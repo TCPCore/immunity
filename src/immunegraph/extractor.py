@@ -382,11 +382,35 @@ class AutoExtractor:
             return self.fallback.extract(text, prior_claims)
 
 
+VALID_EXTRACTOR_MODES: tuple[str, ...] = ("llm", "rule", "auto")
+
+
 def get_extractor(mode: str | None = None):
-    """Build the extractor named by EXTRACTOR (llm|rule|auto)."""
+    """Build the extractor named by EXTRACTOR (llm|rule|auto).
+
+    Validates rather than guessing. A typo used to fall through to ``auto``, and
+    ``llm`` with no API key used to build fine and then fail mid-conversation
+    with a raw provider 401 — both are confusing when you are trying to work out
+    why the demo will not start.
+    """
     mode = (mode or os.getenv("EXTRACTOR") or "auto").strip().lower()
+
+    if mode not in VALID_EXTRACTOR_MODES:
+        raise ValueError(
+            f"EXTRACTOR must be one of {VALID_EXTRACTOR_MODES}, got {mode!r}. "
+            "(Did you mean 'rule'?)"
+        )
+
     if mode == "rule":
         return RuleExtractor()
+
     if mode == "llm":
+        if not os.getenv("OPENAI_API_KEY"):
+            raise RuntimeError(
+                "EXTRACTOR=llm requires OPENAI_API_KEY. Use EXTRACTOR=auto to fall "
+                "back to the deterministic rule extractor, or EXTRACTOR=rule to avoid "
+                "the LLM entirely. The graph queries run for real in every mode."
+            )
         return LLMExtractor()
+
     return AutoExtractor()

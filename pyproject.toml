@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0.0"]
+dev = ["pytest>=8.0.0", "pytest-timeout>=2.3.0"]
 
 [project.scripts]
 immunegraph-verify = "immunegraph.verify_queries:main"
@@ -29,3 +29,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+# Cap every test. A hung suite is worse than a failing one: it gives no
+# information and blocks whoever is waiting. The whole suite runs in ~16s, so
+# 120s is an order of magnitude of headroom.
+timeout = 120

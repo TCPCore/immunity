@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from immunegraph.extractor import (
     RuleExtractor,
     detect_contradiction,
@@ -82,3 +84,47 @@ def test_questions_and_filler_are_not_claims():
     assert not looks_like_claim("What about the oxygen?")
     assert not looks_like_claim("Hi")
     assert looks_like_claim(MARS_FALSE)
+
+
+# ------------------------------------------------------------ mode selection
+
+
+def test_rule_mode_builds_the_rule_extractor(monkeypatch):
+    from immunegraph.extractor import RuleExtractor, get_extractor
+
+    monkeypatch.setenv("EXTRACTOR", "rule")
+    assert isinstance(get_extractor(), RuleExtractor)
+
+
+def test_auto_mode_is_the_default(monkeypatch):
+    from immunegraph.extractor import AutoExtractor, get_extractor
+
+    monkeypatch.delenv("EXTRACTOR", raising=False)
+    assert isinstance(get_extractor(), AutoExtractor)
+
+
+def test_llm_mode_without_a_key_fails_fast(monkeypatch):
+    """Previously this built fine and then raised a raw 401 mid-conversation."""
+    from immunegraph.extractor import get_extractor
+
+    monkeypatch.setenv("EXTRACTOR", "llm")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+        get_extractor()
+
+
+def test_llm_mode_with_a_key_builds(monkeypatch):
+    from immunegraph.extractor import LLMExtractor, get_extractor
+
+    monkeypatch.setenv("EXTRACTOR", "llm")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-not-a-real-key")
+    assert isinstance(get_extractor(), LLMExtractor)
+
+
+def test_typo_in_mode_is_rejected_not_silently_downgraded(monkeypatch):
+    """EXTRACTOR=rules used to fall through to auto without a word."""
+    from immunegraph.extractor import get_extractor
+
+    monkeypatch.setenv("EXTRACTOR", "rules")
+    with pytest.raises(ValueError, match="EXTRACTOR must be one of"):
+        get_extractor()

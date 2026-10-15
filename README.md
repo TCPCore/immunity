@@ -167,6 +167,10 @@ No API key is required. With `EXTRACTOR=rule` extraction is deterministic and ev
 query still runs for real; `EXTRACTOR=auto` uses an LLM when a key is present and silently
 falls back to rules otherwise.
 
+`EXTRACTOR` is validated at startup: an unrecognised value is rejected rather than quietly
+falling through to `auto`, and `EXTRACTOR=llm` without a key fails immediately with an
+explanation instead of raising a provider error mid-conversation.
+
 ### Option B — FalkorDB Cloud
 
 Create a free instance at [app.falkordb.cloud](https://app.falkordb.cloud), then set
@@ -198,6 +202,15 @@ radius of an outbreak is visible at a glance.
 `demo.py` exits non-zero if immunity recall does not fire, no infection is detected, or no
 antibody responds — so it doubles as a CI check and as the script for the demo video.
 
+### Demo video
+
+[`scripts/record_demo.py`](scripts/record_demo.py) produces the demo video from the running
+app: it drives the UI over the Chrome DevTools Protocol, burns in a caption bar, outlines the
+relevant panel on each beat, and encodes H.264. The result is deliberately not committed
+(`*.mp4` is gitignored) — host it and link it here. [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+is the shot list, and `scripts/demo_dry_run.py` asserts that every number the script quotes is
+the number that actually appears at that beat.
+
 ---
 
 ## How it works, in one pass
@@ -222,7 +235,7 @@ A Cypher query that has never been executed is not a feature. Three layers of pr
 
 ```bash
 .venv/bin/python -m immunegraph.verify_queries   # every query, against a live instance
-.venv/bin/python -m pytest                       # 62 tests
+.venv/bin/python -m pytest                       # 67 tests
 .venv/bin/python -m immunegraph.demo             # the full arc; exits non-zero on failure
 ```
 
