@@ -41,6 +41,10 @@ def _app() -> "object":
     return at
 
 
+def _button_index(at, needle: str) -> int:
+    return next(i for i, b in enumerate(at.button) if needle in b.label)
+
+
 def test_app_renders_without_exception():
     at = _app()
     assert not at.exception, at.exception
@@ -53,27 +57,61 @@ def test_app_runs_the_mission_and_recalls_immunity():
     at = _app()
     assert not at.exception
 
-    # Button order follows the sidebar: run, re-inject, reset.
     labels = [b.label for b in at.button]
     assert any("Run Mars" in label for label in labels), labels
     assert any("Re-inject" in label for label in labels), labels
 
-    run_index = next(i for i, b in enumerate(at.button) if "Run Mars" in b.label)
-    at.button[run_index].click().run()
+    at.button[_button_index(at, "Run Mars")].click().run()
     assert not at.exception, at.exception
 
     # The dashboard should now report at least one outbreak.
     metrics = {m.label: m.value for m in at.metric}
     assert int(metrics.get("Active outbreaks", 0)) + int(metrics.get("Contained", 0)) >= 1
 
-    reinject_index = next(i for i, b in enumerate(at.button) if "Re-inject" in b.label)
-    at.button[reinject_index].click().run()
+    at.button[_button_index(at, "Re-inject")].click().run()
     assert not at.exception, at.exception
 
     # Immunity recall should have fired and said so.
     assert any(
         "Immunity recall fired" in (s.value or "") for s in at.success
     ), [s.value for s in at.success]
+
+
+def test_reinject_twice_does_not_crash_on_an_exact_match():
+    """Regression test for a bug that would have bitten on stage.
+
+    The first re-injection matches the paraphrase by similarity and carries a
+    score. The second matches the now-quarantined identical claim by
+    fingerprint, which carries no score, so formatting one raises TypeError.
+    """
+    at = _app()
+    at.button[_button_index(at, "Run Mars")].click().run()
+    assert not at.exception
+
+    at.button[_button_index(at, "Re-inject")].click().run()
+    assert not at.exception, at.exception
+    first = [s.value for s in at.success]
+
+    at.button[_button_index(at, "Re-inject")].click().run()
+    assert not at.exception, at.exception
+    second = [s.value for s in at.success]
+
+    assert any("score" in (value or "") for value in first), first
+    assert any("exact match" in (value or "") for value in second), second
+
+
+def test_rerunning_the_mission_replays_deterministically():
+    """A stale claim must not become the derivation parent of the next run."""
+    at = _app()
+    at.button[_button_index(at, "Run Mars")].click().run()
+    assert not at.exception
+    first = {m.label: m.value for m in at.metric}
+
+    at.button[_button_index(at, "Run Mars")].click().run()
+    assert not at.exception
+    second = {m.label: m.value for m in at.metric}
+
+    assert first == second, f"second run differed: {first} vs {second}"
 
 
 def test_app_survives_an_empty_graph():

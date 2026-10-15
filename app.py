@@ -212,7 +212,12 @@ def render_dashboard(swarm: Swarm) -> None:
 # ----------------------------------------------------------------------- page
 
 
-def run_mission(swarm: Swarm, placeholder) -> None:
+def run_mission(swarm: Swarm, store: GraphStore, placeholder) -> None:
+    # Always replay from a clean graph. The scripted cascade assumes no prior
+    # claims, and a leftover claim would silently become the derivation parent
+    # of the Analyst's line — the demo would then show the wrong cascade.
+    store.reset()
+    store.create_indexes()
     swarm.start(MARS_TOPIC)
     for persona, text, note in MARS_CASCADE:
         placeholder.markdown(f"**{persona.name}** speaking…")
@@ -234,8 +239,18 @@ def reinject(swarm: Swarm) -> str:
         return "No prior infection matched — nothing to recall."
     turn = swarm.say(persona, text, sweep=False)
     swarm.contain_repeat(turn.claim_ids[0], recall)
-    return f"**Immunity recall fired** ({recall.method}, score {recall.score:.2f}). " \
-           f"Claim quarantined on sight — no cascade re-detection needed."
+
+    # A first re-injection matches the paraphrase by similarity and carries a
+    # score. Clicking again matches the now-quarantined identical claim by
+    # fingerprint, which has no score — so this must not blindly format one.
+    if recall.score is not None:
+        how = f"{recall.method}, score {recall.score:.2f}"
+    else:
+        how = f"{recall.method}, exact match"
+    return (
+        f"**Immunity recall fired** ({how}). Claim quarantined on sight — "
+        "no cascade re-detection was needed."
+    )
 
 
 def main() -> None:
@@ -263,7 +278,7 @@ def main() -> None:
         )
         if st.button("▶  Run Mars mission", type="primary", use_container_width=True):
             placeholder = st.empty()
-            run_mission(swarm, placeholder)
+            run_mission(swarm, store, placeholder)
             st.rerun()
         if st.button("💉  Re-inject the false claim", use_container_width=True):
             st.session_state["recall_note"] = reinject(swarm)
