@@ -10,6 +10,31 @@ Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB, Oct 15
 
 ---
 
+## The 30-second version
+
+Agent memory layers store **what was said**. ImmuneGraph stores **what supports what** — so
+the pathologies of collective belief become graph traversals a Cypher query can detect.
+
+Three agents plan a Mars mission. One asserts something with no source. The other two reason
+*correctly* from it. Nothing was stored incorrectly, and the swarm is now acting on a lie.
+
+ImmuneGraph catches it, corrects it, and then catches it again instantly when it comes back —
+as a *paraphrase*. In one verified run from a clean graph:
+
+| Beat | Result | Produced by |
+| --- | --- | --- |
+| Cascade | 3 claims, 2 derivation hops | `Message` → `Claim` extraction |
+| Detection | 1 infection, **severity 6.0** = 1 + 2 claims + 3 agents | **Q4**, graph reach |
+| Response | antibody cites NASA, root quarantined | `Antibody` + `INJECTS` |
+| Trust | all three agents → **0.85** | **Q5**, derived not stored |
+| Recall | paraphrase matched at **0.75 similarity** | **Q6/Q7**, indexed |
+| Outcome | both outbreak types contained, **0 recurred** | **Q8** |
+
+**Remove FalkorDB and the product does not work.** Severity *is* graph reachability (Q4);
+trust *is* derived from association (Q5); the immune memory *is* the
+`Infection`→`TARGETS`→`Claim` subgraph. Nothing here is a visualisation drawn over ordinary
+storage.
+
 ## The problem
 
 Multi-agent AI systems have a failure mode that ordinary memory layers do not address.
@@ -172,7 +197,7 @@ A Cypher query that has never been executed is not a feature. Three layers of pr
 
 ```bash
 .venv/bin/python -m immunegraph.verify_queries   # every query, against a live instance
-.venv/bin/python -m pytest                       # 23 tests
+.venv/bin/python -m pytest                       # 28 tests
 .venv/bin/python -m immunegraph.demo             # the full arc; exits non-zero on failure
 ```
 
@@ -186,13 +211,19 @@ A Cypher query that has never been executed is not a feature. Three layers of pr
   asserting severity 6.0, a spread of 2 claims, a NASA-citing antibody, all three agents
   decaying to 0.85, paraphrase recall at 0.75, and both outbreak types contained. Tenant
   isolation is covered for Track 02.
+- **Concurrency tests** run 8 writers in parallel against shared state. The naive
+  read-then-write sequence allocation produced **37 distinct sequence numbers out of 200
+  writes** (163 collisions); allocating with a write gives 200/200. See
+  [`tests/test_concurrency.py`](tests/test_concurrency.py).
 - **UI tests** execute `app.py` in a real Streamlit runtime via `AppTest`, click through the
-  mission, and assert that immunity recall fires.
+  mission, re-inject twice, and assert the run replays deterministically.
 
-Running the queries rather than assuming them has already caught four defects that reading
-the code would not have: a silent `ORDER BY` inversion in the vector recall path, missing
-`vecf32()` wrapping, a false-positive contradiction caused by an unexpanded contraction, and
-a case-sensitive source pattern that dropped citations.
+Running the code rather than assuming it has caught five defects that reading the source
+would not have: a silent `ORDER BY` inversion in the vector recall path (FalkorDB returns a
+cosine *distance* despite the option being named `similarityFunction`), missing `vecf32()`
+wrapping, a false-positive contradiction caused by a conditional being read as opposing its
+own premise, a case-sensitive source pattern that dropped citations, and the concurrency
+collision above.
 
 FalkorDB implements a **subset** of openCypher v9. The dialect constraints that shaped this
 model — no regex operator, no label expressions, no aggregation inside pattern
@@ -235,8 +266,11 @@ material for that rather than asserting it:
 | Document | Purpose |
 | --- | --- |
 | [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) | Rule-by-rule audit with evidence and the open items |
+| [`docs/SUBMISSION.md`](docs/SUBMISSION.md) | Copy-paste text for the submission form and the final checklist |
 | [`docs/EXPLAINER.md`](docs/EXPLAINER.md) | How to defend the model, every query, and the trade-offs |
 | [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) | The schema and the queries the product depends on |
+| [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Shot-by-shot script for the demo video |
+| [`docs/BLOG_POST.md`](docs/BLOG_POST.md) | Draft write-up for the best-blog-post side prize |
 
 ## Data
 
