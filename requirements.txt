@@ -1,6 +1,24 @@
-# Python deps for ImmuneGraph.
-# NOTE: falkordblite is deliberately NOT used — its macOS wheels ship arm64-only
-# binaries and fail on x86_64 Macs. We run FalkorDB in Docker instead.
+# Dependency reference.
+#
+# The canonical install for this project is the editable one, because the code
+# uses a src/ layout and `python -m immunegraph...` only resolves once the
+# package itself is installed:
+#
+#     uv pip install --python .venv/bin/python -e ".[dev]"
+#
+# That single command installs the package plus every dependency below, and is
+# what the README documents. Installing this file on its own puts the
+# dependencies in place but leaves the package missing, so the module
+# invocations fail with ModuleNotFoundError.
+#
+# This file remains useful for plain-pip users who prefer an explicit list:
+#
+#     pip install -r requirements.txt && pip install -e .
+
+# NOTE: falkordblite is deliberately NOT used. Its published macOS wheels claim
+# universal2 but ship arm64-only redis-server and falkordb.so, so it fails on
+# x86_64 Macs with "[Errno 86] Bad CPU type in executable". Use the Docker
+# container or FalkorDB Cloud.
 falkordb>=1.8.0
 python-dotenv>=1.0.1
 openai>=1.40.0

@@ -64,13 +64,18 @@ swarm develops immunity" into a number.
 ```bash
 git clone https://github.com/TCPCore/immunity.git
 cd immunity
-docker compose up -d                              # FalkorDB on localhost:6379
-cp .env.example .env                              # optional: add OPENAI_API_KEY
+docker compose up -d                                   # FalkorDB on localhost:6379
 uv venv --python 3.12 .venv
-uv pip install --python .venv/bin/python -r requirements.txt
-.venv/bin/python -m immunegraph.verify_queries    # executes all 13 queries
+uv pip install --python .venv/bin/python -e ".[dev]"   # installs the package itself
+cp .env.example .env                                   # optional: add OPENAI_API_KEY
+.venv/bin/python -m immunegraph.verify_queries          # executes all 13 queries
+.venv/bin/python -m pytest                              # 47 tests
 .venv/bin/streamlit run app.py
 ```
+
+`-e ".[dev]"` is required rather than `requirements.txt`: the project uses a `src/` layout, so
+`python -m immunegraph...` only resolves once the package is installed. Installing only the
+requirements leaves the package missing and every command fails with `ModuleNotFoundError`.
 
 No API key is required: with `EXTRACTOR=rule` the extraction is deterministic and every graph
 query still runs for real. `EXTRACTOR=auto` uses an LLM when a key is present and falls back

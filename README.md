@@ -147,13 +147,24 @@ Q8 (antibody effectiveness) are in [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) 
 ### Option A — Docker (recommended)
 
 ```bash
-docker compose up -d          # FalkorDB on localhost:6379
-cp .env.example .env          # then fill in OPENAI_API_KEY
+git clone https://github.com/TCPCore/immunity.git && cd immunity
+docker compose up -d                                   # FalkorDB on localhost:6379
 uv venv --python 3.12 .venv
-uv pip install --python .venv/bin/python -r requirements.txt
-.venv/bin/python -m immunegraph.verify_queries   # proves every Cypher query runs
+uv pip install --python .venv/bin/python -e ".[dev]"   # installs the package itself
+cp .env.example .env                                   # optional; only for the LLM extractor
+.venv/bin/python -m immunegraph.verify_queries          # proves every Cypher query runs
 .venv/bin/streamlit run app.py
 ```
+
+> **Do not skip the `-e ".[dev]"` install.** This project uses a `src/` layout, so
+> `python -m immunegraph...` only resolves once the package is installed. Installing
+> `requirements.txt` on its own puts the *dependencies* in place but leaves the *package*
+> missing, and every command below then fails with `ModuleNotFoundError: No module named
+> 'immunegraph'`. This was caught by following this README verbatim in a clean checkout.
+
+No API key is required. With `EXTRACTOR=rule` extraction is deterministic and every graph
+query still runs for real; `EXTRACTOR=auto` uses an LLM when a key is present and silently
+falls back to rules otherwise.
 
 ### Option B — FalkorDB Cloud
 

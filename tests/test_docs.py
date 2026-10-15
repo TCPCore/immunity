@@ -93,3 +93,23 @@ def test_readme_contains_the_cypher_the_product_depends_on():
     assert "DERIVED_FROM*1..5" in readme, "Q4 (severity) is not shown in the README"
     assert "SUPPORTED_BY|DERIVED_FROM*2..5" in readme, "Q1 (cycles) is not shown in the README"
     assert "fingerprint: $fingerprint" in readme, "Q6 (immunity recall) is not shown"
+
+
+def test_readme_documents_the_editable_install():
+    """Guard against the bug that made the quickstart fail outright.
+
+    The project uses a src/ layout, so `python -m immunegraph...` only resolves
+    once the package is installed. Documenting `requirements.txt` alone leaves
+    the dependencies present and the package missing, and every command in the
+    README then fails with ModuleNotFoundError. This was found by following the
+    README verbatim in a clean checkout.
+    """
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    assert '-e ".[dev]"' in readme, "README no longer documents the editable install"
+
+
+def test_documented_commands_use_the_installed_package():
+    """Commands must not depend on a PYTHONPATH the README never sets."""
+    for path in [REPO_ROOT / "README.md", REPO_ROOT / "docs/SUBMISSION.md"]:
+        text = path.read_text(encoding="utf-8")
+        assert "PYTHONPATH" not in text, f"{path.name} relies on an undocumented PYTHONPATH"
