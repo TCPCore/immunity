@@ -57,7 +57,50 @@ Relationships: `SPOKE` · `MENTIONS` · `ASSERTS` · `SUPPORTED_BY` · `DERIVED_
 `NEUTRALIZES` · `INJECTS`
 
 The full schema, indexes, and the eight load-bearing Cypher queries are in
-**[`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md)**. Those queries are the product.
+**[`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md)**. Those queries are the product; this
+README repeats the four headline ones so a reviewer can see them without leaving the page.
+
+**Q1 — self-justifying belief (a cycle in the support structure)**
+
+```cypher
+MATCH path = (c:Claim)-[:SUPPORTED_BY|DERIVED_FROM*2..5]->(c)
+RETURN c.id, c.text, [n IN nodes(path) | n.text] AS cycle_path, length(path)
+```
+
+**Q2 — an unsupported root (no trusted source, no parent)**
+
+```cypher
+MATCH (c:Claim {status: 'active'})
+OPTIONAL MATCH (c)-[:SUPPORTED_BY]->(s:Source) WHERE s.trust_level <> 'unreliable'
+WITH c, count(s) AS source_count
+OPTIONAL MATCH (c)-[:DERIVED_FROM]->(p:Claim)
+WITH c, source_count, count(p) AS parent_count
+WHERE source_count = 0 AND parent_count = 0
+RETURN c.id, c.text, c.fingerprint
+```
+
+**Q4 — cascade reach. Severity is defined as this traversal, not as an LLM's opinion**
+
+```cypher
+MATCH (root:Claim {id: $root_claim_id})
+OPTIONAL MATCH (down:Claim)-[:DERIVED_FROM*1..5]->(root)
+WITH root, collect(DISTINCT down) AS downs
+WITH root, downs, downs + [root] AS members
+UNWIND members AS member
+OPTIONAL MATCH (a:Agent)-[:ASSERTS]->(member)
+RETURN root.id, size(downs) AS infected_claims, count(DISTINCT a) AS exposed_agents
+```
+
+**Q6 — immunity recall. An indexed equality match, so it is instant, not a model judgement**
+
+```cypher
+MATCH (past:Claim {fingerprint: $fingerprint})<-[:TARGETS]-(i:Infection)
+RETURN past.id, past.text, past.status, i.id, i.type, i.detected_at, i.resolved_at
+```
+
+Q3 (contradiction clusters), Q5 (derived trust decay), Q7 (vector recall of paraphrases) and
+Q8 (antibody effectiveness) are in [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) §5 and
+[`src/immunegraph/queries.py`](src/immunegraph/queries.py).
 
 ---
 
@@ -128,14 +171,40 @@ comprehensions, `LIMIT` not constraining eager writes — are documented in
 
 ## AI coding assistant disclosure
 
-Required by hackathon rule 11. **Edit this section to be accurate before submitting.**
+Required by hackathon rule 11. Being specific rather than vague about it:
 
-- AI coding assistants were used for: scaffolding, boilerplate, documentation drafting, and
-  Cypher dialect research.
-- All graph model decisions, the immune-system design, and the final queries were reviewed,
-  executed, and validated against a live FalkorDB instance by the team.
-- Every Cypher query in this repository has been run and its results inspected.
-- The demo video shows a real run against a real FalkorDB instance.
+- **AI-assisted:** the FalkorDB connection and schema modules, the query registry and its
+  docstrings, the live query verifier, the extraction module, documentation drafting, and
+  research into FalkorDB's openCypher subset and vector-index API.
+- **Human-authored:** the project concept and the immune-system framing, the choice of
+  Tracks 01 and 02, the Mars mission scenario and its beats, the memory taxonomy mapping onto
+  the Track 02 rubric, and the decision to run FalkorDB in Docker.
+- **Verification — the part that matters most:** every Cypher query in this repository was
+  executed against a live FalkorDB instance before being committed, via
+  `python -m immunegraph.verify_queries`. Two non-obvious behaviours were discovered by
+  *running* the queries rather than assuming them; one of them (the vector recall ordering
+  bug) is a silent correctness bug that the verifier does **not** catch. Both are written up
+  in [`docs/EXPLAINER.md`](docs/EXPLAINER.md) §4.
+- The team can explain the graph model, each detection query, and the reasoning behind the
+  memory taxonomy. [`docs/EXPLAINER.md`](docs/EXPLAINER.md) is the written form of that
+  explanation.
+
+> **Before submitting:** confirm every sentence above is true. Rules 12 and 13 require
+> meaningful participant contribution and technical understanding, and a disclosure that
+> overstates human involvement is worse than an honest one that admits heavy AI use.
+> [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) tracks this and every other rule, including the
+> items still open.
+
+## Submission compliance
+
+Rules 12 and 13 turn on the participant understanding the work, so this repo ships the
+material for that rather than asserting it:
+
+| Document | Purpose |
+| --- | --- |
+| [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) | Rule-by-rule audit with evidence and the open items |
+| [`docs/EXPLAINER.md`](docs/EXPLAINER.md) | How to defend the model, every query, and the trade-offs |
+| [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) | The schema and the queries the product depends on |
 
 ## Data
 
