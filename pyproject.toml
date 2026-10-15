@@ -1,0 +1,31 @@
+[project]
+name = "immunegraph"
+version = "0.1.0"
+description = "A FalkorDB-backed immune system for hallucination cascades in multi-agent swarms"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "falkordb>=1.8.0",
+    "python-dotenv>=1.0.1",
+    "openai>=1.40.0",
+    "numpy>=1.26.0",
+    "streamlit>=1.40.0",
+    "streamlit-agraph>=0.0.45",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+immunegraph-verify = "immunegraph.verify_queries:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
