@@ -88,7 +88,15 @@ def render_transcript(swarm: Swarm) -> None:
             st.markdown(text)
 
 
-def render_graph(swarm: Swarm, height: int = 560) -> None:
+def _short_label(text: str, words: int = 5, chars: int = 30) -> str:
+    """Keep node labels legible; full text stays in the hover tooltip."""
+    short = " ".join((text or "").split()[:words])
+    if len(short) > chars:
+        short = short[: chars - 1].rstrip() + "…"
+    return short or (text or "")[:chars]
+
+
+def render_graph(swarm: Swarm, height: int = 660) -> None:
     snapshot = swarm.graph_snapshot()
     if not snapshot["nodes"]:
         st.info("The graph is empty.")
@@ -118,7 +126,7 @@ def render_graph(swarm: Swarm, height: int = 560) -> None:
         nodes.append(
             Node(
                 id=node["id"],
-                label=(node.get("title") or node["id"])[:42],
+                label=_short_label(node.get("title") or node["id"]),
                 size=size,
                 color=colour,
                 title=title,
@@ -132,17 +140,30 @@ def render_graph(swarm: Swarm, height: int = 560) -> None:
         if e["source"] in ids and e["target"] in ids
     ]
 
+    # Stronger repulsion and longer springs, because claim text makes for long
+    # labels that otherwise pile up on top of each other.
     config = Config(
         width="100%",
         height=height,
         directed=True,
-        physics=True,
         hierarchical=False,
         nodeHighlightBehavior=True,
         highlightColor="#F7E7A1",
         collapsible=False,
         node={"labelProperty": "label"},
         link={"labelProperty": "label", "renderLabel": True},
+        physics={
+            "enabled": True,
+            "solver": "barnesHut",
+            "barnesHut": {
+                "gravitationalConstant": -16000,
+                "centralGravity": 0.2,
+                "springLength": 220,
+                "springConstant": 0.04,
+                "avoidOverlap": 0.5,
+            },
+            "stabilization": {"enabled": True, "iterations": 500, "fit": True},
+        },
     )
     agraph(nodes=nodes, edges=edges, config=config)
 
