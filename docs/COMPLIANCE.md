@@ -15,11 +15,24 @@ Legend: ✅ satisfied · ⚠️ action required · ⛔ not yet done
 
 | # | Item | Owner | Why it blocks |
 | --- | --- | --- | --- |
+| 0 | **Push the commits** | human | Rule 10 needs a public repository containing the work. 18 commits are made locally but the remote is still empty because `git push` has no credentials. Authenticate with `gh auth login` or a PAT, then `git push -u origin main`. |
 | 1 | **Confirm registration** | human | Rule 1. The schedule says registration is the one checkpoint you must act on. An unregistered team cannot submit. |
-| 2 | **Record the demo video** (2–3 min) | human | Rule 10 explicitly requires "a demo video showing the working project". |
+| 2 | **Record the demo video** (2–3 min) | human | Rule 10 explicitly requires "a demo video showing the working project". Use `DEMO_SCRIPT.md`. |
 | 3 | **Complete the rule 12/13 review** | human | Rules 12 and 13. You must be able to explain the model and every query, and demonstrate meaningful contribution. See `EXPLAINER.md`. |
 | 4 | **Finalise the AI disclosure** | human | Rule 11. The wording in the README must be true when you submit it. |
 | 5 | **Name both tracks at submission** | human | Rule 5: enter 01 and 02, and name *every* track you are entering. |
+
+## What is already done and verified
+
+| Claim | Evidence |
+| --- | --- |
+| FalkorDB is the only datastore and does the detection | 13 Cypher queries, all executed against a live instance |
+| Every query actually runs | `python -m immunegraph.verify_queries` → "All non-optional queries executed and returned expected shapes" |
+| The product works end to end | `python -m immunegraph.demo` exits 0; 28 tests pass, twice consecutively |
+| High-concurrency reads and writes (Track 02) | 8 concurrent writers, 200 writes: 200/200 unique sequence numbers vs 37/200 for the naive read-then-write. See `tests/test_concurrency.py` |
+| The UI works | 5 headless `AppTest` tests execute `app.py`, click through the mission and assert recall fires |
+| The repo is public | verified via the GitHub API (anonymous read) |
+| No credentials in history | `git log --diff-filter=A` shows no `.env` ever committed |
 
 ---
 
