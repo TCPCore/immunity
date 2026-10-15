@@ -162,7 +162,7 @@ click and keep talking — do not wait for something to happen.
 > the antibody worked.
 >
 > Every query here has been executed against a live instance — `verify_queries` runs all
-> thirteen, and the test suite has fifty tests. FalkorDB wasn't a place to store the
+> thirteen, and the test suite has sixty-two tests. FalkorDB wasn't a place to store the
 > answer. It was the thing that worked out the answer."
 
 ---

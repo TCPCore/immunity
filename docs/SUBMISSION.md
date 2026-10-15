@@ -69,7 +69,7 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -e ".[dev]"   # installs the package itself
 cp .env.example .env                                   # optional: add OPENAI_API_KEY
 .venv/bin/python -m immunegraph.verify_queries          # executes all 13 queries
-.venv/bin/python -m pytest                              # 47 tests
+.venv/bin/python -m pytest                              # 62 tests
 .venv/bin/streamlit run app.py
 ```
 
@@ -126,7 +126,7 @@ the written form of that explanation.
 - [ ] **Rule 12/13 review complete** — see `COMPLIANCE.md` for the five concrete steps
 - [x] MIT licence present
 - [x] `python -m immunegraph.verify_queries` passes
-- [x] `python -m pytest` passes (28 tests)
+- [x] `python -m pytest` passes (62 tests)
 
 **Final five minutes**
 

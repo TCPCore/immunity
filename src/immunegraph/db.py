@@ -33,7 +33,13 @@ class GraphStore:
 
     # ------------------------------------------------------------------ setup
 
-    def _build_client(self) -> FalkorDB:
+    def client_kwargs(self) -> dict[str, Any]:
+        """Connection kwargs, kept separate from construction.
+
+        The official client connects eagerly inside its constructor, so the
+        FalkorDB Cloud path (host/port/user/password/TLS) cannot otherwise be
+        asserted without a live server.
+        """
         s = self.settings
         kwargs: dict[str, Any] = {"host": s.host, "port": s.port}
         if s.username:
@@ -42,7 +48,10 @@ class GraphStore:
             kwargs["password"] = s.password
         if s.tls:
             kwargs["ssl"] = True
-        return FalkorDB(**kwargs)
+        return kwargs
+
+    def _build_client(self) -> FalkorDB:
+        return FalkorDB(**self.client_kwargs())
 
     def _connect(self) -> bool:
         """Attempt (or re-attempt) the connection. Never raises."""

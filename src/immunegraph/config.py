@@ -75,7 +75,9 @@ class Settings:
 
     def describe(self) -> str:
         """Human-readable connection summary with no secrets in it."""
-        auth = "yes" if self.username else "no"
+        # Auth is configured if either credential is present: Redis accepts a
+        # password on its own, so keying off the username alone under-reports.
+        auth = "yes" if (self.username or self.password) else "no"
         return (
             f"{self.host}:{self.port} graph={self.graph!r} "
             f"tls={self.tls} auth={auth} extractor={self.extractor}"
