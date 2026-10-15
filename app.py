@@ -45,8 +45,14 @@ QUARANTINED_COLOUR = "#7A2E28"
 
 @st.cache_resource(show_spinner=False)
 def get_context() -> tuple[Swarm, GraphStore]:
+    """Build the store and swarm without touching the database.
+
+    Deliberately no query here. If FalkorDB is unreachable, anything that talks
+    to it raises before ``require_db`` gets the chance to explain the problem,
+    and a judge who opens the app before starting Docker would see a traceback
+    instead of "run docker compose up -d".
+    """
     store = GraphStore(Settings.from_env())
-    store.create_indexes()
     swarm = Swarm(store)
     return swarm, store
 
@@ -290,6 +296,10 @@ def main() -> None:
 
     if not require_db(store):
         return
+
+    # Safe to touch the database now. Idempotent: re-creating an existing index
+    # is swallowed by create_indexes().
+    store.create_indexes()
 
     with st.sidebar:
         st.header("Scenario")

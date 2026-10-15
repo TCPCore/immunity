@@ -14,12 +14,22 @@ from .config import Settings
 
 
 class GraphStore:
-    """Thin wrapper around a FalkorDB graph."""
+    """Thin wrapper around a FalkorDB graph.
+
+    Construction is deliberately exception-safe. The official client connects
+    eagerly inside its own constructor, so building one against a database that
+    is not running raises immediately — which means ``GraphStore(...)`` would
+    blow up before any caller could report the problem, and a user who forgets
+    ``docker compose up -d`` gets a traceback instead of instructions.
+
+    The connection is therefore deferred, and any operation retries it once.
+    """
 
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or Settings.from_env()
-        self._client = self._build_client()
-        self.graph = self._client.select_graph(self.settings.graph)
+        self._client: FalkorDB | None = None
+        self.graph = None
+        self._connect()
 
     # ------------------------------------------------------------------ setup
 
@@ -34,15 +44,39 @@ class GraphStore:
             kwargs["ssl"] = True
         return FalkorDB(**kwargs)
 
+    def _connect(self) -> bool:
+        """Attempt (or re-attempt) the connection. Never raises."""
+        try:
+            self._client = self._build_client()
+            self.graph = self._client.select_graph(self.settings.graph)
+            return True
+        except Exception:  # noqa: BLE001 - a down database is an expected state
+            self._client = None
+            self.graph = None
+            return False
+
+    def _graph(self):
+        """The live graph handle, retrying the connection once if needed."""
+        if self.graph is None and not self._connect():
+            raise ConnectionError(
+                f"FalkorDB is unreachable at {self.settings.host}:{self.settings.port}. "
+                "Start it with: docker compose up -d"
+            )
+        return self.graph
+
+    @property
+    def connected(self) -> bool:
+        return self.graph is not None
+
     # ----------------------------------------------------------------- querying
 
     def query(self, cypher: str, params: dict[str, Any] | None = None):
         """Run a read/write query."""
-        return self.graph.query(cypher, params or {})
+        return self._graph().query(cypher, params or {})
 
     def ro_query(self, cypher: str, params: dict[str, Any] | None = None):
         """Run a read-only query."""
-        return self.graph.ro_query(cypher, params or {})
+        return self._graph().ro_query(cypher, params or {})
 
     def rows(self, cypher: str, params: dict[str, Any] | None = None) -> list[list[Any]]:
         """Run a query and return just the result rows."""
@@ -79,11 +113,17 @@ class GraphStore:
             return False
 
     def reset(self) -> None:
-        """Delete the whole graph. Destructive — demo/dev only."""
+        """Delete the whole graph. Destructive — demo/dev only. Idempotent.
+
+        Returns quietly if the database is unreachable, so callers that reset
+        before checking connectivity do not have to guard the call.
+        """
+        if not self._connect():
+            return
         try:
             self.graph.delete()
         except Exception:
-            # Graph may not exist yet.
+            # The graph may not exist yet.
             pass
         self.graph = self._client.select_graph(self.settings.graph)
 

@@ -122,3 +122,26 @@ def test_app_survives_an_empty_graph():
     at = _app()
     assert not at.exception, at.exception
     assert any("No conversation yet" in (c.value or "") for c in at.caption)
+
+
+def test_app_shows_a_clear_error_when_the_database_is_unreachable(monkeypatch):
+    """Judges open the app before starting Docker. It must not traceback.
+
+    Kept last in the file because it repoints the connection at a dead port and
+    has to clear the cached connection afterwards.
+    """
+    import streamlit as st
+    from streamlit.testing.v1 import AppTest
+
+    st.cache_resource.clear()
+    monkeypatch.setenv("FALKORDB_PORT", "9")  # nothing listens on 9
+
+    try:
+        at = AppTest.from_file(str(APP_PATH), default_timeout=60)
+        at.run()
+        assert not at.exception, at.exception
+        assert any(
+            "Cannot reach FalkorDB" in (e.value or "") for e in at.error
+        ), [e.value for e in at.error]
+    finally:
+        st.cache_resource.clear()
