@@ -78,8 +78,9 @@ Deliberate choices that keep FalkorDB load-bearing:
 environment-driven (`src/immunegraph/config.py`).
 
 ### Rule 5 — Open-ended within three tracks; name every track at submission
-✅ Entering **Track 01 — Agents That Act on Connected Data** and
-**Track 02 — Agent Memory and Coordination**.
+✅ Entering both of these, each kept unbroken in the README so an automated checker can match it:
+- **Track 01 — Agents That Act on Connected Data**
+- **Track 02 — Agent Memory and Coordination**
 ⚠️ Both must be named in the submission form. The README states both.
 
 Track 02 mapping is explicit in `../AGENT_BRIEF.md` §2 (episodic/semantic/procedural

@@ -5,8 +5,13 @@ systems, corrects them, and remembers them so the swarm develops immunity.**
 
 Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB, Oct 15–18 2026).
 
-> **Tracks entered: 01 — Agents That Act on Connected Data, and 02 — Agent Memory and
-> Coordination.**
+> **Tracks entered:**
+>
+> - **Track 01 — Agents That Act on Connected Data**
+> - **Track 02 — Agent Memory and Coordination**
+>
+> Each track name is kept unbroken on its own line so an automated submission
+> checker can match it exactly.
 
 ---
 
