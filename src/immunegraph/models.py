@@ -30,6 +30,23 @@ STOPWORDS: frozenset[str] = frozenset(
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
 
+# Expand contractions before tokenising so negations survive normalisation.
+# Without this, "don't" tokenises to "don t" and the negation marker "not" is
+# lost, which silently breaks contradiction detection.
+_CONTRACTIONS: tuple[tuple[str, str], ...] = (
+    ("n't", " not"),
+    ("cannot", "can not"),
+    ("'re", " are"),
+    ("'ve", " have"),
+    ("'ll", " will"),
+)
+
+
+def _expand_contractions(text: str) -> str:
+    for suffix, replacement in _CONTRACTIONS:
+        text = text.replace(suffix, replacement)
+    return text
+
 
 def normalise_text(text: str) -> str:
     """Lowercase, strip accents and punctuation, drop stopwords.
@@ -40,6 +57,7 @@ def normalise_text(text: str) -> str:
     """
     decomposed = unicodedata.normalize("NFKD", text or "")
     ascii_only = decomposed.encode("ascii", "ignore").decode("ascii").lower()
+    ascii_only = _expand_contractions(ascii_only)
     tokens = [t for t in _WORD_RE.findall(ascii_only) if t not in STOPWORDS]
     return " ".join(tokens)
 
