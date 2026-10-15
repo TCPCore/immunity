@@ -1,0 +1,12 @@
+# Python deps for ImmuneGraph.
+# NOTE: falkordblite is deliberately NOT used — its macOS wheels ship arm64-only
+# binaries and fail on x86_64 Macs. We run FalkorDB in Docker instead.
+falkordb>=1.8.0
+python-dotenv>=1.0.1
+openai>=1.40.0
+numpy>=1.26.0
+streamlit>=1.40.0
+streamlit-agraph>=0.0.45
+
+# dev
+pytest>=8.0.0
