@@ -21,3 +21,11 @@ dump.rdb
 .DS_Store
 .idea/
 .vscode/
+
+# Recorded demo video.
+# Deliberately not committed: a hackathon submission hosts its demo video
+# (YouTube/Loom) and a binary this size does not belong in git history.
+# To track one anyway:  git add -f <file>.mp4
+*.mp4
+*.mov
+*.mkv
