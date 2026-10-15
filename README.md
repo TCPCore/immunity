@@ -128,11 +128,25 @@ No other change is needed — the connection layer is environment-driven.
 > on x86_64 Macs with `[Errno 86] Bad CPU type in executable`. This is an upstream packaging
 > bug, not a missing dependency. Use the container or Cloud.
 
+### Run the UI
+
+```bash
+.venv/bin/streamlit run app.py
+```
+
+Three panels: the conversation, the live belief graph, and the immune dashboard. The sidebar
+runs the Mars mission, re-injects the false claim to demonstrate immunity recall, and resets
+the graph. Node colour encodes label and node size encodes infection severity, so the blast
+radius of an outbreak is visible at a glance.
+
 ### Run the demo headless
 
 ```bash
-.venv/bin/python -m immunegraph.demo
+.venv/bin/python -m immunegraph.demo            # add --pause 1.5 when recording
 ```
+
+`demo.py` exits non-zero if immunity recall does not fire, no infection is detected, or no
+antibody responds — so it doubles as a CI check and as the script for the demo video.
 
 ---
 
@@ -154,13 +168,31 @@ No other change is needed — the connection layer is environment-driven.
 
 ## Verification
 
-A Cypher query that has never been executed is not a feature. `verify_queries.py` executes
-every query in `docs/GRAPH_MODEL.md` against a live instance and exits non-zero on failure.
+A Cypher query that has never been executed is not a feature. Three layers of proof:
 
 ```bash
-.venv/bin/python -m immunegraph.verify_queries
-.venv/bin/python -m pytest
+.venv/bin/python -m immunegraph.verify_queries   # every query, against a live instance
+.venv/bin/python -m pytest                       # 23 tests
+.venv/bin/python -m immunegraph.demo             # the full arc; exits non-zero on failure
 ```
+
+- **`verify_queries.py`** seeds a fixture graph containing a cascade, a 3-hop epistemic cycle,
+  a contradiction cluster, two infections, two antibodies and embeddings, then executes all
+  13 queries and checks the shape of each result. The optional vector path reports `SKIP`
+  rather than failing on builds without vector support.
+- **Unit tests** cover fingerprinting, contraction handling, similarity, source
+  canonicalisation and severity.
+- **Integration tests** run the whole Mars arc against a real instance on throwaway graphs,
+  asserting severity 6.0, a spread of 2 claims, a NASA-citing antibody, all three agents
+  decaying to 0.85, paraphrase recall at 0.75, and both outbreak types contained. Tenant
+  isolation is covered for Track 02.
+- **UI tests** execute `app.py` in a real Streamlit runtime via `AppTest`, click through the
+  mission, and assert that immunity recall fires.
+
+Running the queries rather than assuming them has already caught four defects that reading
+the code would not have: a silent `ORDER BY` inversion in the vector recall path, missing
+`vecf32()` wrapping, a false-positive contradiction caused by an unexpanded contraction, and
+a case-sensitive source pattern that dropped citations.
 
 FalkorDB implements a **subset** of openCypher v9. The dialect constraints that shaped this
 model — no regex operator, no label expressions, no aggregation inside pattern
