@@ -155,6 +155,10 @@ MATCH path = (c:Claim)-[:DERIVED_FROM*2..5]->(c)
 RETURN c.id, c.text, [n IN nodes(path) | n.text] AS cycle_path
 ```
 
+> **Status: both forms verified working** on FalkorDB with the `graph` module (Oct 2026).
+> Alternation inside a variable-length pattern is accepted, and a 3-hop cycle
+> `A→B→C→A` is detected from each of its three starting nodes.
+
 ### Q2 — Unsupported claims (no source, no derivation)
 
 Written with `OPTIONAL MATCH` rather than a negated pattern predicate, because pattern
@@ -246,28 +250,39 @@ ORDER BY i.detected_at DESC
 Catches "Mars has oxygen at night" against a quarantined "Mars has breathable oxygen at
 night". Requires a vector index over `Claim.embedding`.
 
+**Verified against a live instance** (FalkorDB with the `graph` module, Oct 2026).
+
 ```cypher
 CREATE VECTOR INDEX FOR (c:Claim) ON (c.embedding)
 OPTIONS {dimension: 1536, similarityFunction: 'cosine'}
 ```
 
 ```cypher
-MATCH (q:Claim {id: $query_claim_id})
-CALL db.idx.vector.queryNodes('Claim', 'embedding', 5, q.embedding)
+CALL db.idx.vector.queryNodes('Claim', 'embedding', $k, vecf32($query_embedding))
 YIELD node AS candidate, score
 MATCH (candidate)<-[:TARGETS]-(i:Infection)
 RETURN candidate.id AS claim_id,
        candidate.text AS claim,
        candidate.status,
-       score,
+       score AS cosine_distance,
        i.type AS infection_type
-ORDER BY score DESC
+ORDER BY score ASC
 ```
 
-> **Verify the exact vector-index syntax against the running instance before relying on
-> it.** FalkorDB has changed this surface between releases. If it does not work, fall back
-> to the extractor emitting `REPEATS` edges plus a Python-side cosine comparison over
-> embeddings stored as `Claim.embedding` lists.
+Two behaviours were confirmed by execution, not assumed:
+
+1. The query vector **must** be wrapped in `vecf32(...)`. Passing a bare list, or a stored
+   vector property directly, raises
+   `Invalid arguments for procedure 'db.idx.vector.queryNodes'`.
+2. The yielded `score` is a cosine **distance** (0.0 = identical) even though the index
+   option is named `similarityFunction`. `ORDER BY score DESC` therefore returns the *least*
+   similar candidates — a silent correctness bug that only shows up once more than `k`
+   claims exist. Order ascending.
+
+**Fallback if vector support is unavailable:** `Q7B_RECALL_CANDIDATES` pulls the candidate
+set from the graph (claims carrying an infection) and scores token-overlap similarity in
+Python via `models.similarity()`. The graph still supplies the recall set, so FalkorDB
+remains load-bearing; only the scoring differs.
 
 ### Q8 — Antibody effectiveness (does immunity actually improve?)
 
