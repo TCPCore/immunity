@@ -13,9 +13,13 @@ Legend: ✅ satisfied · ⚠️ action required · ⛔ not yet done
 
 ## Critical path items still open
 
+✅ **The push is done.** All 25 commits are on `main`, verified three ways: `origin/main`
+and `HEAD` resolve to the same SHA, `git rev-list --count origin/main` returns 25, and every
+key file returns HTTP 200 from the GitHub contents API. The README and its screenshot both
+render from the remote.
+
 | # | Item | Owner | Why it blocks |
 | --- | --- | --- | --- |
-| 0 | **Push the commits** | human | Rule 10 needs a public repository containing the work. 18 commits are made locally but the remote is still empty because `git push` has no credentials. Authenticate with `gh auth login` or a PAT, then `git push -u origin main`. |
 | 1 | **Confirm registration** | human | Rule 1. The schedule says registration is the one checkpoint you must act on. An unregistered team cannot submit. |
 | 2 | **Record the demo video** (2–3 min) | human | Rule 10 explicitly requires "a demo video showing the working project". Use `DEMO_SCRIPT.md`. |
 | 3 | **Complete the rule 12/13 review** | human | Rules 12 and 13. You must be able to explain the model and every query, and demonstrate meaningful contribution. See `EXPLAINER.md`. |
@@ -33,7 +37,7 @@ Legend: ✅ satisfied · ⚠️ action required · ⛔ not yet done
 | Opening the app before Docker is running | shows "Cannot reach FalkorDB … start it with docker compose up -d", not a traceback |
 | High-concurrency reads and writes (Track 02) | 8 concurrent writers, 200 writes: 200/200 unique sequence numbers vs 37/200 for the naive read-then-write. See `tests/test_concurrency.py` |
 | The UI works | 5 headless `AppTest` tests execute `app.py`, click through the mission and assert recall fires |
-| The repo is public | verified via the GitHub API (anonymous read) |
+| The repo is public and fully pushed | verified via the GitHub API; `origin/main` and `HEAD` are the same commit |
 | No credentials in history | `git log --diff-filter=A` shows no `.env` ever committed |
 
 ---
@@ -120,7 +124,7 @@ pre-hackathon code exists, as the workspace was empty at session start.
 ### Rule 10 — Required submission contents
 | Required | Status | Where |
 | --- | --- | --- |
-| Public source-code repository | ✅ | `github.com/TCPCore/immunity` — verified public via the GitHub API |
+| Public source-code repository | ✅ | [github.com/TCPCore/immunity](https://github.com/TCPCore/immunity) — verified public via the GitHub API, 25 commits on `main` |
 | README with setup instructions | ✅ | `../README.md` |
 | README with graph data model | ✅ | `../README.md` summary + `GRAPH_MODEL.md` |
 | The Cypher queries the product depends on | ✅ | `GRAPH_MODEL.md` §5 and `src/immunegraph/queries.py` |
