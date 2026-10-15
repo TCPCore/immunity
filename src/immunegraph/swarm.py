@@ -46,7 +46,6 @@ class Swarm:
         self.antibody = AntibodyAgent(store, self.writer)
         self.tenant_id = tenant_id
         self.session_id: str | None = None
-        self._claim_counter = 0
 
     # --------------------------------------------------------------- setup
 
@@ -72,8 +71,13 @@ class Swarm:
         return self.session_id
 
     def _new_claim_id(self) -> str:
-        self._claim_counter += 1
-        return f"cl_{self.session_id}_{self._claim_counter:04d}"
+        """Claim ids come from an atomic per-session counter, not a Python one.
+
+        A module-level counter is not safe when several agents write
+        concurrently, which is exactly the Track 02 scenario.
+        """
+        n = self.writer.allocate_counter(self._require_session(), "claim")
+        return f"cl_{self.session_id}_{n:04d}"
 
     # ----------------------------------------------------------- graph reads
 
@@ -127,8 +131,7 @@ class Swarm:
             )
         )
 
-        message_id = f"msg_{session_id}_{len(self.writer.existing_message_ids(session_id)) + 1:04d}"
-        self.writer.record_message(message_id, session_id, persona.id, text)
+        message_id, _seq = self.writer.record_message(session_id, persona.id, text)
 
         # Resolve "-1 means the previous claim" BEFORE this turn adds any, so a
         # derivation points at the prior turn rather than at itself.

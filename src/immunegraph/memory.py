@@ -38,48 +38,49 @@ class MemoryWriter:
             {"id": session_id, "now": utcnow()},
         )
 
-    def next_seq(self, session_id: str) -> int:
-        current = self.store.scalar(
-            "MATCH (m:Message {session_id: $sid}) RETURN coalesce(max(m.seq), 0)",
+    _COUNTER_NAMES = frozenset({"seq", "claim"})
+
+    def allocate_counter(self, session_id: str, name: str) -> int:
+        """Atomically allocate the next value of a per-session counter.
+
+        Deliberately implemented as a *write* (``SET``) so FalkorDB serialises
+        it. The obvious implementation — read ``max(seq)`` and add one — is a
+        read-only query, and concurrent readers are free to observe the same
+        value, which produces duplicate sequence numbers and colliding ids.
+
+        ``name`` is validated against an allow-list because it is interpolated
+        into the query text.
+        """
+        if name not in self._COUNTER_NAMES:
+            raise ValueError(f"unknown counter {name!r}")
+        prop = f"{name}_counter"
+        row = self.store.one(
+            f"""
+            MATCH (s:Session {{id: $sid}})
+            WITH s, coalesce(s.{prop}, 0) AS current
+            SET s.{prop} = current + 1
+            RETURN s.{prop}
+            """,
             {"sid": session_id},
         )
-        return int(current or 0) + 1
-
-    # -------------------------------------------------------------- agents
-
-    def upsert_agent(self, agent: Agent) -> None:
-        self.store.query(
-            """
-            MERGE (a:Agent {id: $id})
-            SET a.name = $name, a.role = $role,
-                a.base_trust = coalesce(a.base_trust, $base_trust),
-                a.tenant_id = $tenant_id
-            """,
-            agent.to_properties(),
-        )
-
-    def link_trust(self, truster_id: str, trustee_id: str, weight: float = 1.0) -> None:
-        self.store.query(
-            """
-            MATCH (t:Agent {id: $truster}), (u:Agent {id: $trustee})
-            MERGE (t)-[r:TRUSTS]->(u) SET r.weight = $weight
-            """,
-            {"truster": truster_id, "trustee": trustee_id, "weight": weight},
-        )
-
-    # -------------------------------------------------------- episodic layer
+        if row is None:
+            raise RuntimeError(f"session {session_id!r} does not exist")
+        return int(row[0])
 
     def record_message(
         self,
-        message_id: str,
         session_id: str,
         agent_id: str,
         text: str,
-        seq: int | None = None,
         role: str = "agent",
-    ) -> str:
-        """Append an immutable utterance and attach it to its session."""
-        seq = self.next_seq(session_id) if seq is None else seq
+    ) -> tuple[str, int]:
+        """Append an immutable utterance. Returns (message_id, seq).
+
+        The id is derived from the atomically allocated sequence number, so
+        concurrent writers cannot collide.
+        """
+        seq = self.allocate_counter(session_id, "seq")
+        message_id = f"msg_{session_id}_{seq:04d}"
         self.store.query(
             """
             MATCH (s:Session {id: $session_id})
@@ -103,7 +104,29 @@ class MemoryWriter:
             """,
             {"agent_id": agent_id, "message_id": message_id, "ts": utcnow()},
         )
-        return message_id
+        return message_id, seq
+
+    # -------------------------------------------------------------- agents
+
+    def upsert_agent(self, agent: Agent) -> None:
+        self.store.query(
+            """
+            MERGE (a:Agent {id: $id})
+            SET a.name = $name, a.role = $role,
+                a.base_trust = coalesce(a.base_trust, $base_trust),
+                a.tenant_id = $tenant_id
+            """,
+            agent.to_properties(),
+        )
+
+    def link_trust(self, truster_id: str, trustee_id: str, weight: float = 1.0) -> None:
+        self.store.query(
+            """
+            MATCH (t:Agent {id: $truster}), (u:Agent {id: $trustee})
+            MERGE (t)-[r:TRUSTS]->(u) SET r.weight = $weight
+            """,
+            {"truster": truster_id, "trustee": trustee_id, "weight": weight},
+        )
 
     # -------------------------------------------------------- semantic layer
 
