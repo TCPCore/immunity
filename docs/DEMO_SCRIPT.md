@@ -1,10 +1,26 @@
 # Demo video script
 
-Target: **2:40**. Rule 10 requires a demo video showing the working project, so this is
+Target: **~3:00**. Rule 10 requires a demo video showing the working project, so this is
 scripted beat by beat.
 
 The goal is that a judge who watches only the video understands that **the graph is the
 immune system**, not a visualisation bolted onto storage.
+
+## Measured timings (dry-run on the real UI)
+
+| Beat | On screen | Scripted slot |
+| --- | --- | --- |
+| App boot | 1.0s | — |
+| "Run Mars mission" cascade + detection + antibody | **3.1s** | 0:35 – 1:15 (40s) |
+| "Re-inject the false claim" recall | **0.2s** | 2:20 – 2:45 (25s) |
+
+**The one pacing trap:** the cascade animation finishes in about three seconds, but Act I is
+scripted as forty seconds of narration. Do not click and then start talking — you will be
+pointing at a static graph for 37 seconds. Either narrate *what is about to happen* before
+clicking, or click first and use the finished graph as the illustration while you explain the
+three hops. Both work; the second looks better on camera.
+
+The recall at the end is effectively instant, which is the point — say so rather than waiting.
 
 ---
 
@@ -13,10 +29,21 @@ immune system**, not a visualisation bolted onto storage.
 ```bash
 docker compose up -d
 .venv/bin/python -m immunegraph.verify_queries    # must end with "All non-optional queries..."
+.venv/bin/python scripts/demo_dry_run.py          # checks every beat below against the app
 .venv/bin/streamlit run app.py
+
+# Optional: drive the real browser through all three beats and save a storyboard
+python scripts/live_ui_walkthrough.py http://127.0.0.1:8501 /tmp/storyboard
 ```
 
+`demo_dry_run.py` asserts that the numbers this script quotes are the numbers that actually
+appear at each beat. Run it first; if it passes, the recording should go smoothly.
+
 - [ ] FalkorDB healthy: `docker ps` shows `immunegraph-db  Up ... (healthy)`
+- [ ] **Restart Streamlit if you changed any code under `src/`.** It reloads `app.py` on save
+  but keeps already-imported modules cached, so a running app can silently execute the *old*
+  `immunegraph` package. This bit us once: the UI showed new text while the immune-response
+  logic was stale. When in doubt, kill and restart.
 - [ ] App loads at <http://localhost:8501> with an empty graph ("No conversation yet")
 - [ ] Sidebar shows **▶ Run Mars mission**, **💉 Re-inject the false claim**, **🗑 Reset graph**
 - [ ] Browser zoom ~110% so the graph labels are legible at 1080p
@@ -59,7 +86,8 @@ node appears in red.
 > then we can skip life support. Neither the Analyst nor the Planner is lying. Each reasoned
 > correctly from the premise it was handed."
 
-*Beat. Let the audience watch the graph build.*
+*Beat. Let the audience watch the graph build — but note it finishes in about three seconds,
+so this is where the pacing trap lives. See "Measured timings" at the top.*
 
 ## 1:15 – 1:40 · Act II — what the graph found
 
@@ -82,6 +110,13 @@ node appears in red.
 > contradicting it. Notice the antibody cannot just assert a fact: if it had no source, it
 > would say so instead of inventing one."
 
+**Then point at the conversation panel, which is the part judges remember.**
+
+> "And look at what happened to the other two. The Analyst's and the Planner's claims are now
+> amber — *support invalidated*. They were never proven false, but their only justification
+> was the claim we just refuted, so they stop being trustworthy. Quarantining the root isn't
+> enough; the whole cascade has to be contained."
+
 ## 2:05 – 2:20 · Act IV — trust, derived
 
 **On screen:** the **Trust** table.
@@ -91,31 +126,43 @@ node appears in red.
 > claim directly; it inherited the infection through the derivation chain, and the graph knows
 > that."
 
+*Optional extra, only if you have room:* point out the **Immunity memory (Q8)** table now
+reads `contained: 0` for the unsupported root. That is deliberate — the antibody is not
+credited with working until the swarm proves it by not being fooled again. The recall in the
+next beat is what flips that number to 1.
+
 ## 2:20 – 2:45 · Act V — immunity (the payoff)
 
-**Do:** click **💉 Re-inject the false claim**. Pause on the green success banner.
+**Do:** click **💉 Re-inject the false claim**. The recall is effectively instant (0.2s), so
+click and keep talking — do not wait for something to happen.
 
 > "Now the Researcher tries again, with a *paraphrase*: Mars has oxygen at night. Watch."
 
-*Beat — the success banner appears.*
+*The green banner is already there.*
 
 > "Recognised instantly. Matched by similarity at zero point seven five against the claim that
 > was quarantined earlier — and the claim is quarantined on sight. No cascade detection ran.
 > Click it again and it matches on the fingerprint hash instead, and the answer is immediate.
 > The swarm does not get fooled twice."
 
-**Optional, if you have time:** click **Re-inject** a second time to show the "exact match"
-path and prove it does not crash.
+**Point at the trust table again — this is a strong beat.**
 
-## 2:45 – 2:40 · Close — did it actually work?
+> "And the Researcher drops further, to zero point seven, because it asserted the lie twice.
+> The other two stay at zero point eight five. Trust is being derived from the graph, so
+> re-offending costs you."
+
+**Optional:** click **Re-inject** a second time to show the "exact match" path.
+
+## 2:45 – 3:00 · Close — did it actually work?
 
 **On screen:** the **Immunity memory (Q8)** table.
 
 > "And query eight makes 'the swarm develops immunity' measurable: one outbreak of each type,
-> both contained, zero recurred.
+> both contained, zero recurred. That number was zero a moment ago — the recall is what proved
+> the antibody worked.
 >
 > Every query here has been executed against a live instance — `verify_queries` runs all
-> thirteen, and the test suite has twenty-eight tests. FalkorDB wasn't a place to store the
+> thirteen, and the test suite has fifty tests. FalkorDB wasn't a place to store the
 > answer. It was the thing that worked out the answer."
 
 ---

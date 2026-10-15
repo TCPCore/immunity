@@ -42,7 +42,7 @@ Multi-tenancy is handled by FalkorDB's multi-graph feature — one graph per ten
     id,
     text,             // canonical natural-language claim
     fingerprint,      // normalised dedupe key — deterministic repeat detection
-    status,           // 'active' | 'quarantined' | 'corroborated' | 'retracted'
+    status,           // 'active' | 'suspect' | 'quarantined' | 'corroborated' | 'retracted'
     verification,     // 'unsourced' | 'sourced' | 'contradicted'
     confidence,       // 0.0–1.0, as asserted
     created_at

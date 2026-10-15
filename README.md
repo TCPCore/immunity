@@ -42,11 +42,12 @@ storage.
 
 ![ImmuneGraph — conversation, live belief graph and immune dashboard](docs/images/immunegraph-ui.png)
 
-*After the Mars run. The original claim and its later paraphrase are both quarantined (dark
-red) with two `Antibody` nodes in gold. Peak severity is 6.0, both outbreaks are contained,
-and trust has decayed to **0.70** for the Researcher — who asserted the falsehood *and* its
-repeat — and **0.85** for the Analyst and Planner, who each only inherited it through the
-derivation chain.*
+*After the Mars run and the immunity-recall test. The original claim and its later paraphrase
+are both quarantined (dark red). The Analyst's and Planner's claims are amber — **support
+invalidated** — because their only justification was the claim just refuted; they are not
+proven false, but they are no longer trustworthy. Peak severity is 6.0, both outbreaks are
+contained, and trust has decayed to **0.70** for the Researcher (who asserted the falsehood
+*and* its repeat) and **0.85** for the Analyst and Planner, who each only inherited it.*
 
 ## The problem
 

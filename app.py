@@ -38,6 +38,9 @@ NODE_COLOURS = {
 }
 
 QUARANTINED_COLOUR = "#7A2E28"
+# Support invalidated by an upstream quarantine — not proven false, but no
+# longer trustworthy. Amber, deliberately distinct from the red of a refuted claim.
+SUSPECT_COLOUR = "#D98324"
 
 
 # ------------------------------------------------------------------- resources
@@ -84,11 +87,15 @@ def render_transcript(swarm: Swarm) -> None:
         st.caption("No conversation yet. Run the Mars mission to begin.")
         return
     for name, text, seq, statuses in rows:
-        badge = ""
-        if "quarantined" in (statuses or []):
+        statuses = statuses or []
+        if "quarantined" in statuses:
             badge = "  🚫 *quarantined*"
+        elif "suspect" in statuses:
+            badge = "  ⚠️ *support invalidated*"
         elif statuses and statuses[0]:
             badge = "  ✅ *believed*"
+        else:
+            badge = ""
         with st.chat_message("assistant" if name != "Antibody System" else "system"):
             st.markdown(f"**{name}**{badge}")
             st.markdown(text)
@@ -112,7 +119,7 @@ def render_graph(swarm: Swarm, height: int = 660) -> None:
         from streamlit_agraph import Config, Edge, Node, agraph
     except Exception as exc:  # noqa: BLE001
         st.warning(f"Graph canvas unavailable ({exc}). Falling back to a table.")
-        st.dataframe(snapshot["nodes"], use_container_width=True)
+        st.dataframe(snapshot["nodes"], width="stretch")
         return
 
     nodes = []
@@ -121,9 +128,13 @@ def render_graph(swarm: Swarm, height: int = 660) -> None:
         props = node.get("properties") or {}
         colour = NODE_COLOURS.get(label, "#CCCCCC")
         size = 18
-        if label == "Claim" and props.get("status") == "quarantined":
-            colour = QUARANTINED_COLOUR
-            size = 22
+        if label == "Claim":
+            if props.get("status") == "quarantined":
+                colour = QUARANTINED_COLOUR
+                size = 22
+            elif props.get("status") == "suspect":
+                colour = SUSPECT_COLOUR
+                size = 20
         if label == "Infection":
             size = 18 + min(float(props.get("severity") or 0), 12)
         title = node.get("title") or node["id"]
@@ -180,7 +191,8 @@ def render_graph(swarm: Swarm, height: int = 660) -> None:
     )
     st.markdown(
         f"<div style='font-size:0.85rem'>{legend} · "
-        f"<span style='color:{QUARANTINED_COLOUR};font-weight:700'>■</span> quarantined claim"
+        f"<span style='color:{QUARANTINED_COLOUR};font-weight:700'>■</span> quarantined · "
+        f"<span style='color:{SUSPECT_COLOUR};font-weight:700'>■</span> support invalidated"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -224,14 +236,14 @@ def render_dashboard(swarm: Swarm) -> None:
                 }
                 for row in trust
             ],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
     st.markdown("##### Immunity memory (Q8)")
     effectiveness = swarm.effectiveness()
     if effectiveness:
-        st.dataframe(effectiveness, use_container_width=True, hide_index=True)
+        st.dataframe(effectiveness, width="stretch", hide_index=True)
     else:
         st.caption("No antibodies have responded yet.")
 
@@ -307,14 +319,14 @@ def main() -> None:
             "Three agents plan a Mars mission. The first asserts something with no source. "
             "The other two reason correctly from it."
         )
-        if st.button("▶  Run Mars mission", type="primary", use_container_width=True):
+        if st.button("▶  Run Mars mission", type="primary", width="stretch"):
             placeholder = st.empty()
             run_mission(swarm, store, placeholder)
             st.rerun()
-        if st.button("💉  Re-inject the false claim", use_container_width=True):
+        if st.button("💉  Re-inject the false claim", width="stretch"):
             st.session_state["recall_note"] = reinject(swarm)
             st.rerun()
-        if st.button("🗑  Reset graph", use_container_width=True):
+        if st.button("🗑  Reset graph", width="stretch"):
             store.reset()
             store.create_indexes()
             st.session_state.pop("recall_note", None)

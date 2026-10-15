@@ -50,6 +50,10 @@ RELATIONSHIP_TYPES: list[str] = [
 # Claim lifecycle states.
 CLAIM_ACTIVE = "active"
 CLAIM_QUARANTINED = "quarantined"
+# Support invalidated: the claim descends from a quarantined root and carries no
+# independent trusted source. Not proven false, but no longer trustworthy.
+# Without this state a cascade leaves downstream claims reading as 'believed'.
+CLAIM_SUSPECT = "suspect"
 CLAIM_CORROBORATED = "corroborated"
 CLAIM_RETRACTED = "retracted"
 

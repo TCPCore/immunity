@@ -20,12 +20,13 @@ from __future__ import annotations
 import json
 import os
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .memory import MemoryWriter
 from .models import Antibody, Claim, Source, utcnow
 from .schema import (
     CLAIM_QUARANTINED,
+    CLAIM_SUSPECT,
     INFECTION_CONTAINED,
     INFECTION_UNSUPPORTED,
     TRUST_PRIMARY,
@@ -77,6 +78,7 @@ class AntibodyResult:
     strategy: str
     severity_before: float
     contained: bool = True
+    cascade_contained: list[str] = field(default_factory=list)
 
     def lines(self) -> list[str]:
         out = [
@@ -88,7 +90,12 @@ class AntibodyResult:
         if self.source_name:
             out.append(f"  cited source: {self.source_name}")
         out.append(f"  severity    : {self.severity_before:.1f}")
-        out.append(f"  action      : root claim quarantined, infection contained")
+        out.append("  action      : root claim quarantined, infection contained")
+        if self.cascade_contained:
+            out.append(
+                f"  cascade     : {len(self.cascade_contained)} downstream claim(s) "
+                "marked suspect (support invalidated)"
+            )
         return out
 
 
@@ -218,6 +225,35 @@ class AntibodyAgent:
             STRATEGY_SURFACE,
         )
 
+    # -------------------------------------------------------------- cascade
+
+    def contain_cascade(self, root_claim_id: str) -> list[str]:
+        """Mark claims whose only support descends from a quarantined root.
+
+        Quarantining the root alone leaves the Analyst's and Planner's claims
+        reading as 'believed', which is actively misleading: their entire
+        justification was the claim we just refuted. They are downgraded to
+        'suspect' — not proven false, but no longer trustworthy — unless they
+        carry their own independent trusted source, in which case they stand on
+        their own.
+
+        Returns the ids that were downgraded.
+        """
+        rows = self.store.rows(
+            """
+            MATCH (down:Claim)-[:DERIVED_FROM*1..5]->(root:Claim {id: $root})
+            WHERE down.status = 'active'
+            OPTIONAL MATCH (down)-[:SUPPORTED_BY]->(s:Source)
+              WHERE s.trust_level IN ['primary', 'reputable']
+            WITH down, count(s) AS independent
+            WHERE independent = 0
+            SET down.status = $suspect
+            RETURN down.id
+            """,
+            {"root": root_claim_id, "suspect": CLAIM_SUSPECT},
+        )
+        return [row[0] for row in rows]
+
     # -------------------------------------------------------------- respond
 
     def respond(self, infection_id: str) -> AntibodyResult | None:
@@ -273,6 +309,9 @@ class AntibodyAgent:
         self.writer.set_verification(info["root_claim_id"], "contradicted")
         self.writer.set_infection_status(infection_id, INFECTION_CONTAINED)
 
+        # 5. contain the whole cascade, not only its root
+        cascade = self.contain_cascade(info["root_claim_id"])
+
         return AntibodyResult(
             antibody_id=antibody.id,
             infection_id=infection_id,
@@ -283,6 +322,7 @@ class AntibodyAgent:
             source_name=source_name,
             strategy=strategy,
             severity_before=info["severity"],
+            cascade_contained=cascade,
         )
 
     def respond_to_all(self) -> list[AntibodyResult]:

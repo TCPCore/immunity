@@ -87,6 +87,14 @@ def test_mars_scenario_end_to_end():
         i["status"] == "contained" for i in swarm.infections()
     ), swarm.infections()
 
+    # The cascade is contained, not only its root. The Analyst's and Planner's
+    # claims descend from the refuted claim and have no independent source, so
+    # leaving them as 'active' would show them as "believed" in the UI while
+    # their entire justification had just been refuted.
+    suspect = [row[0] for row in store.rows("MATCH (c:Claim {status: 'suspect'}) RETURN c.id")]
+    assert len(suspect) == 2, f"expected the 2 derived claims to be suspect, got {suspect}"
+    assert results[0].cascade_contained, "antibody should report what it contained"
+
     # --- Act IV: trust decays for the whole chain --------------------------
     trust = {row["agent"]: row["effective_trust"] for row in swarm.trust_table()}
     assert trust["Researcher"] == pytest.approx(0.85)   # asserted the infected claim

@@ -111,7 +111,8 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True) -> dict:
         summary["antibodies"].append(
             {"antibody_id": res.antibody_id, "strategy": res.strategy,
              "correction": res.correction_text, "source": res.source_name,
-             "severity_before": res.severity_before}
+             "severity_before": res.severity_before,
+             "cascade_contained": res.cascade_contained}
         )
 
     # --------------------------------------------------------------- ACT IV
