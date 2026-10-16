@@ -124,6 +124,60 @@ RETURN k.text, ab.id AS established_by, s.name AS source, s.url AS source_url
 
 ---
 
+## Durability — the graph is a projection
+
+**FalkorDB Cloud's free tier has no persistence and no backups.** Instances are stopped after
+a day idle and deleted after seven. A kernel of truth that evaporates is not much of a truth,
+and a judge clicking a dead link is worse than no link.
+
+So every write is appended to a **write-ahead log** *before* it is applied, and the graph can
+be rebuilt from that log at any time. FalkorDB is the live queryable view; the log is what
+survives.
+
+Press **♻️ Rebuild from log** and it wipes the graph and reconstructs it, then reports whether
+the result is *identical* rather than merely plausible:
+
+```
+Rebuilt 73 writes from the log — the graph is identical to the one before
+the wipe (20 nodes).
+```
+
+**Why the log stores statements rather than semantic events.** Events such as
+`ClaimAsserted {text: ...}` read better, but replay then has to reconstruct *which* write that
+implied, and any divergence between the event vocabulary and the writer's behaviour shows up
+as a graph that quietly differs from the original. Statements cannot diverge — replaying them
+*is* the original write.
+
+That matters most for ids. Infection and antibody ids are `uuid4`, so a replay that regenerated
+them would produce a different graph with every reference broken. Because the log stores the
+fully-substituted statement, the generated id is captured with it.
+
+Replay is *proven*, not assumed: `graph_fingerprint()` compares node ids, relationship counts
+and claim statuses before and after, and [`tests/test_durability.py`](tests/test_durability.py)
+asserts they match — over the whole Mars arc, twice in a row, and from an exported seed.
+
+> **The fingerprint earned its place immediately.** The first rebuild looked fine by every
+> superficial measure, but two claims silently reverted from `suspect` to `active`. The cause:
+> the cascade-containment update returns ids, so it *read* like a query and had been written
+> with `rows()` — which is **not logged**. It worked, and a rebuild lost it. There is now a
+> structural test that fails if any write hides inside a read helper.
+
+### Cold starts
+
+[`data/seed_writes.jsonl`](data/seed_writes.jsonl) is a committed 73-write log of the Mars run.
+Point `SEED_LOG` at it and a freshly deployed app rebuilds the whole story on first load — no
+clicking, nothing to go stale:
+
+```bash
+SEED_LOG=data/seed_writes.jsonl
+```
+
+For genuine cross-restart durability the log needs durable storage — a mounted volume, object
+storage, or a paid FalkorDB tier. On Streamlit Community Cloud the filesystem is ephemeral, so
+the seed is what makes a cold start deterministic.
+
+---
+
 ## Graph model
 
 Nodes: `Tenant` · `Session` · `Message` · `Agent` · `Claim` · `Source` · `Infection` · `Antibody` · `KernelFact`
@@ -281,7 +335,7 @@ A Cypher query that has never been executed is not a feature. Three layers of pr
 
 ```bash
 .venv/bin/python -m immunegraph.verify_queries   # every query, against a live instance
-.venv/bin/python -m pytest                       # 85 tests
+.venv/bin/python -m pytest                       # 100 tests
 .venv/bin/python -m immunegraph.demo             # the full arc; exits non-zero on failure
 ```
 

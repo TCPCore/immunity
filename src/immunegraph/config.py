@@ -78,6 +78,8 @@ class Settings:
     graph: str
     extractor: str
     tenant_id: str
+    write_log_path: str
+    seed_log_path: str | None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -99,6 +101,10 @@ class Settings:
             graph=graph,
             extractor=(os.getenv("EXTRACTOR") or "auto").strip().lower(),
             tenant_id=tenant or "default",
+            # Durable write-ahead log. FalkorDB Cloud's free tier has no
+            # persistence, so the graph is treated as a rebuildable projection.
+            write_log_path=(os.getenv("WRITE_LOG_PATH") or "/tmp/immunegraph-writes.db").strip(),
+            seed_log_path=(os.getenv("SEED_LOG") or "").strip() or None,
         )
 
     @property

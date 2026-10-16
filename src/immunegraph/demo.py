@@ -18,6 +18,7 @@ import time
 from .agents import MARS_CASCADE, MARS_REPEAT, MARS_TOPIC
 from .config import Settings
 from .db import GraphStore
+from .event_log import WriteLog
 from .swarm import Swarm
 
 WIDTH = 76
@@ -44,13 +45,17 @@ def build_store() -> GraphStore:
     return store
 
 
-def run(reset: bool = True, pause: float = 0.0, verbose: bool = True) -> dict:
+def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
+        export_seed: str | None = None) -> dict:
     store = build_store()
+    settings = Settings.from_env()
+    log = WriteLog(settings.write_log_path)
+    swarm = Swarm(store, log=log)
     if reset:
-        store.reset()
+        # Clears the log as well as the graph, so a re-run does not replay a
+        # previous run's writes on top of this one.
+        swarm.reset_all()
     store.create_indexes()
-
-    swarm = Swarm(store)
     swarm.start(MARS_TOPIC)
 
     summary: dict = {"cascade": [], "infections": [], "antibodies": [],
@@ -207,6 +212,42 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True) -> dict:
     say("  by comparison. One gets more expensive as the graph grows; the")
     say("  other does not — that is what immunity means here.")
 
+    # -------------------------------------------------------------- ACT VIII
+    banner("ACT VIII  —  DURABILITY: THE GRAPH IS A PROJECTION")
+    say("FalkorDB Cloud's free tier has no persistence and no backups. So")
+    say("every write is appended to a log BEFORE it is applied, and the graph")
+    say("can be rebuilt from that log at any time.")
+    rule()
+    say(f"  writes logged : {swarm.log_count()}")
+    top = list(swarm.log_label_counts().items())[:4]
+    say(f"  most frequent : " + ", ".join(f"{label} x{n}" for label, n in top))
+    result = swarm.rebuild_from_log()
+    say("")
+    say(f"  graph wiped and rebuilt from the log")
+    say(f"  replayed      : {result['applied']} writes, {result['failed']} failed")
+    say(f"  identical     : {result['identical']}")
+    say("")
+    say("  Identical includes node ids. That is why the log stores")
+    say("  statements rather than semantic events: replaying a statement")
+    say("  reproduces the generated id exactly, whereas regenerating one")
+    say("  would produce a different graph with every reference broken.")
+    summary["durability"] = {
+        "writes": swarm.log_count(),
+        "applied": result["applied"],
+        "failed": result["failed"],
+        "identical": result["identical"],
+    }
+
+    if export_seed:
+        from .projection import export_jsonl
+
+        written = export_jsonl(log, export_seed)
+        say("")
+        say(f"  seed log exported: {written} writes -> {export_seed}")
+        say("  Set SEED_LOG to this path and a cold-started deployment")
+        say("  rebuilds the whole story without anyone clicking anything.")
+        summary["durability"]["seed"] = export_seed
+
     banner("GRAPH STATE")
     for label, count in swarm.stats().items():
         say(f"  {label:<12}{count:>4}")
@@ -225,9 +266,19 @@ def main() -> None:
     parser.add_argument("--keep", action="store_true",
                         help="do not wipe the graph before running")
     parser.add_argument("--quiet", action="store_true", help="suppress the narrative")
+    parser.add_argument(
+        "--export-seed",
+        metavar="PATH",
+        help="also write this run's write-ahead log to PATH as JSONL, for SEED_LOG",
+    )
     args = parser.parse_args()
 
-    summary = run(reset=not args.keep, pause=args.pause, verbose=not args.quiet)
+    summary = run(
+        reset=not args.keep,
+        pause=args.pause,
+        verbose=not args.quiet,
+        export_seed=args.export_seed,
+    )
 
     failures = []
     if not summary["recall"] or not summary["recall"]["hit"]:

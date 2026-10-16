@@ -17,6 +17,7 @@ from .immune import ImmuneScanner, RecallResult, TRUST_DECAY_PER_INFECTION
 from .kernel import Kernel
 from .memory import MemoryWriter
 from .models import Agent, Claim, Source
+from .projection import rebuild_and_verify
 from .sanitizer import Sanitizer
 from .schema import CLAIM_ACTIVE
 
@@ -41,7 +42,7 @@ class TurnResult:
 class Swarm:
     """Shared-state multi-agent conversation backed by FalkorDB."""
 
-    def __init__(self, store, extractor=None, tenant_id: str = "default") -> None:
+    def __init__(self, store, extractor=None, tenant_id: str = "default", log=None) -> None:
         self.store = store
         self.writer = MemoryWriter(store)
         self.extractor = extractor or get_extractor()
@@ -54,6 +55,11 @@ class Swarm:
         self.sanitizer = Sanitizer(store, self.writer, kernel=self.kernel)
         self.tenant_id = tenant_id
         self.session_id: str | None = None
+        # Attaching a write-ahead log makes every mutation below recoverable:
+        # the graph becomes a projection that can be rebuilt from scratch.
+        self.log = log
+        if log is not None:
+            store.attach_log(log)
 
     # --------------------------------------------------------------- setup
 
@@ -289,6 +295,45 @@ class Swarm:
 
     def sanitizer_summary(self) -> dict:
         return self.sanitizer.summary()
+
+    # ------------------------------------------------------------ durability
+
+    def rebuild_from_log(self, reset: bool = True) -> dict:
+        """Wipe the graph and rebuild it from the write-ahead log.
+
+        Returns the replay result, including whether the rebuilt graph is
+        identical to the one that was there before — the claim worth making is
+        "provably the same", not "still seems to work".
+        """
+        if self.log is None:
+            return {"applied": 0, "failed": 0, "identical": None,
+                    "error": "no write log attached"}
+        return rebuild_and_verify(self.store, self.log)
+
+    def reset_all(self) -> None:
+        """Wipe the graph *and* the log — start the scenario over.
+
+        Resetting only the graph leaves the log holding writes for data that no
+        longer exists. The next rebuild would then replay both runs, and because
+        claim ids come from a per-session counter that restarts at zero, the
+        second run's `cl_..._0001` would collide with the first run's. Clearing
+        both keeps log and graph in step.
+        """
+        self.store.reset()
+        self.store.create_indexes()
+        if self.log is not None:
+            self.log.clear()
+
+    def log_entries(self, limit: int = 60) -> list[dict]:
+        if self.log is None:
+            return []
+        return self.log.labels(limit=limit)
+
+    def log_count(self) -> int:
+        return len(self.log) if self.log is not None else 0
+
+    def log_label_counts(self) -> dict[str, int]:
+        return self.log.label_counts() if self.log is not None else {}
 
     @staticmethod
     def _node_view(node, labels) -> tuple[str, dict]:

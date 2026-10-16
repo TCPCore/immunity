@@ -275,7 +275,7 @@ class AntibodyAgent:
     # -------------------------------------------------------------- cascade
 
     def contain_cascade(self, root_claim_id: str) -> list[str]:
-        """Mark claims whose only support descends from a quarantined root.
+        """Downgrade claims whose only support descends from a quarantined root.
 
         Quarantining the root alone leaves the Analyst's and Planner's claims
         reading as 'believed', which is actively misleading: their entire
@@ -284,22 +284,9 @@ class AntibodyAgent:
         carry their own independent trusted source, in which case they stand on
         their own.
 
-        Returns the ids that were downgraded.
+        Delegated to the writer so the update is logged and survives a rebuild.
         """
-        rows = self.store.rows(
-            """
-            MATCH (down:Claim)-[:DERIVED_FROM*1..5]->(root:Claim {id: $root})
-            WHERE down.status = 'active'
-            OPTIONAL MATCH (down)-[:SUPPORTED_BY]->(s:Source)
-              WHERE s.trust_level IN ['primary', 'reputable']
-            WITH down, count(s) AS independent
-            WHERE independent = 0
-            SET down.status = $suspect
-            RETURN down.id
-            """,
-            {"root": root_claim_id, "suspect": CLAIM_SUSPECT},
-        )
-        return [row[0] for row in rows]
+        return self.writer.contain_cascade(root_claim_id)
 
     # -------------------------------------------------------------- respond
 

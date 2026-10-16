@@ -29,6 +29,9 @@ class GraphStore:
         self.settings = settings or Settings.from_env()
         self._client: FalkorDB | None = None
         self.graph = None
+        # Optional durable write-ahead log. When attached, every write() is
+        # recorded so the graph can be rebuilt from scratch.
+        self.log = None
         self._connect()
 
     # ------------------------------------------------------------------ setup
@@ -80,8 +83,28 @@ class GraphStore:
     # ----------------------------------------------------------------- querying
 
     def query(self, cypher: str, params: dict[str, Any] | None = None):
-        """Run a read/write query."""
+        """Run a read/write query. Never logged — see ``write``."""
         return self._graph().query(cypher, params or {})
+
+    def attach_log(self, log) -> None:
+        """Attach a write-ahead log. Pass None to detach."""
+        self.log = log
+
+    def write(self, label: str, cypher: str, params: dict[str, Any] | None = None):
+        """Execute a mutating statement and record it durably.
+
+        Write-ahead ordering: the entry is appended *before* the statement runs,
+        so a crash mid-write leaves a log that is ahead of the graph rather than
+        behind it. Replay is tolerant, so a statement that failed here cannot
+        block a rebuild later.
+
+        Reads deliberately go through ``query`` instead, so the log contains only
+        the mutations needed to reconstruct the graph.
+        """
+        params = params or {}
+        if self.log is not None:
+            self.log.record(label, cypher, params)
+        return self.query(cypher, params)
 
     def ro_query(self, cypher: str, params: dict[str, Any] | None = None):
         """Run a read-only query."""

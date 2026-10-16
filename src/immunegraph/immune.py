@@ -211,9 +211,8 @@ class ImmuneScanner:
         )
         for infection_id, root_claim_id in rows:
             infected, exposed = self.cascade_reach(root_claim_id)
-            self.store.query(
-                "MATCH (i:Infection {id: $iid}) SET i.severity = $sev",
-                {"iid": infection_id, "sev": severity_from_reach(infected, exposed)},
+            self.writer.set_infection_severity(
+                infection_id, severity_from_reach(infected, exposed)
             )
             for downstream_id in self.downstream_claims(root_claim_id):
                 self.writer.link_infection_spread(infection_id, downstream_id)
@@ -306,14 +305,7 @@ class ImmuneScanner:
 
         # The earlier antibody demonstrably worked: the swarm recognised the
         # claim without help. That is the signal Q8 measures.
-        self.store.query(
-            """
-            MATCH (ab:Antibody)-[:NEUTRALIZES]->(i:Infection)-[:TARGETS]->(:Claim {id: $past})
-            WHERE ab.outcome = 'unknown'
-            SET ab.outcome = 'effective'
-            """,
-            {"past": recall.past_claim_id},
-        )
+        self.writer.mark_antibodies_effective_for(recall.past_claim_id)
 
         # The recall is itself an immune response, so it is recorded as one —
         # otherwise Q8 would silently omit the most interesting outbreak type.

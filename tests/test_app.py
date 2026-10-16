@@ -3,11 +3,15 @@
 These actually execute app.py inside a Streamlit runtime and fail on any
 uncaught exception, which is the closest thing to a browser smoke test
 without a browser.
+
+Every test gets its own write-ahead log. That matters: the log persists across
+app instances by design, so without isolation a test can inherit a previous
+run's data — which is precisely how the durability feature first announced
+itself, by restoring a graph that a test expected to be empty.
 """
 
 from __future__ import annotations
 
-import dataclasses
 from pathlib import Path
 
 import pytest
@@ -33,7 +37,25 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _app() -> "object":
+@pytest.fixture(autouse=True)
+def isolated_log(tmp_path, monkeypatch):
+    """Give each test its own log path and a clean graph."""
+    import streamlit as st
+
+    monkeypatch.setenv("WRITE_LOG_PATH", str(tmp_path / "writes.db"))
+    monkeypatch.setenv("SEED_LOG", "")
+    st.cache_resource.clear()
+
+    store = GraphStore(Settings.from_env())
+    store.reset()
+    store.create_indexes()
+
+    yield
+
+    st.cache_resource.clear()
+
+
+def _app():
     from streamlit.testing.v1 import AppTest
 
     at = AppTest.from_file(str(APP_PATH), default_timeout=120)
@@ -48,7 +70,6 @@ def _button_index(at, needle: str) -> int:
 def test_app_renders_without_exception():
     at = _app()
     assert not at.exception, at.exception
-    # The three headline panels must be present.
     assert len(at.title) >= 1
     assert any("ImmuneGraph" in t.value for t in at.title)
 
@@ -64,17 +85,12 @@ def test_app_runs_the_mission_and_recalls_immunity():
     at.button[_button_index(at, "Run Mars")].click().run()
     assert not at.exception, at.exception
 
-    # The dashboard should now report at least one outbreak.
     metrics = {m.label: m.value for m in at.metric}
     assert int(metrics.get("Active outbreaks", 0)) + int(metrics.get("Contained", 0)) >= 1
 
     at.button[_button_index(at, "Re-inject")].click().run()
     assert not at.exception, at.exception
-
-    # Immunity recall should have fired and said so.
-    assert any(
-        "Immunity recall fired" in (s.value or "") for s in at.success
-    ), [s.value for s in at.success]
+    assert any("Immunity recall fired" in (s.value or "") for s in at.success)
 
 
 def test_reinject_twice_does_not_crash_on_an_exact_match():
@@ -114,14 +130,30 @@ def test_rerunning_the_mission_replays_deterministically():
     assert first == second, f"second run differed: {first} vs {second}"
 
 
-def test_app_survives_an_empty_graph():
-    store = GraphStore(Settings.from_env())
-    store.reset()
-    store.create_indexes()
+def test_rebuild_from_log_button_reports_an_identical_graph():
+    """The durability claim, exercised through the UI rather than asserted."""
+    at = _app()
+    at.button[_button_index(at, "Run Mars")].click().run()
+    assert not at.exception
+    before = {m.label: m.value for m in at.metric}
 
+    at.button[_button_index(at, "Rebuild from log")].click().run()
+    assert not at.exception, at.exception
+
+    notes = [s.value or "" for s in at.success]
+    assert any("identical" in note for note in notes), notes
+
+    after = {m.label: m.value for m in at.metric}
+    assert before == after, f"dashboard changed across a rebuild: {before} vs {after}"
+
+
+def test_app_survives_an_empty_graph():
     at = _app()
     assert not at.exception, at.exception
     assert any("No conversation yet" in (c.value or "") for c in at.caption)
+
+    metrics = {m.label: m.value for m in at.metric}
+    assert metrics.get("Peak severity") == "0.0"
 
 
 def test_app_shows_a_clear_error_when_the_database_is_unreachable(monkeypatch):

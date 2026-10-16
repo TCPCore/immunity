@@ -22,6 +22,8 @@ st.set_page_config(
 from immunegraph.agents import MARS_CASCADE, MARS_REPEAT, MARS_TOPIC  # noqa: E402
 from immunegraph.config import Settings  # noqa: E402
 from immunegraph.db import GraphStore  # noqa: E402
+from immunegraph.event_log import WriteLog  # noqa: E402
+from immunegraph.projection import import_jsonl  # noqa: E402
 from immunegraph.swarm import Swarm  # noqa: E402
 
 # --------------------------------------------------------------------- palette
@@ -50,17 +52,47 @@ SUSPECT_COLOUR = "#D98324"
 
 
 @st.cache_resource(show_spinner=False)
-def get_context() -> tuple[Swarm, GraphStore]:
-    """Build the store and swarm without touching the database.
+def get_context() -> tuple[Swarm, GraphStore, WriteLog, Settings]:
+    """Build the store, the write-ahead log and the swarm.
 
     Deliberately no query here. If FalkorDB is unreachable, anything that talks
     to it raises before ``require_db`` gets the chance to explain the problem,
     and a judge who opens the app before starting Docker would see a traceback
     instead of "run docker compose up -d".
     """
-    store = GraphStore(Settings.from_env())
-    swarm = Swarm(store)
-    return swarm, store
+    settings = Settings.from_env()
+    store = GraphStore(settings)
+    # Durability: FalkorDB Cloud's free tier has no persistence, so every write
+    # is appended here and the graph can be rebuilt from it.
+    log = WriteLog(settings.write_log_path)
+    swarm = Swarm(store, log=log)
+    return swarm, store, log, settings
+
+
+def restore_if_empty(swarm: Swarm, store: GraphStore, settings: Settings) -> str | None:
+    """Rebuild the graph from the log if the database came back empty.
+
+    This is the durability story actually working: kill the container, restart
+    it, reload the app, and the swarm's memory is still there. The log is the
+    durable record; the graph is a projection of it.
+    """
+    if store.node_count() > 0:
+        return None
+
+    if swarm.log_count() == 0 and settings.seed_log_path:
+        imported = import_jsonl(swarm.log, settings.seed_log_path)
+        if imported:
+            result = swarm.rebuild_from_log()
+            return (
+                f"Cold start: replayed {result['applied']} seeded writes from "
+                f"`{settings.seed_log_path}`."
+            )
+
+    if swarm.log_count() > 0:
+        result = swarm.rebuild_from_log()
+        if result["applied"]:
+            return f"Cold start: rebuilt the graph from {result['applied']} logged writes."
+    return None
 
 
 def require_db(store: GraphStore) -> bool:
@@ -314,6 +346,25 @@ def render_kernel(swarm: Swarm) -> None:
             f"average {summary['avg_ms']}ms, no model call."
         )
 
+    st.markdown("##### Durability")
+    st.caption(
+        f"{swarm.log_count()} writes in the append-only log. FalkorDB Cloud's free tier has "
+        "no persistence, so the graph is a projection — rebuild it and it comes back."
+    )
+    with st.expander("Write-ahead log (what a rebuild replays)"):
+        rows = swarm.log_entries(limit=40)
+        if not rows:
+            st.caption("Nothing logged yet. Press **Rebuild from log** after running the mission.")
+        else:
+            st.dataframe(
+                [{"seq": r["seq"], "event": r["label"], "statement": r["summary"]} for r in rows],
+                width="stretch",
+                hide_index=True,
+            )
+            st.caption("Most frequent: " + ", ".join(
+                f"{label} ×{n}" for label, n in list(swarm.log_label_counts().items())[:5]
+            ))
+
 
 # ----------------------------------------------------------------------- page
 
@@ -322,8 +373,11 @@ def run_mission(swarm: Swarm, store: GraphStore, placeholder) -> None:
     # Always replay from a clean graph. The scripted cascade assumes no prior
     # claims, and a leftover claim would silently become the derivation parent
     # of the Analyst's line — the demo would then show the wrong cascade.
-    store.reset()
-    store.create_indexes()
+    #
+    # reset_all() clears the log as well: resetting only the graph would leave
+    # the log describing data that no longer exists, and the next rebuild would
+    # replay both runs with colliding claim ids.
+    swarm.reset_all()
     swarm.start(MARS_TOPIC)
     for persona, text, note in MARS_CASCADE:
         placeholder.markdown(f"**{persona.name}** speaking…")
@@ -360,7 +414,7 @@ def reinject(swarm: Swarm) -> str:
 
 
 def main() -> None:
-    swarm, store = get_context()
+    swarm, store, log, settings = get_context()
 
     st.title("🧬 ImmuneGraph")
     st.markdown(
@@ -380,6 +434,12 @@ def main() -> None:
     # is swallowed by create_indexes().
     store.create_indexes()
 
+    # If the database came back empty — a restarted free-tier Cloud instance, a
+    # wiped volume — rebuild it from the durable log before rendering anything.
+    notice = restore_if_empty(swarm, store, settings)
+    if notice:
+        st.info(notice)
+
     with st.sidebar:
         st.header("Scenario")
         st.markdown(
@@ -394,9 +454,26 @@ def main() -> None:
             st.session_state["recall_note"] = reinject(swarm)
             st.rerun()
         if st.button("🗑  Reset graph", width="stretch"):
-            store.reset()
-            store.create_indexes()
+            swarm.reset_all()
             st.session_state.pop("recall_note", None)
+            st.session_state.pop("rebuild_note", None)
+            st.rerun()
+        if st.button("♻️  Rebuild from log", width="stretch"):
+            # The durability claim, demonstrated rather than asserted: wipe the
+            # graph and reconstruct it from the durable log, then compare.
+            result = swarm.rebuild_from_log()
+            if result.get("error"):
+                st.session_state["rebuild_note"] = result["error"]
+            elif result["identical"]:
+                st.session_state["rebuild_note"] = (
+                    f"Rebuilt {result['applied']} writes from the log — the graph is "
+                    f"**identical** to the one before the wipe ({result['nodes']} nodes)."
+                )
+            else:
+                st.session_state["rebuild_note"] = (
+                    f"Rebuilt {result['applied']} writes, but the result differs — "
+                    f"{result['failed']} statement(s) failed."
+                )
             st.rerun()
 
         st.divider()
@@ -438,6 +515,8 @@ def main() -> None:
             )
             st.caption("Every query is executed against a live instance before commit.")
 
+    if note := st.session_state.get("rebuild_note"):
+        st.success(note)
     if note := st.session_state.get("recall_note"):
         st.success(note)
 
