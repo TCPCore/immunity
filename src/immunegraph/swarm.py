@@ -14,8 +14,10 @@ from .agents import DEFAULT_SWARM, MARS_TOPIC, Persona
 from .antibody import AntibodyAgent, AntibodyResult
 from .extractor import ExtractedSource, get_extractor
 from .immune import ImmuneScanner, RecallResult, TRUST_DECAY_PER_INFECTION
+from .kernel import Kernel
 from .memory import MemoryWriter
 from .models import Agent, Claim, Source
+from .sanitizer import Sanitizer
 from .schema import CLAIM_ACTIVE
 
 
@@ -33,6 +35,7 @@ class TurnResult:
     derivations: list[tuple[str, str]] = field(default_factory=list)
     contradictions: list[tuple[str, str, str]] = field(default_factory=list)
     new_infection_ids: list[str] = field(default_factory=list)
+    verdicts: list[dict] = field(default_factory=list)
 
 
 class Swarm:
@@ -43,7 +46,12 @@ class Swarm:
         self.writer = MemoryWriter(store)
         self.extractor = extractor or get_extractor()
         self.scanner = ImmuneScanner(store, self.writer)
-        self.antibody = AntibodyAgent(store, self.writer)
+        # The kernel is shared by the antibody (which writes to it) and the
+        # sanitiser (which reads it), so both halves of the immune response
+        # agree on what the swarm currently holds as true.
+        self.kernel = Kernel(store, self.writer)
+        self.antibody = AntibodyAgent(store, self.writer, kernel=self.kernel)
+        self.sanitizer = Sanitizer(store, self.writer, kernel=self.kernel)
         self.tenant_id = tenant_id
         self.session_id: str | None = None
 
@@ -206,12 +214,37 @@ class Swarm:
         if sweep:
             new_infections = self.scanner.sweep()
             result.new_infection_ids = [i.id for i in new_infections]
+
+        # Sanitise every claim this turn produced, whether or not the cascade
+        # scan ran. Detection finds lies the swarm has never seen; sanitisation
+        # recognises ones it has already learned about, and needs no model call.
+        for claim_id, claim_text in zip(result.claim_ids, result.claim_texts):
+            verdict = self.sanitizer.judge(claim_id, claim_text)
+            top = verdict.best_conflict
+            result.verdicts.append(
+                {
+                    "claim_id": claim_id,
+                    "verdict": verdict.verdict,
+                    "elapsed_ms": round(verdict.elapsed_ms, 3),
+                    "fact": top["fact"] if top else None,
+                    "overlap": top["overlap"] if top else None,
+                }
+            )
         return result
 
     # ------------------------------------------------------- immune response
 
     def dispatch_antibodies(self) -> list[AntibodyResult]:
-        return self.antibody.respond_to_all()
+        """Respond to every active outbreak, then re-check the graph.
+
+        The re-check matters: a fact learned now can condemn a claim that was
+        merely unsupported a moment ago. Claims already quarantined or suspect
+        are skipped, so nothing is weakened.
+        """
+        results = self.antibody.respond_to_all()
+        if results:
+            self.sanitizer.rejudge_unknown()
+        return results
 
     def recall(self, text: str, embedding: list[float] | None = None) -> RecallResult:
         return self.scanner.recall(text, embedding)
@@ -229,6 +262,33 @@ class Swarm:
 
     def effectiveness(self) -> list[dict]:
         return self.scanner.antibody_effectiveness()
+
+    # ------------------------------------------------------- kernel reporting
+
+    def kernel_facts(self) -> list[dict]:
+        return [
+            {
+                "id": fact.id,
+                "text": fact.text,
+                "trust_level": fact.trust_level,
+                "version": fact.version,
+                "created_at": fact.created_at,
+                "source": fact.source,
+            }
+            for fact in self.kernel.facts()
+        ]
+
+    def kernel_stats(self) -> dict:
+        return self.kernel.stats()
+
+    def kernel_conflicts(self) -> list[dict]:
+        return self.kernel.conflicts()
+
+    def fact_provenance(self, fact_id: str) -> dict | None:
+        return self.kernel.provenance(fact_id)
+
+    def sanitizer_summary(self) -> dict:
+        return self.sanitizer.summary()
 
     @staticmethod
     def _node_view(node, labels) -> tuple[str, dict]:
@@ -265,7 +325,10 @@ class Swarm:
 
     def stats(self) -> dict:
         counts = {}
-        for label in ("Agent", "Claim", "Source", "Infection", "Antibody", "Message", "Session"):
+        for label in (
+            "Agent", "Claim", "KernelFact", "Source", "Infection",
+            "Antibody", "Message", "Session",
+        ):
             counts[label] = int(
                 self.store.scalar(f"MATCH (n:{label}) RETURN count(n)") or 0
             )

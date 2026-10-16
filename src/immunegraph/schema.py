@@ -16,6 +16,9 @@ INDEX_STATEMENTS: list[str] = [
     "CREATE INDEX FOR (i:Infection) ON (i.id)",
     "CREATE INDEX FOR (s:Session) ON (s.id)",
     "CREATE INDEX FOR (m:Message) ON (m.id)",
+    # The kernel is consulted on every sanitisation, so its id lookup is hot.
+    "CREATE INDEX FOR (k:KernelFact) ON (k.id)",
+    "CREATE INDEX FOR (k:KernelFact) ON (k.status)",
 ]
 
 # Canonical label and relationship names, used for validation in tests.
@@ -28,6 +31,7 @@ NODE_LABELS: list[str] = [
     "Source",
     "Infection",
     "Antibody",
+    "KernelFact",
 ]
 
 RELATIONSHIP_TYPES: list[str] = [
@@ -45,6 +49,11 @@ RELATIONSHIP_TYPES: list[str] = [
     "NEUTRALIZES",
     "INJECTS",
     "CONTAINS",
+    # kernel of truth
+    "ESTABLISHES",
+    "CONFLICTS_WITH",
+    "ALIGNED_WITH",
+    "SUPERSEDES",
 ]
 
 # Claim lifecycle states.
@@ -73,3 +82,23 @@ TRUST_PRIMARY = "primary"
 TRUST_REPUTABLE = "reputable"
 TRUST_UNKNOWN = "unknown"
 TRUST_UNRELIABLE = "unreliable"
+
+# --- Kernel of truth -------------------------------------------------------
+#
+# KernelFacts are canonical, source-backed statements the antibody establishes
+# and every new claim is sanitised against. They are the swarm's memory of what
+# is *right*, complementing Infection/Claim which record what was *wrong*.
+#
+# This is deliberately a graph concern, not a side table: a fact's provenance
+# (which source, which antibody established it) and its conflicts are edges, and
+# sanitisation is a traversal. Move it out of FalkorDB and sanitisation stops
+# existing, which is what keeps rule 3 satisfied.
+
+KERNEL_ACTIVE = "active"
+KERNEL_SUPERSEDED = "superseded"
+
+# Sanitiser verdicts, stored on the Claim so the UI can badge it without
+# re-running the check.
+VERDICT_CLEAN = "clean"          # agrees with a kernel fact
+VERDICT_CONFLICTS = "conflicts"  # contradicts a kernel fact
+VERDICT_UNKNOWN = "unknown"      # kernel has nothing to say about it

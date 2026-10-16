@@ -11,9 +11,13 @@
 # dependencies in place but leaves the package missing, so the module
 # invocations fail with ModuleNotFoundError.
 #
-# This file remains useful for plain-pip users who prefer an explicit list:
+# This file remains useful for plain-pip users who prefer an explicit list.
 #
-#     pip install -r requirements.txt && pip install -e .
+# The leading "-e ." is load-bearing for hosted deploys: Streamlit Community
+# Cloud runs `pip install -r requirements.txt` and then `streamlit run app.py`,
+# with no separate install step. Without it the src/ layout means
+# `import immunegraph` fails and the deployed app dies at startup.
+-e .
 
 # NOTE: falkordblite is deliberately NOT used. Its published macOS wheels claim
 # universal2 but ship arm64-only redis-server and falkordb.so, so it fails on

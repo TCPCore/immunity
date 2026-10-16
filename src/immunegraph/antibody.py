@@ -22,6 +22,7 @@ import os
 import uuid
 from dataclasses import dataclass, field
 
+from .kernel import Kernel
 from .memory import MemoryWriter
 from .models import Antibody, Claim, Source, utcnow
 from .schema import (
@@ -30,6 +31,7 @@ from .schema import (
     INFECTION_CONTAINED,
     INFECTION_UNSUPPORTED,
     TRUST_PRIMARY,
+    TRUST_UNKNOWN,
 )
 
 STRATEGY_CITATION = "source_citation"
@@ -45,6 +47,11 @@ CORRECTION_KB: list[dict] = [
             "NASA: the Martian atmosphere is about 95% carbon dioxide with only trace "
             "oxygen, so there is no breathable oxygen on Mars at any time of day."
         ),
+        # The canonical, claim-shaped form that goes into the kernel. Kept
+        # deliberately terse and separate from the prose correction: the kernel
+        # is matched lexically against short claims, and a full sentence dilutes
+        # that comparison.
+        "fact": "Mars has no breathable oxygen",
         "source": {
             "name": "NASA",
             "url": "https://science.nasa.gov/mars/facts/",
@@ -57,6 +64,7 @@ CORRECTION_KB: list[dict] = [
             "NASA: the Martian atmosphere is roughly 95% carbon dioxide at very low "
             "pressure, around 1% of Earth's surface pressure."
         ),
+        "fact": "The Martian atmosphere is about 95% carbon dioxide at low pressure",
         "source": {
             "name": "NASA",
             "url": "https://science.nasa.gov/mars/facts/",
@@ -79,6 +87,10 @@ class AntibodyResult:
     severity_before: float
     contained: bool = True
     cascade_contained: list[str] = field(default_factory=list)
+    # The kernel fact this antibody established, if any. Present only when the
+    # correction cites a source: an unsourced correction is a meta-statement
+    # ("nothing supports this"), not a truth worth remembering.
+    fact_id: str | None = None
 
     def lines(self) -> list[str]:
         out = [
@@ -96,6 +108,13 @@ class AntibodyResult:
                 f"  cascade     : {len(self.cascade_contained)} downstream claim(s) "
                 "marked suspect (support invalidated)"
             )
+        if self.fact_id:
+            out.append(
+                f"  taught      : kernel fact {self.fact_id} registered — future claims "
+                "are sanitised against it without a model call"
+            )
+        else:
+            out.append("  taught      : nothing — no source, so no kernel fact")
         return out
 
 
@@ -106,12 +125,19 @@ def _new_id(prefix: str) -> str:
 class AntibodyAgent:
     """Generates and injects corrections."""
 
-    def __init__(self, store, writer: MemoryWriter | None = None, client=None) -> None:
+    def __init__(
+        self,
+        store,
+        writer: MemoryWriter | None = None,
+        client=None,
+        kernel: Kernel | None = None,
+    ) -> None:
         self.store = store
         self.writer = writer or MemoryWriter(store)
         self._client = client
         self.model = os.getenv("LLM_MODEL", "gpt-4o-mini")
         self.system_agent_id = "agent_antibody"
+        self.kernel = kernel or Kernel(store, self.writer)
 
     def ensure_system_agent(self) -> str:
         """The antibody system is itself an actor in the graph.
@@ -181,8 +207,12 @@ class AntibodyAgent:
                         "role": "system",
                         "content": (
                             "You are an antibody agent correcting a false claim made by an "
-                            "AI agent. Return JSON: {\"correction\": str, \"source_name\": str, "
-                            "\"source_url\": str, \"trust_level\": \"primary\"|\"reputable\"}. "
+                            "AI agent. Return JSON: {\"correction\": str, \"fact\": str, "
+                            "\"source_name\": str, \"source_url\": str, "
+                            "\"trust_level\": \"primary\"|\"reputable\"}. "
+                            "\"correction\" is a sentence for humans; \"fact\" is the same "
+                            "truth as a short canonical assertion of at most 10 words, "
+                            "because it will be matched lexically against future claims. "
                             "Only cite a source that genuinely supports the correction. If no "
                             "trusted source exists, set source_name to null and simply state "
                             "that the claim is unsupported. Never invent a citation."
@@ -198,11 +228,21 @@ class AntibodyAgent:
         except Exception:  # noqa: BLE001 - fall back to the deterministic path
             return None
 
-    def _decide(self, claim_text: str, infection_type: str) -> tuple[str, dict | None, str]:
-        """Return (correction_text, source_dict_or_None, strategy)."""
+    def _decide(self, claim_text: str, infection_type: str) -> dict:
+        """Choose how to respond.
+
+        Returns ``{"correction", "source", "strategy", "fact"}``. ``fact`` is the
+        canonical claim-shaped statement for the kernel, or None when nothing was
+        established — an unsourced correction is a meta-statement, not a truth.
+        """
         kb = self._kb_lookup(claim_text)
         if kb:
-            return kb["correction"], kb["source"], STRATEGY_CITATION
+            return {
+                "correction": kb["correction"],
+                "source": kb["source"],
+                "strategy": STRATEGY_CITATION,
+                "fact": kb.get("fact"),
+            }
 
         llm = self._llm_correction(claim_text, infection_type)
         if llm and llm.get("correction"):
@@ -213,17 +253,24 @@ class AntibodyAgent:
                     "url": llm.get("source_url") or "",
                     "trust_level": llm.get("trust_level") or "reputable",
                 }
-            strategy = STRATEGY_CITATION if source else STRATEGY_SURFACE
-            return llm["correction"], source, strategy
+            return {
+                "correction": llm["correction"],
+                "source": source,
+                "strategy": STRATEGY_CITATION if source else STRATEGY_SURFACE,
+                "fact": (llm.get("fact") or llm["correction"]) if source else None,
+            }
 
         # Honest fallback: no trusted counter-fact is available, so do not
-        # fabricate one. State the epistemic status instead.
-        return (
-            f"No trusted source supports the claim {claim_text!r}. It is quarantined "
-            f"pending evidence, and anything derived from it should not be relied on.",
-            None,
-            STRATEGY_SURFACE,
-        )
+        # fabricate one — and do not pretend to have established a fact either.
+        return {
+            "correction": (
+                f"No trusted source supports the claim {claim_text!r}. It is quarantined "
+                f"pending evidence, and anything derived from it should not be relied on."
+            ),
+            "source": None,
+            "strategy": STRATEGY_SURFACE,
+            "fact": None,
+        }
 
     # -------------------------------------------------------------- cascade
 
@@ -262,9 +309,10 @@ class AntibodyAgent:
         if info is None:
             return None
 
-        correction_text, source_info, strategy = self._decide(
-            info["root_claim_text"], info["type"]
-        )
+        decision = self._decide(info["root_claim_text"], info["type"])
+        correction_text = decision["correction"]
+        source_info = decision["source"]
+        strategy = decision["strategy"]
 
         # 1. the correction enters the graph as a first-class Claim, and if it
         #    has a source it is *supported*, so Q2 will never flag it.
@@ -312,6 +360,19 @@ class AntibodyAgent:
         # 5. contain the whole cascade, not only its root
         cascade = self.contain_cascade(info["root_claim_id"])
 
+        # 6. teach. A sourced correction becomes a kernel fact, so the next claim
+        #    like this is recognised by comparison instead of by re-running the
+        #    whole detection pipeline. Deliberately skipped when no source was
+        #    cited: "nothing supports this" is a meta-statement, not a truth.
+        fact_id = None
+        if source_info and decision.get("fact"):
+            fact_id = self.kernel.register_fact(
+                decision["fact"],
+                source=source.id,
+                trust_level=source_info.get("trust_level") or TRUST_UNKNOWN,
+                antibody_id=antibody.id,
+            )
+
         return AntibodyResult(
             antibody_id=antibody.id,
             infection_id=infection_id,
@@ -323,6 +384,7 @@ class AntibodyAgent:
             strategy=strategy,
             severity_before=info["severity"],
             cascade_contained=cascade,
+            fact_id=fact_id,
         )
 
     def respond_to_all(self) -> list[AntibodyResult]:

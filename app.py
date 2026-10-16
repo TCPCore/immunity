@@ -29,6 +29,9 @@ from immunegraph.swarm import Swarm  # noqa: E402
 NODE_COLOURS = {
     "Agent": "#4C8BF5",
     "Claim": "#2E9E5B",
+    # The kernel is deliberately the loudest colour in the graph: it is the
+    # swarm's accumulated truth, not another kind of claim.
+    "KernelFact": "#7B4DFF",
     "Source": "#9AA0A6",
     "Infection": "#E8453C",
     "Antibody": "#F2B705",
@@ -79,15 +82,16 @@ def render_transcript(swarm: Swarm) -> None:
         """
         MATCH (a:Agent)-[:SPOKE]->(m:Message)
         OPTIONAL MATCH (m)-[:MENTIONS]->(c:Claim)
-        RETURN a.name, m.text, m.seq, collect(c.status)
+        RETURN a.name, m.text, m.seq, collect(c.status), collect(c.verdict)
         ORDER BY m.seq
         """
     )
     if not rows:
         st.caption("No conversation yet. Run the Mars mission to begin.")
         return
-    for name, text, seq, statuses in rows:
+    for name, text, seq, statuses, verdicts in rows:
         statuses = statuses or []
+        verdicts = [v for v in (verdicts or []) if v]
         if "quarantined" in statuses:
             badge = "  🚫 *quarantined*"
         elif "suspect" in statuses:
@@ -96,6 +100,12 @@ def render_transcript(swarm: Swarm) -> None:
             badge = "  ✅ *believed*"
         else:
             badge = ""
+        # The sanitiser's verdict is separate from the cascade verdict: a claim
+        # can be structurally supported and still contradict what we know.
+        if "conflicts" in verdicts:
+            badge += "  🛡️ *contradicts the kernel*"
+        elif "clean" in verdicts:
+            badge += "  🛡️ *agrees with the kernel*"
         with st.chat_message("assistant" if name != "Antibody System" else "system"):
             st.markdown(f"**{name}**{badge}")
             st.markdown(text)
@@ -135,6 +145,9 @@ def render_graph(swarm: Swarm, height: int = 660) -> None:
             elif props.get("status") == "suspect":
                 colour = SUSPECT_COLOUR
                 size = 20
+        if label == "KernelFact":
+            # Larger than a claim: the kernel is what survived scrutiny.
+            size = 26
         if label == "Infection":
             size = 18 + min(float(props.get("severity") or 0), 12)
         title = node.get("title") or node["id"]
@@ -187,7 +200,7 @@ def render_graph(swarm: Swarm, height: int = 660) -> None:
     legend = " · ".join(
         f"<span style='color:{colour};font-weight:700'>■</span> {label}"
         for label, colour in NODE_COLOURS.items()
-        if label in {"Agent", "Claim", "Source", "Infection", "Antibody"}
+        if label in {"Agent", "Claim", "KernelFact", "Source", "Infection", "Antibody"}
     )
     st.markdown(
         f"<div style='font-size:0.85rem'>{legend} · "
@@ -246,6 +259,60 @@ def render_dashboard(swarm: Swarm) -> None:
         st.dataframe(effectiveness, width="stretch", hide_index=True)
     else:
         st.caption("No antibodies have responded yet.")
+
+    render_kernel(swarm)
+
+
+def render_kernel(swarm: Swarm) -> None:
+    """The kernel of truth: what the swarm has learned is *right*.
+
+    Infection/Claim record what was wrong. This panel is the other half — the
+    facts the antibody established, each with the source that backs it, and the
+    claims currently in conflict with them.
+    """
+    st.markdown("##### Kernel of truth")
+    stats = swarm.kernel_stats()
+    cols = st.columns(3)
+    cols[0].metric("Facts held", stats["facts"])
+    cols[1].metric("Claims aligned", stats["aligned_edges"])
+    cols[2].metric("In conflict", stats["conflict_edges"])
+
+    facts = swarm.kernel_facts()
+    if facts:
+        st.dataframe(
+            [
+                {
+                    "fact": fact["text"],
+                    "source": fact["source"] or "—",
+                    "trust": fact["trust_level"],
+                }
+                for fact in facts
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+        with st.expander("Provenance — who taught the swarm this?"):
+            for fact in facts:
+                prov = swarm.fact_provenance(fact["id"]) or {}
+                st.markdown(f"**{fact['text']}**")
+                st.caption(
+                    f"established by `{prov.get('established_by') or '—'}` · "
+                    f"source {prov.get('source') or '—'} · {prov.get('created_at', '')}"
+                )
+                if prov.get("source_url"):
+                    st.caption(prov["source_url"])
+    else:
+        st.caption(
+            "Nothing established yet. The antibody adds a fact when it can cite a source — "
+            "an unsourced correction is a meta-statement, not a truth."
+        )
+
+    summary = swarm.sanitizer_summary()
+    if summary["fast_path_hits"]:
+        st.caption(
+            f"🛡️ Fast path: {summary['fast_path_hits']} claim(s) recognised against the kernel, "
+            f"average {summary['avg_ms']}ms, no model call."
+        )
 
 
 # ----------------------------------------------------------------------- page
@@ -345,13 +412,20 @@ def main() -> None:
             )
         with st.expander("The queries doing the work"):
             st.markdown(
+                "**How the swarm detects new lies**\n\n"
                 "**Q1** cycles in the support structure\n\n"
                 "**Q2** active claims with no trusted source and no parent\n\n"
                 "**Q3** contradiction clusters between agents\n\n"
                 "**Q4** cascade reach — severity is *defined* as this traversal\n\n"
                 "**Q5** trust derived from exposure\n\n"
                 "**Q6/Q7** immunity recall, exact and paraphrase\n\n"
-                "**Q8** antibody effectiveness"
+                "**Q8** antibody effectiveness\n\n"
+                "**How it recognises lies it already knows**\n\n"
+                "**K1** the kernel of truth, with provenance\n\n"
+                "**K2** claims in conflict with the kernel\n\n"
+                "**K3** kernel health — facts held, aligned, in conflict\n\n"
+                "**K4** claims not yet sanitised\n\n"
+                "**K5** who established a fact, citing what"
             )
             st.caption("Full text in docs/GRAPH_MODEL.md and src/immunegraph/queries.py")
         with st.expander("Verify it yourself"):

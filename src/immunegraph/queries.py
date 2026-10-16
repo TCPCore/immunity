@@ -174,6 +174,78 @@ RETURN i.type AS infection_type,
 ORDER BY outbreaks DESC
 """
 
+# --------------------------------------------------------------------- kernel
+# The kernel of truth. Antibodies write to it; the sanitiser reads it. Every
+# query here is a traversal over provenance, which is why the kernel lives in
+# the graph rather than in a side table.
+
+# K1 — the active kernel, with provenance.
+K1_KERNEL_FACTS = """
+MATCH (k:KernelFact)
+WHERE k.status = 'active'
+OPTIONAL MATCH (k)-[:DERIVED_FROM]->(s:Source)
+RETURN k.id AS fact_id,
+       k.text AS text,
+       k.trust_level AS trust_level,
+       k.version AS version,
+       k.created_at AS created_at,
+       s.name AS source
+ORDER BY k.created_at
+"""
+
+# K2 — which claims currently conflict with the kernel, and how strongly.
+K2_KERNEL_CONFLICTS = """
+MATCH (c:Claim)-[r:CONFLICTS_WITH]->(k:KernelFact)
+RETURN c.id AS claim_id,
+       c.text AS claim,
+       c.status AS claim_status,
+       k.id AS fact_id,
+       k.text AS fact,
+       k.trust_level AS trust_level,
+       r.score AS overlap
+ORDER BY r.score DESC
+"""
+
+# K3 — kernel health in one row: facts held, claims aligned, claims in conflict.
+#     This is the number that shows immunity accumulating across outbreaks.
+#
+#     count(rel) rather than count(*): under OPTIONAL MATCH an unmatched pattern
+#     still yields one row of nulls, so count(*) reports 1 for an empty edge set
+#     and the dashboard cheerfully reports conflicts that do not exist.
+K3_KERNEL_STATS = """
+MATCH (k:KernelFact)
+WHERE k.status = 'active'
+WITH count(k) AS facts
+OPTIONAL MATCH (:Claim)-[al:ALIGNED_WITH]->(:KernelFact)
+WITH facts, count(al) AS aligned_edges
+OPTIONAL MATCH (:Claim)-[cf:CONFLICTS_WITH]->(:KernelFact)
+RETURN facts, aligned_edges, count(cf) AS conflict_edges
+"""
+
+# K4 — claims the sanitiser has not yet judged. Drives the incremental pass.
+K4_UNSANITISED_CLAIMS = """
+MATCH (c:Claim)
+WHERE c.status = 'active' AND c.verdict IS NULL
+OPTIONAL MATCH (m:Message)-[:MENTIONS]->(c)
+RETURN c.id AS claim_id, c.text AS text, c.created_at AS created_at
+ORDER BY c.created_at
+LIMIT $limit
+"""
+
+# K5 — provenance path for one fact: who established it, citing what.
+#      This is the "explain this truth" view.
+K5_FACT_PROVENANCE = """
+MATCH (k:KernelFact {id: $fact_id})
+OPTIONAL MATCH (ab:Antibody)-[:ESTABLISHES]->(k)
+OPTIONAL MATCH (k)-[:DERIVED_FROM]->(s:Source)
+OPTIONAL MATCH (i:Infection)-[:NEUTRALIZES|TARGETS*1..2]-(ab)
+RETURN k.id AS fact_id, k.text AS text, k.trust_level AS trust_level,
+       k.created_at AS created_at,
+       ab.id AS established_by, s.name AS source, s.url AS source_url,
+       collect(DISTINCT i.id) AS related_infections
+"""
+
+
 # --------------------------------------------------------------------- helpers
 # Used by the UI and the orchestrator, not part of the detection core.
 
@@ -263,6 +335,33 @@ QUERIES: dict[str, QuerySpec] = {
             "Q8_ANTIBODY_EFFECTIVENESS",
             Q8_ANTIBODY_EFFECTIVENESS,
             "Outbreak/containment counts per infection type.",
+        ),
+        QuerySpec(
+            "K1_KERNEL_FACTS",
+            K1_KERNEL_FACTS,
+            "The active kernel of truth, with provenance.",
+        ),
+        QuerySpec(
+            "K2_KERNEL_CONFLICTS",
+            K2_KERNEL_CONFLICTS,
+            "Claims currently in conflict with the kernel.",
+        ),
+        QuerySpec(
+            "K3_KERNEL_STATS",
+            K3_KERNEL_STATS,
+            "Kernel health: facts held, aligned claims, conflicting claims.",
+        ),
+        QuerySpec(
+            "K4_UNSANITISED_CLAIMS",
+            K4_UNSANITISED_CLAIMS,
+            "Active claims the sanitiser has not yet judged.",
+            required_params=("limit",),
+        ),
+        QuerySpec(
+            "K5_FACT_PROVENANCE",
+            K5_FACT_PROVENANCE,
+            "Who established a fact and citing what.",
+            required_params=("fact_id",),
         ),
         QuerySpec("ACTIVE_INFECTIONS", ACTIVE_INFECTIONS, "Dashboard infection list."),
         QuerySpec("GRAPH_SNAPSHOT", GRAPH_SNAPSHOT, "Full graph for visualisation."),

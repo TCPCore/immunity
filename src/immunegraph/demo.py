@@ -115,6 +115,25 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True) -> dict:
              "cascade_contained": res.cascade_contained}
         )
 
+    # ------------------------------------------------------------- ACT III.b
+    banner("ACT III.b  —  THE KERNEL OF TRUTH")
+    say("Until now the swarm only remembered what was WRONG. A sourced")
+    say("correction also becomes a fact — so the antibody teaches, not just")
+    say("punishes, and every future claim is judged against it.")
+    rule()
+    stats = swarm.kernel_stats()
+    say(f"  facts held        : {stats['facts']}")
+    say(f"  claims aligned    : {stats['aligned_edges']}")
+    say(f"  claims in conflict: {stats['conflict_edges']}")
+    say("")
+    for fact in swarm.kernel_facts():
+        say(f"  [{fact['trust_level']}] {fact['text']!r}")
+        prov = swarm.fact_provenance(fact["id"]) or {}
+        say(f"      established by {prov.get('established_by') or '—'} "
+            f"citing {prov.get('source') or '—'}")
+    summary["kernel"] = swarm.kernel_stats()
+    summary["kernel_facts"] = swarm.kernel_facts()
+
     # --------------------------------------------------------------- ACT IV
     banner("ACT IV  —  TRUST DECAYS, DERIVED FROM THE GRAPH")
     say("No counter is decremented anywhere. Q5 recomputes trust from")
@@ -143,12 +162,25 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True) -> dict:
 
     if recall.hit:
         turn = swarm.say(persona, text, sweep=False)
+
+        # The fast path, and the point of the kernel: the sanitiser recognises
+        # this claim against a fact, without an extraction call and without
+        # re-running any part of the cascade detection.
+        for verdict in turn.verdicts:
+            if verdict["verdict"] == "conflicts":
+                say(f"  SANITISER : contradicts kernel fact {verdict['fact']!r}")
+                say(f"              overlap {verdict['overlap']:.2f}, "
+                    f"decided in {verdict['elapsed_ms']:.1f}ms — no model call, no cascade scan")
+            else:
+                say(f"  SANITISER : {verdict['verdict']} ({verdict['elapsed_ms']:.1f}ms)")
+
         infection = swarm.contain_repeat(turn.claim_ids[0], recall)
         say("  ACTION: claim quarantined on sight.")
-        say(f"          NO cascade re-detection was required.")
+        say("          NO cascade re-detection was required.")
         say(f"          repeat recorded as {infection.id if infection else 'n/a'}")
         say("          the earlier antibody is marked 'effective'")
         summary["contained"] = infection.id if infection else None
+        summary["verdicts"] = turn.verdicts
 
     # --------------------------------------------------------------- ACT VI
     banner("ACT VI  —  DID THE IMMUNE SYSTEM ACTUALLY WORK?")
@@ -161,6 +193,20 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True) -> dict:
     summary["effectiveness"] = swarm.effectiveness()
 
     # -------------------------------------------------------------- EPILOGUE
+    banner("ACT VII  —  THE SWARM IS HARDER TO FOOL THAN IT WAS")
+    rule()
+    stats = swarm.kernel_stats()
+    summary_stats = swarm.sanitizer_summary()
+    say(f"  kernel facts held     : {stats['facts']}")
+    say(f"  claims in conflict    : {stats['conflict_edges']}")
+    say(f"  fast-path recognitions: {summary_stats['fast_path_hits']} "
+        f"(avg {summary_stats['avg_ms']}ms, no model call)")
+    say("")
+    say("  Detection finds lies the swarm has never seen, by walking the")
+    say("  support structure. The kernel recognises lies it already knows,")
+    say("  by comparison. One gets more expensive as the graph grows; the")
+    say("  other does not — that is what immunity means here.")
+
     banner("GRAPH STATE")
     for label, count in swarm.stats().items():
         say(f"  {label:<12}{count:>4}")

@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from .models import Agent, Antibody, Claim, Infection, Source, utcnow
+from .schema import CLAIM_SUSPECT, KERNEL_ACTIVE, KERNEL_SUPERSEDED, TRUST_PRIMARY
 
 
 class MemoryWriter:
@@ -332,6 +333,108 @@ class MemoryWriter:
         self.store.query(
             "MATCH (ab:Antibody {id: $abid}) SET ab.outcome = $outcome",
             {"abid": antibody_id, "outcome": outcome},
+        )
+
+    # --------------------------------------------------------- kernel of truth
+
+    def record_kernel_fact(
+        self,
+        fact_id: str,
+        text: str,
+        trust_level: str = TRUST_PRIMARY,
+        version: int = 1,
+        status: str = KERNEL_ACTIVE,
+        created_at: str | None = None,
+    ) -> str:
+        """A canonical, source-backed statement the swarm now holds as true."""
+        self.store.query(
+            """
+            MERGE (k:KernelFact {id: $id})
+            SET k.text = $text, k.trust_level = $trust_level,
+                k.version = $version, k.status = $status,
+                k.created_at = coalesce(k.created_at, $created_at)
+            """,
+            {
+                "id": fact_id,
+                "text": text,
+                "trust_level": trust_level,
+                "version": version,
+                "status": status,
+                "created_at": created_at or utcnow(),
+            },
+        )
+        return fact_id
+
+    def link_fact_source(self, fact_id: str, source_id: str) -> None:
+        self.store.query(
+            """
+            MATCH (k:KernelFact {id: $fid}), (s:Source {id: $sid})
+            MERGE (k)-[:DERIVED_FROM]->(s)
+            """,
+            {"fid": fact_id, "sid": source_id},
+        )
+
+    def link_antibody_establishes(self, antibody_id: str, fact_id: str) -> None:
+        """The antibody *teaches*, not just punishes."""
+        self.store.query(
+            """
+            MATCH (ab:Antibody {id: $abid}), (k:KernelFact {id: $fid})
+            MERGE (ab)-[:ESTABLISHES]->(k)
+            """,
+            {"abid": antibody_id, "fid": fact_id},
+        )
+
+    def link_claim_conflicts_with(self, claim_id: str, fact_id: str, score: float) -> None:
+        self.store.query(
+            """
+            MATCH (c:Claim {id: $cid}), (k:KernelFact {id: $fid})
+            MERGE (c)-[r:CONFLICTS_WITH]->(k)
+            SET r.score = $score, r.detected_at = $ts
+            """,
+            {"cid": claim_id, "fid": fact_id, "score": score, "ts": utcnow()},
+        )
+
+    def link_claim_aligned_with(self, claim_id: str, fact_id: str, score: float) -> None:
+        self.store.query(
+            """
+            MATCH (c:Claim {id: $cid}), (k:KernelFact {id: $fid})
+            MERGE (c)-[r:ALIGNED_WITH]->(k)
+            SET r.score = $score, r.detected_at = $ts
+            """,
+            {"cid": claim_id, "fid": fact_id, "score": score, "ts": utcnow()},
+        )
+
+    def set_claim_verdict(self, claim_id: str, verdict: str) -> None:
+        self.store.query(
+            "MATCH (c:Claim {id: $cid}) SET c.verdict = $verdict",
+            {"cid": claim_id, "verdict": verdict},
+        )
+
+    def mark_claim_suspect_if_active(self, claim_id: str) -> None:
+        """Downgrade a claim to 'suspect' without clobbering a stronger state.
+
+        Cascade detection may already have quarantined this claim, and
+        'quarantined' is stronger than 'suspect'. Sanitisation must never
+        weaken a verdict that detection already reached.
+        """
+        self.store.query(
+            """
+            MATCH (c:Claim {id: $cid})
+            WHERE c.status = 'active'
+            SET c.status = $suspect
+            """,
+            {"cid": claim_id, "suspect": CLAIM_SUSPECT},
+        )
+
+    def supersede_kernel_fact(self, old_id: str, new_id: str) -> None:
+        """Retire a fact in favour of a newer one, keeping the history."""
+        self.store.query(
+            """
+            MATCH (old:KernelFact {id: $old_id}), (new:KernelFact {id: $new_id})
+            SET old.status = $superseded, old.superseded_by = $new_id
+            MERGE (new)-[:SUPERSEDES]->(old)
+            """,
+            {"old_id": old_id, "new_id": new_id, "superseded": KERNEL_SUPERSEDED},
         )
 
     # ------------------------------------------------------------- utilities

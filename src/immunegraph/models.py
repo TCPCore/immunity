@@ -79,6 +79,74 @@ def similarity(left: str, right: str) -> float:
     return len(a & b) / len(a | b)
 
 
+# Explicit negation markers. Kept here rather than in the extractor because
+# kernel sanitisation needs them too, and both must agree on what counts as a
+# contradiction.
+_NEGATIONS: tuple[str, ...] = (
+    "not ", "n't", "no ", "never", "none", "without", "cannot", "can't", "false",
+)
+
+# Above this overlap two claims are considered to be about the same thing.
+CONTRADICTION_OVERLAP = 0.25
+
+# Above this overlap a claim is considered to *agree* with a kernel fact.
+ALIGNMENT_OVERLAP = 0.60
+
+# Kernel facts are canonical statements, often longer than the claim being
+# judged ("Mars has no breathable oxygen" vs a full correction sentence). Jaccard
+# divides by the union, so a longer fact dilutes the score purely because it has
+# more words. Comparing a short claim against a longer fact therefore uses the
+# overlap coefficient instead, with a correspondingly higher threshold.
+KERNEL_CONFLICT_OVERLAP = 0.60
+
+
+def overlap_coefficient(left: str, right: str) -> float:
+    """|A ∩ B| / min(|A|, |B|) over normalised tokens.
+
+    Unlike Jaccard this does not punish a length difference, which is exactly
+    what is needed when a short claim is checked against a longer canonical fact.
+    """
+    a, b = token_set(left), token_set(right)
+    if not a or not b:
+        return 0.0
+    return len(a & b) / min(len(a), len(b))
+
+
+def is_negated(text: str) -> bool:
+    lowered = f" {text.lower()} "
+    return any(marker in lowered for marker in _NEGATIONS)
+
+
+def detect_contradiction(a: str, b: str, threshold: float = CONTRADICTION_OVERLAP) -> str | None:
+    """Two statements about the same thing where exactly one is negated.
+
+    Deliberately conservative: requires real lexical overlap *and* a negation
+    asymmetry, so loose paraphrases are not reported as contradictions.
+    """
+    if is_negated(a) == is_negated(b):
+        return None
+    overlap = similarity(a, b)
+    if overlap < threshold:
+        return None
+    shared = sorted(token_set(a) & token_set(b))
+    return f"negation asymmetry over {', '.join(shared[:6])}"
+
+
+def conflicts_with_fact(claim: str, fact: str) -> float | None:
+    """Score a claim against a kernel fact, or None if they do not conflict.
+
+    Same negation-asymmetry rule as :func:`detect_contradiction`, but scored with
+    the overlap coefficient so a terse claim is not drowned out by a longer
+    canonical fact.
+    """
+    if is_negated(claim) == is_negated(fact):
+        return None
+    score = overlap_coefficient(claim, fact)
+    if score < KERNEL_CONFLICT_OVERLAP:
+        return None
+    return score
+
+
 def fingerprint(text: str) -> str:
     """Stable short hash of the normalised claim text."""
     normalised = normalise_text(text)

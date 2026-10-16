@@ -19,7 +19,13 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from .models import normalise_text, similarity, token_set
+from .models import (  # noqa: F401 - re-exported for backwards compatibility
+    detect_contradiction,
+    is_negated,
+    normalise_text,
+    similarity,
+    token_set,
+)
 
 # --------------------------------------------------------------- data shapes
 
@@ -127,9 +133,6 @@ _DERIVATION_CUES = (
     "we can", "we could", "we should", "it follows", "as a result",
 )
 
-# Explicit negation markers, used to spot contradictions.
-_NEGATIONS = ("not ", "n't", "no ", "never", "none", "without", "cannot", "can't", "false")
-
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 
 # Sentences that are questions, greetings or filler rather than claims.
@@ -153,11 +156,6 @@ def looks_like_claim(sentence: str) -> bool:
     return len(normalise_text(stripped).split()) >= 3
 
 
-def is_negated(text: str) -> bool:
-    lowered = f" {text.lower()} "
-    return any(marker in lowered for marker in _NEGATIONS)
-
-
 def find_sources(sentence: str) -> list[ExtractedSource]:
     found: dict[str, ExtractedSource] = {}
     for pattern in _SOURCE_PATTERNS:
@@ -176,21 +174,6 @@ def find_sources(sentence: str) -> list[ExtractedSource]:
             if key not in found:
                 found[key] = ExtractedSource(name=display, url=url, trust_level=trust)
     return list(found.values())
-
-
-def detect_contradiction(a: str, b: str, threshold: float = 0.25) -> str | None:
-    """Two claims about the same thing where exactly one is negated.
-
-    Deliberately conservative: requires real lexical overlap *and* a negation
-    asymmetry, so loose paraphrases are not reported as contradictions.
-    """
-    if is_negated(a) == is_negated(b):
-        return None
-    overlap = similarity(a, b)
-    if overlap < threshold:
-        return None
-    shared = sorted(token_set(a) & token_set(b))
-    return f"negation asymmetry over {', '.join(shared[:6])}"
 
 
 # ------------------------------------------------------------------ rule impl

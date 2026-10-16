@@ -169,3 +169,51 @@ def test_env_example_contains_no_real_secrets():
         name, _, value = line.partition("=")
         if "KEY" in name or "PASSWORD" in name:
             assert value.strip() == "", f"{name} must not ship with a value"
+
+
+# ------------------------------------------------------- hosted deploy support
+
+
+def test_requirements_installs_the_package_itself():
+    """Streamlit Community Cloud only runs `pip install -r requirements.txt`.
+
+    There is no separate install step, so without `-e .` the src/ layout means
+    `import immunegraph` fails and the deployed app dies at startup. This is the
+    same class of bug that once made the documented quickstart unusable.
+    """
+    text = (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
+    install_lines = [
+        line.strip()
+        for line in text.splitlines()
+        if not line.strip().startswith("#")
+    ]
+    assert "-e ." in install_lines, "requirements.txt must install the package itself"
+
+
+def test_streamlit_secrets_bridge_exists():
+    """Streamlit Cloud supplies config via st.secrets, not environment variables."""
+    source = (SOURCE_DIR / "config.py").read_text(encoding="utf-8")
+    assert "st.secrets" in source, "no bridge from st.secrets to os.environ"
+    assert "_load_streamlit_secrets" in source
+
+
+def test_secrets_bridge_is_a_noop_outside_streamlit(monkeypatch):
+    """The CLI tools must not pay for, or warn about, a Streamlit import."""
+    import subprocess
+    import sys
+
+    probe = (
+        "import sys; "
+        "assert 'streamlit' not in sys.modules; "
+        "import immunegraph.config as c; "
+        "assert 'streamlit' not in sys.modules, 'config imported streamlit in a CLI process'; "
+        "assert c.STREAMLIT_SECRETS_BRIDGED == 0; "
+        "print('noop-ok')"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    )
+    assert "noop-ok" in result.stdout, result.stdout + result.stderr

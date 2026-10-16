@@ -109,6 +109,20 @@ FIXTURE: list[str] = [
     "correction_text:'The sample derivation is circular', strategy:'contradiction_surface', "
     "outcome:'effective', created_at:'2026-10-15T00:05:30+00:00'})-[:NEUTRALIZES]->(i)",
     "MATCH (a:Antibody {id:'ab_root'}), (c:Claim {id:'" + CL_CORRECTION + "'}) CREATE (a)-[:INJECTS]->(c)",
+    # --- kernel of truth ---------------------------------------------------
+    # A fact the antibody established, with provenance, plus one claim that
+    # conflicts with it and one that agrees. Without these the kernel queries
+    # would execute against an empty label and prove nothing.
+    "CREATE (:KernelFact {id:'kf_mars_oxygen', text:'Mars has no breathable oxygen', "
+    "trust_level:'primary', version:1, status:'active', created_at:'2026-10-15T00:07:00+00:00'})",
+    "MATCH (k:KernelFact {id:'kf_mars_oxygen'}), (s:Source {id:'src_nasa'}) "
+    "CREATE (k)-[:DERIVED_FROM]->(s)",
+    "MATCH (k:KernelFact {id:'kf_mars_oxygen'}), (ab:Antibody {id:'ab_root'}) "
+    "CREATE (ab)-[:ESTABLISHES]->(k)",
+    f"MATCH (c:Claim {{id:'{CL_ROOT}'}}), (k:KernelFact {{id:'kf_mars_oxygen'}}) "
+    "CREATE (c)-[:CONFLICTS_WITH {score:0.67, detected_at:'2026-10-15T00:07:30+00:00'}]->(k)",
+    f"MATCH (c:Claim {{id:'{CL_CORRECTION}'}}), (k:KernelFact {{id:'kf_mars_oxygen'}}) "
+    "CREATE (c)-[:ALIGNED_WITH {score:0.80, detected_at:'2026-10-15T00:07:30+00:00'}]->(k)",
     # --- embeddings, so the vector recall path (Q7) is genuinely exercised ---
     # Dimension 4 keeps the test fast; production uses the real model width.
     f"MATCH (c:Claim {{id:'{CL_ROOT}'}}) SET c.embedding = vecf32([1.0, 0.0, 0.0, 0.0])",
@@ -136,6 +150,11 @@ EXPECTATIONS: dict[str, Callable[[list[list[Any]]], bool]] = {
     "Q7_VECTOR_RECALL": lambda rows: len(rows) >= 1,
     "Q7B_RECALL_CANDIDATES": lambda rows: len(rows) >= 1,
     "Q8_ANTIBODY_EFFECTIVENESS": lambda rows: len(rows) >= 1,
+    "K1_KERNEL_FACTS": lambda rows: any(r[0] == "kf_mars_oxygen" for r in rows),
+    "K2_KERNEL_CONFLICTS": lambda rows: any(r[0] == CL_ROOT for r in rows),
+    "K3_KERNEL_STATS": lambda rows: bool(rows) and int(rows[0][0]) >= 1 and int(rows[0][2]) >= 1,
+    "K4_UNSANITISED_CLAIMS": lambda rows: len(rows) >= 1,
+    "K5_FACT_PROVENANCE": lambda rows: bool(rows) and rows[0][4] == "ab_root" and rows[0][5] == "NASA",
     "ACTIVE_INFECTIONS": lambda rows: len(rows) >= 1,
     "GRAPH_SNAPSHOT": lambda rows: len(rows) >= 1,
     "CLAIM_NEIGHBOURHOOD": lambda rows: len(rows) >= 1,
@@ -145,6 +164,8 @@ PARAMS: dict[str, dict[str, Any]] = {
     "Q4_CASCADE_REACH": {"root_claim_id": CL_ROOT},
     "Q6_IMMUNITY_RECALL": {"fingerprint": fingerprint(ROOT_TEXT)},
     "Q7_VECTOR_RECALL": {"query_embedding": [1.0, 0.0, 0.0, 0.0], "k": 5},
+    "K4_UNSANITISED_CLAIMS": {"limit": 50},
+    "K5_FACT_PROVENANCE": {"fact_id": "kf_mars_oxygen"},
     "CLAIM_NEIGHBOURHOOD": {"claim_id": CL_ROOT},
 }
 

@@ -7,6 +7,7 @@ container and a FalkorDB Cloud instance by changing .env alone.
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,6 +16,37 @@ from dotenv import load_dotenv
 # Load .env from the repository root if present.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(REPO_ROOT / ".env")
+
+
+def _load_streamlit_secrets() -> int:
+    """Expose Streamlit Cloud secrets as environment variables.
+
+    Streamlit Community Cloud supplies configuration through ``st.secrets``,
+    not environment variables. Without this bridge FALKORDB_HOST and its
+    companions never arrive and the deployed app cannot connect.
+
+    Only runs when Streamlit is already imported — which is true under
+    ``streamlit run`` (app.py imports it before this module) and false for the
+    CLI tools, so those avoid the import cost and the bare-mode warnings.
+    ``setdefault`` means a real environment variable always wins over a secret.
+    """
+    if "streamlit" not in sys.modules:
+        return 0
+    try:
+        import streamlit as st
+
+        bridged = 0
+        for key in st.secrets:
+            value = st.secrets[key]
+            if isinstance(value, (str, int, float, bool)) and key not in os.environ:
+                os.environ[key] = str(value)
+                bridged += 1
+        return bridged
+    except Exception:  # noqa: BLE001 - no secrets configured is normal
+        return 0
+
+
+STREAMLIT_SECRETS_BRIDGED = _load_streamlit_secrets()
 
 
 def _bool(name: str, default: bool = False) -> bool:
