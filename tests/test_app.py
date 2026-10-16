@@ -156,6 +156,31 @@ def test_app_survives_an_empty_graph():
     assert metrics.get("Peak severity") == "0.0"
 
 
+def test_cold_start_replays_the_committed_seed(monkeypatch):
+    """The deployed-app story.
+
+    FalkorDB Cloud's free tier has no persistence, so a fresh instance starts
+    empty. With SEED_LOG pointing at the committed log, the first page load
+    rebuilds the whole Mars run before rendering anything.
+    """
+    seed = Path(__file__).resolve().parents[1] / "data" / "seed_writes.jsonl"
+    assert seed.is_file(), "the committed seed log is missing"
+    monkeypatch.setenv("SEED_LOG", str(seed))
+
+    store = GraphStore(Settings.from_env())
+    assert store.node_count() == 0, "the fixture should have wiped the graph"
+
+    at = _app()
+    assert not at.exception, at.exception
+
+    assert any("replayed" in (i.value or "") for i in at.info), [i.value for i in at.info]
+    assert store.node_count() > 0, "the seed did not repopulate the graph"
+
+    metrics = {m.label: m.value for m in at.metric}
+    assert metrics.get("Peak severity") == "6.0", metrics
+    assert metrics.get("Facts held") == "1", metrics
+
+
 def test_app_shows_a_clear_error_when_the_database_is_unreachable(monkeypatch):
     """Judges open the app before starting Docker. It must not traceback.
 
