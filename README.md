@@ -81,21 +81,64 @@ severity, trust and recall are all Cypher queries. See
 
 ---
 
+## The kernel of truth — memory of what is *right*
+
+Everything above records what was **wrong**: an `Infection`, a quarantined `Claim`, a trust
+score that dropped. Useful, but incomplete. A swarm that only remembers its mistakes learns
+nothing it can reuse — every outbreak leaves a scar and the next one is caught the same
+expensive way.
+
+So when an antibody produces a correction that **cites a source**, the canonical form of that
+correction becomes a `KernelFact`: linked to the source that backs it, and to the antibody
+that established it. From then on every new claim is judged against the kernel.
+
+| | Detection (Q1–Q8) | Sanitisation (K1–K5) |
+| --- | --- | --- |
+| Finds | lies the swarm has **never seen** | lies it **already knows** |
+| Method | traversal over the support structure | lexical match against facts |
+| Cost | extraction + full scan — **3.1s** for the cascade | **~5ms**, no model call |
+
+That contrast is the whole point, and it is measured rather than asserted: every verdict
+carries its own elapsed time, shown in the UI and printed by the demo.
+
+**Only sourced corrections become facts.** If the antibody cannot cite anything, it says so
+and establishes nothing — "no source supports this" is a meta-statement, not a truth worth
+remembering, and inventing certainty would just be a new infection.
+
+Provenance is why this lives in the graph rather than a side table. *Which antibody* taught
+the swarm a fact, *citing what*, and *which claims conflict with it* are all edges, and
+answering "why is this claim quarantined?" is a traversal:
+
+```cypher
+MATCH (k:KernelFact {id: $fact_id})
+OPTIONAL MATCH (ab:Antibody)-[:ESTABLISHES]->(k)
+OPTIONAL MATCH (k)-[:DERIVED_FROM]->(s:Source)
+RETURN k.text, ab.id AS established_by, s.name AS source, s.url AS source_url
+```
+
+> **A bug worth mentioning.** The first version of the kernel-health query counted with
+> `count(*)`, which under `OPTIONAL MATCH` counts *rows* rather than *edges* — so an empty
+> kernel reported one conflict that did not exist, in exactly the direction that flattered
+> the project. Named-relationship counts ignore nulls; `count(*)` does not. See
+> [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) §5b.
+
+---
+
 ## Graph model
 
-Nodes: `Tenant` · `Session` · `Message` · `Agent` · `Claim` · `Source` · `Infection` · `Antibody`
+Nodes: `Tenant` · `Session` · `Message` · `Agent` · `Claim` · `Source` · `Infection` · `Antibody` · `KernelFact`
 
 | Memory type | Nodes | Role |
 | --- | --- | --- |
 | Episodic | `Message`, `Session` | append-only conversation history |
-| Semantic | `Claim`, `Source`, `Agent` | durable beliefs and who holds them |
+| Semantic | `Claim`, `Source`, `Agent`, `KernelFact` | durable beliefs, who holds them, and what the swarm has established as true |
 | Procedural | `Antibody`, `Infection` | how the swarm responds to a class of failure |
 
 Relationships: `SPOKE` · `MENTIONS` · `ASSERTS` · `SUPPORTED_BY` · `DERIVED_FROM` ·
 `CONTRADICTS` · `REPEATS` · `TRUSTS` · `HANDOFF_TO` · `TARGETS` · `SPREAD_TO` ·
-`NEUTRALIZES` · `INJECTS`
+`NEUTRALIZES` · `INJECTS` · `ESTABLISHES` · `CONFLICTS_WITH` · `ALIGNED_WITH` · `SUPERSEDES`
 
-The full schema, indexes, and the eight load-bearing Cypher queries are in
+The full schema, indexes, and all eighteen load-bearing Cypher queries are in
 **[`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md)**. Those queries are the product; this
 README repeats the four headline ones so a reviewer can see them without leaving the page.
 
@@ -226,6 +269,9 @@ the number that actually appears at that beat.
 8. Researcher repeats *"Mars has oxygen at night."* → **Q6/Q7 immunity recall fires
    instantly.** The swarm does not get fooled twice.
 9. **Q8** measures whether antibodies actually worked across outbreaks.
+10. The antibody's sourced correction becomes a **`KernelFact`** (K1). A later claim is
+    judged against it (K2) and, if it conflicts, downgraded — **in ~5ms with no model call**.
+    The swarm is measurably harder to fool than it was at step 1.
 
 ---
 

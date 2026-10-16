@@ -65,6 +65,22 @@ Multi-tenancy is handled by FalkorDB's multi-graph feature — one graph per ten
     outcome,       // 'effective' | 'ignored' | 'unknown'  -> the learning signal
     created_at
 })
+
+// --- kernel of truth ---------------------------------------------------
+//
+// The swarm's memory of what is RIGHT, complementing Infection/quarantined
+// Claim which record what was WRONG. Written by antibodies, read by the
+// sanitiser. Only established when a source is cited: an unsourced correction
+// ("nothing supports this") is a meta-statement, not a truth.
+(:KernelFact {
+    id,
+    text,          // canonical, claim-shaped — kept short so lexical matching works
+    trust_level,   // inherited from the source that backs it
+    version,
+    status,        // 'active' | 'superseded'
+    created_at,
+    superseded_by  // id of the fact that replaced this one, if any
+})
 ```
 
 ### Why `fingerprint` exists
@@ -105,6 +121,13 @@ vector-recall path in §5, query 7.
 (:Infection)-[:SPREAD_TO]->(:Claim)          // materialised cascade members
 (:Antibody)-[:NEUTRALIZES]->(:Infection)
 (:Antibody)-[:INJECTS]->(:Claim)             // the corrective claim itself
+
+// kernel of truth — provenance is edges, which is why the kernel is a graph
+(:KernelFact)-[:DERIVED_FROM]->(:Source)     // what backs this fact
+(:Antibody)-[:ESTABLISHES]->(:KernelFact)    // who taught the swarm this
+(:KernelFact)-[:SUPERSEDES]->(:KernelFact)   // a newer fact retires an older one
+(:Claim)-[:CONFLICTS_WITH {score}]->(:KernelFact)
+(:Claim)-[:ALIGNED_WITH {score}]->(:KernelFact)
 ```
 
 `DERIVED_FROM` direction matters and is easy to get backwards: the edge runs
@@ -122,6 +145,8 @@ CREATE INDEX FOR (c:Claim)   ON (c.id)
 CREATE INDEX FOR (a:Agent)   ON (a.name)
 CREATE INDEX FOR (i:Infection) ON (i.status)
 CREATE INDEX FOR (s:Session) ON (s.id)
+CREATE INDEX FOR (k:KernelFact) ON (k.id)
+CREATE INDEX FOR (k:KernelFact) ON (k.status)
 ```
 
 `fingerprint` and `status` are the hot paths — immunity recall and the active-claim scan.
@@ -296,6 +321,99 @@ RETURN i.type AS infection_type,
        sum(CASE WHEN ab.outcome = 'ignored' THEN 1 ELSE 0 END) AS recurred
 ORDER BY outbreaks DESC
 ```
+
+---
+
+## 5b. The kernel of truth — recognising lies the swarm already knows
+
+Q1–Q8 **detect new lies** by walking the support structure. They are thorough and they are
+expensive: extraction runs, then a scan. The kernel is the other half of immunity — a set of
+canonical, source-backed facts that new claims are judged against by comparison.
+
+| | Detection (Q1–Q8) | Sanitisation (K1–K5) |
+| --- | --- | --- |
+| Finds | lies the swarm has **never seen** | lies it **already knows** |
+| Method | traversal over the support structure | lexical match against facts |
+| Cost | extraction + full scan | one fact query, then comparison per fact |
+| Measured | 3.1s for the cascade | **~5ms**, no model call |
+
+An antibody that cites a source establishes a fact. An antibody that cannot cite one
+establishes **nothing** — "no source supports this" is a meta-statement, not a truth worth
+remembering, and inventing certainty would just be a new infection.
+
+### K1 — the active kernel, with provenance
+
+```cypher
+MATCH (k:KernelFact)
+WHERE k.status = 'active'
+OPTIONAL MATCH (k)-[:DERIVED_FROM]->(s:Source)
+RETURN k.id AS fact_id, k.text AS text, k.trust_level AS trust_level,
+       k.version AS version, k.created_at AS created_at, s.name AS source
+ORDER BY k.created_at
+```
+
+### K2 — what currently conflicts with the kernel
+
+```cypher
+MATCH (c:Claim)-[r:CONFLICTS_WITH]->(k:KernelFact)
+RETURN c.id AS claim_id, c.text AS claim, c.status AS claim_status,
+       k.id AS fact_id, k.text AS fact, k.trust_level AS trust_level,
+       r.score AS overlap
+ORDER BY r.score DESC
+```
+
+### K3 — kernel health (the number that shows immunity accumulating)
+
+```cypher
+MATCH (k:KernelFact)
+WHERE k.status = 'active'
+WITH count(k) AS facts
+OPTIONAL MATCH (:Claim)-[al:ALIGNED_WITH]->(:KernelFact)
+WITH facts, count(al) AS aligned_edges
+OPTIONAL MATCH (:Claim)-[cf:CONFLICTS_WITH]->(:KernelFact)
+RETURN facts, aligned_edges, count(cf) AS conflict_edges
+```
+
+> **`count(al)`, not `count(*)`.** Under `OPTIONAL MATCH` an unmatched pattern still yields
+> one row of nulls, so `count(*)` reports **1** for an empty edge set. The first version of
+> this query did exactly that and the dashboard cheerfully reported a conflict before any
+> fact existed. Named-relationship counts ignore nulls; `count(*)` does not.
+
+### K4 — claims the sanitiser has not yet judged
+
+```cypher
+MATCH (c:Claim)
+WHERE c.status = 'active' AND c.verdict IS NULL
+RETURN c.id AS claim_id, c.text AS text, c.created_at AS created_at
+ORDER BY c.created_at
+LIMIT $limit
+```
+
+### K5 — who established a fact, citing what
+
+```cypher
+MATCH (k:KernelFact {id: $fact_id})
+OPTIONAL MATCH (ab:Antibody)-[:ESTABLISHES]->(k)
+OPTIONAL MATCH (k)-[:DERIVED_FROM]->(s:Source)
+OPTIONAL MATCH (i:Infection)-[:NEUTRALIZES|TARGETS*1..2]-(ab)
+RETURN k.id AS fact_id, k.text AS text, k.trust_level AS trust_level,
+       k.created_at AS created_at,
+       ab.id AS established_by, s.name AS source, s.url AS source_url,
+       collect(DISTINCT i.id) AS related_infections
+```
+
+### Matching a short claim against a longer fact
+
+Kernel facts are canonical and terse, but the LLM path has no hand-written short form, so its
+fact may be prose-length. **Jaccard divides by the union**, which penalises a length
+difference and drops a real contradiction below threshold. Kernel comparisons therefore use
+the **overlap coefficient**, `|A ∩ B| / min(|A|, |B|)`, with a higher threshold (`0.60`) and
+the same negation-asymmetry rule as `detect_contradiction`.
+
+This is worth being precise about, because the honest version is narrower than it first
+looks: against the Mars correction's short canonical fact, Jaccard already sufficed. The
+overlap coefficient is what saves the **prose-length** fact — which is exactly what the LLM
+path produces. `tests/test_models.py` records that distinction rather than overclaiming.
 
 ---
 

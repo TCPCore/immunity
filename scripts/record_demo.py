@@ -84,11 +84,10 @@ BEATS: list[Beat] = [
         highlight_index=2,
     ),
     Beat(
-        "Q4's traversal also gives the blast radius: queried as spread 2. An antibody "
-        "injects a sourced correction citing NASA and quarantines the root claim.",
-        hold=8.0,
-        # Scoped to stMain: a bare [data-testid="stExpander"] matches the sidebar's
-        # three expanders first, and the highlight lands on the wrong panel.
+        "Q4's traversal also gives the blast radius: spread 2. An antibody injects a "
+        "sourced correction citing NASA and quarantines the root claim.",
+        hold=7.0,
+        # Scoped to stMain: a bare stExpander matches the sidebar's expanders first.
         highlight='[data-testid="stMain"] [data-testid="stExpander"]',
     ),
     Beat(
@@ -96,6 +95,14 @@ BEATS: list[Beat] = [
         "They were never proven false; their justification was refuted.",
         hold=6.0,
         highlight='[data-testid="stChatMessage"]',
+    ),
+    Beat(
+        "And because the correction cited a source, it became a KERNEL FACT: what the "
+        "swarm now holds as TRUE, with the antibody that established it and the source "
+        "behind it. The swarm has stopped only remembering its mistakes.",
+        hold=10.0,
+        highlight='[data-testid="stMain"] [data-testid="stDataFrame"]',
+        highlight_index=2,
     ),
     Beat(
         "Trust is DERIVED from the graph, never stored (Q5). All three fall to 0.85 — the "
@@ -110,15 +117,17 @@ BEATS: list[Beat] = [
         button="Re-inject the false claim",
     ),
     Beat(
-        "Immunity recall fires instantly by similarity (0.75). No cascade re-detection ran. "
-        "The re-offending Researcher drops to 0.70; the others stay at 0.85.",
-        hold=9.0,
+        "The sanitiser catches it against the kernel in about five milliseconds — no "
+        "extraction, no cascade scan. Compare that with the three seconds the original "
+        "detection needed. The re-offending Researcher drops to 0.70.",
+        hold=11.0,
         highlight='[data-testid="stAlert"]',
     ),
     Beat(
-        "Q8 measures whether the immune response actually worked: both outbreak types "
-        "contained, none recurred. FalkorDB was not storing the answer — it worked it out.",
-        hold=8.0,
+        "Q8: both outbreak types contained, none recurred, and one fast-path recognition "
+        "recorded. Detection finds lies the swarm has never seen; the kernel recognises "
+        "lies it already knows. That difference is what immunity means here.",
+        hold=10.0,
         highlight='[data-testid="stMain"] [data-testid="stDataFrame"]',
         highlight_index=1,
     ),
