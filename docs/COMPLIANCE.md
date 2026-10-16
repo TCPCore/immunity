@@ -21,7 +21,7 @@ render from the remote.
 | # | Item | Owner | Why it blocks |
 | --- | --- | --- | --- |
 | 1 | **Confirm registration** | human | Rule 1. The schedule says registration is the one checkpoint you must act on. An unregistered team cannot submit. |
-| 2 | **Host the demo video** and link it | human | Rule 10 requires "a demo video showing the working project". It is recorded and verified (79.5s, captioned, reproducible via `scripts/record_demo.py`); it now needs uploading to YouTube/Loom and linking from `SUBMISSION.md`. Consider re-recording with narration — a silent captioned cut satisfies the rule but a narrated one argues rules 12/13 better. |
+| 2 | **Host the demo video** and link it | human | Rule 10 requires "a demo video showing the working project". It is recorded and verified (90.5s, captioned, reproducible via `scripts/record_demo.py`); it now needs uploading to YouTube/Loom and linking from `SUBMISSION.md`. Consider re-recording with narration — a silent captioned cut satisfies the rule but a narrated one argues rules 12/13 better. |
 | 3 | **Complete the rule 12/13 review** | human | Rules 12 and 13. You must be able to explain the model and every query, and demonstrate meaningful contribution. See `EXPLAINER.md`. |
 | 4 | **Finalise the AI disclosure** | human | Rule 11. The wording in the README must be true when you submit it. |
 | 5 | **Name both tracks at submission** | human | Rule 5: enter 01 and 02, and name *every* track you are entering. |
@@ -32,7 +32,7 @@ render from the remote.
 | --- | --- |
 | FalkorDB is the only datastore and does the detection | 13 Cypher queries, all executed against a live instance |
 | Every query actually runs | `python -m immunegraph.verify_queries` → "All non-optional queries executed and returned expected shapes" |
-| The product works end to end | `python -m immunegraph.demo` exits 0; 67 tests pass, twice consecutively |
+| The product works end to end | `python -m immunegraph.demo` exits 0; 85 tests pass, twice consecutively |
 | The documented quickstart works for a judge | verified by exporting a fresh clone with `git archive` and following the README verbatim against a recreated database |
 | Opening the app before Docker is running | shows "Cannot reach FalkorDB … start it with docker compose up -d", not a traceback |
 | High-concurrency reads and writes (Track 02) | 8 concurrent writers, 200 writes: 200/200 unique sequence numbers vs 37/200 for the naive read-then-write. See `tests/test_concurrency.py` |
@@ -128,7 +128,7 @@ pre-hackathon code exists, as the workspace was empty at session start.
 | README with setup instructions | ✅ | `../README.md` |
 | README with graph data model | ✅ | `../README.md` summary + `GRAPH_MODEL.md` |
 | The Cypher queries the product depends on | ✅ | `GRAPH_MODEL.md` §5 and `src/immunegraph/queries.py` |
-| Demo video | ✅ recorded, ⚠️ needs hosting | **79.5s at 1680×1050.** Silent, with burned-in captions and the relevant panel outlined on each beat, so it explains itself without narration. Produced from the live UI by the committed `scripts/record_demo.py`. Deliberately not tracked in git (`*.mp4` is ignored) — host it and link it from `SUBMISSION.md`. |
+| Demo video | ✅ recorded, ⚠️ needs hosting | **90.5s at 1680×1200.** Silent, with burned-in captions and the relevant panel outlined on each beat, so it explains itself without narration. Produced from the live UI by the committed `scripts/record_demo.py`. Deliberately not tracked in git (`*.mp4` is ignored) — host it and link it from `SUBMISSION.md`. |
 | Live deployment, or complete local setup | ✅ | `../README.md` Option A (Docker) and Option B (Cloud) |
 | The track being entered | ✅ | `../README.md` — tracks 01 and 02 |
 

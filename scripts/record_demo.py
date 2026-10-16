@@ -26,6 +26,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,7 +34,7 @@ from pathlib import Path
 import websockets
 
 URL = "http://127.0.0.1:8501"
-WIDTH, HEIGHT = 1680, 1050
+WIDTH, HEIGHT = 1680, 1200
 FPS = 10
 JPEG_QUALITY = 78
 
@@ -195,6 +196,9 @@ def highlight_js(selector: str | None, index: int | None) -> str:
         e.style.borderRadius = '10px';
         e.classList.add('__ig_hl');
       });
+      // The dashboard is taller than the viewport now that it carries the kernel
+      // panel, so outlining an element is useless if the viewer cannot see it.
+      chosen[0].scrollIntoView({block: 'center', inline: 'nearest'});
       return 'OK';
     })()""" % (json.dumps(selector), target)
 
@@ -281,6 +285,25 @@ def ffmpeg_exe() -> str:
 # --------------------------------------------------------------------- record
 
 
+async def wait_for_app(cdp: "CDP", timeout: float = 90.0) -> bool:
+    """Block until the app has actually rendered, rather than sleeping blindly.
+
+    A fixed sleep must cover the worst case, which means Chrome idles on a static
+    page for most of it — and idle headless Chrome on this machine has been
+    observed to exit by itself. Polling starts the recording the moment the
+    dashboard exists and keeps that window of exposure short.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            if await cdp.js("!!document.querySelector('[data-testid=\"stMetric\"]')"):
+                return True
+        except Exception:  # noqa: BLE001 - the connection may still be settling
+            pass
+        await asyncio.sleep(0.5)
+    return False
+
+
 async def record(frames_dir: Path) -> int:
     targets = json.load(urllib.request.urlopen("http://127.0.0.1:9222/json"))
     page = next((t for t in targets if t.get("type") == "page"), None)
@@ -326,8 +349,10 @@ async def record(frames_dir: Path) -> int:
             {"width": WIDTH, "height": HEIGHT, "deviceScaleFactor": 1, "mobile": False},
         )
         await cdp.call("Page.navigate", {"url": URL})
-        print("Waiting for the app to finish its first render ...", flush=True)
-        await asyncio.sleep(24)
+        print("Waiting for the app to render ...", flush=True)
+        if not await wait_for_app(cdp):
+            raise RuntimeError("the app never rendered a dashboard within 90s")
+        print("App is up.", flush=True)
 
         await cdp.call(
             "Page.startScreencast",

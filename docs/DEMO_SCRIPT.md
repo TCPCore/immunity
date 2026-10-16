@@ -117,7 +117,25 @@ so this is where the pacing trap lives. See "Measured timings" at the top.*
 > was the claim we just refuted, so they stop being trustworthy. Quarantining the root isn't
 > enough; the whole cascade has to be contained."
 
-## 2:05 – 2:20 · Act IV — trust, derived
+## 2:05 – 2:35 · Act III.b — the kernel of truth
+
+**On screen:** scroll the dashboard to the **Kernel of truth** panel. This is the beat that
+distinguishes the project from a detector.
+
+> "Now the part I care most about. Everything up to here recorded what was *wrong* — an
+> infection, a quarantined claim, a trust score that dropped. But a swarm that only remembers
+> its mistakes learns nothing it can reuse.
+>
+> The correction cited NASA, so it became a **fact**. Not a note, not a log line — a node in
+> the graph, linked to the source that backs it, and to the antibody that established it.
+> That's the purple node: *Mars has no breathable oxygen*, citing NASA.
+>
+> And notice what did **not** become a fact. If the antibody had found no source, it would
+> have said so and established nothing. Inventing certainty would just be a new infection."
+
+**Point at** the `Facts held` metric and the fact table.
+
+## 2:35 – 2:50 · Act IV — trust, derived
 
 **On screen:** the **Trust** table.
 
@@ -140,8 +158,15 @@ click and keep talking — do not wait for something to happen.
 
 *The green banner is already there.*
 
-> "Recognised instantly. Matched by similarity at zero point seven five against the claim that
-> was quarantined earlier — and the claim is quarantined on sight. No cascade detection ran.
+> "Recognised instantly — and look at *why*. The sanitiser matched this claim against the
+> kernel fact in about five milliseconds. No extraction call, no cascade scan. Compare that
+> with the three seconds the original detection needed.
+>
+> That's the difference between the two halves of the immune system. Detection finds lies the
+> swarm has never seen, by walking the support structure — thorough, and it gets more
+> expensive as the graph grows. The kernel recognises lies it already knows, by comparison,
+> and it doesn't. The swarm is measurably harder to fool than it was ninety seconds ago.
+>
 > Click it again and it matches on the fingerprint hash instead, and the answer is immediate.
 > The swarm does not get fooled twice."
 
@@ -162,7 +187,7 @@ click and keep talking — do not wait for something to happen.
 > the antibody worked.
 >
 > Every query here has been executed against a live instance — `verify_queries` runs all
-> thirteen, and the test suite has sixty-seven tests. FalkorDB wasn't a place to store the
+> thirteen, and the test suite has eighty-five tests. FalkorDB wasn't a place to store the
 > answer. It was the thing that worked out the answer."
 
 ---

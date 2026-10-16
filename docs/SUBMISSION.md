@@ -56,7 +56,7 @@ swarm develops immunity" into a number.
 | Item | Value |
 | --- | --- |
 | Repository | <https://github.com/TCPCore/immunity> — public, 30 commits on `main` |
-| Demo video | **Recorded and verified** — 79.5s, 1680×1050, silent with burned-in captions and per-beat panel highlighting. Upload it (YouTube/Loom, public or unlisted) and paste the URL here. Reproducible with `python scripts/record_demo.py`; `docs/DEMO_SCRIPT.md` is the shot list. |
+| Demo video | **Recorded and verified** — 90.5s, 1680×1200, silent with burned-in captions and per-beat panel highlighting. Upload it (YouTube/Loom, public or unlisted) and paste the URL here. Reproducible with `python scripts/record_demo.py`; `docs/DEMO_SCRIPT.md` is the shot list. |
 | Live deployment | Local Docker / FalkorDB Cloud; see below |
 
 ## Setup (rule 10 — a live deployment, or complete local setup instructions)
@@ -69,7 +69,7 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -e ".[dev]"   # installs the package itself
 cp .env.example .env                                   # optional: add OPENAI_API_KEY
 .venv/bin/python -m immunegraph.verify_queries          # executes all 13 queries
-.venv/bin/python -m pytest                              # 67 tests
+.venv/bin/python -m pytest                              # 85 tests
 .venv/bin/streamlit run app.py
 ```
 
@@ -113,7 +113,7 @@ the written form of that explanation.
 - [x] README with setup instructions
 - [x] README with the graph data model
 - [x] The Cypher queries the product depends on — `docs/GRAPH_MODEL.md` §5, `src/immunegraph/queries.py`, and the four headline queries inlined in the README
-- [x] **Demo video** recorded (79.5s, captioned, verified beat by beat) — **still needs uploading and a link here**
+- [x] **Demo video** recorded (90.5s, captioned, verified beat by beat) — **still needs uploading and a link here**
 - [x] Complete local setup instructions (Docker) and a Cloud path
 - [x] Tracks named — 01 and 02
 
@@ -126,7 +126,7 @@ the written form of that explanation.
 - [ ] **Rule 12/13 review complete** — see `COMPLIANCE.md` for the five concrete steps
 - [x] MIT licence present
 - [x] `python -m immunegraph.verify_queries` passes
-- [x] `python -m pytest` passes (67 tests)
+- [x] `python -m pytest` passes (85 tests)
 
 **Final five minutes**
 
