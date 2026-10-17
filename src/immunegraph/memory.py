@@ -217,6 +217,19 @@ class MemoryWriter:
             source.to_properties(),
         )
 
+    @logs("StatementRefuted")
+    def record_refuted_statement(self, statement: "RefutedStatement") -> str:
+        """Store a known-false statement. Negative memory, and logged like any write."""
+        self._write(
+            """
+            MERGE (r:RefutedStatement {id: $id})
+            SET r.text = $text, r.fact_id = $fact_id,
+                r.reason = $reason, r.created_at = $created_at
+            """,
+            statement.to_properties(),
+        )
+        return statement.id
+
     @logs("SourceCited")
     def link_source(self, claim_id: str, source_id: str, quote: str = "") -> None:
         """Attach a citation, and promote the claim's verification state."""

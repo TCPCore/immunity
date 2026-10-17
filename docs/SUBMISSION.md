@@ -135,7 +135,7 @@ the written form of that explanation.
 - [ ] **Rule 12/13 review complete** — see `COMPLIANCE.md` for the five concrete steps
 - [x] MIT licence present
 - [x] `python -m immunegraph.verify_queries` passes
-- [x] `python -m pytest` passes (134 tests)
+- [x] `python -m pytest` passes (154 tests)
 
 **Final five minutes**
 

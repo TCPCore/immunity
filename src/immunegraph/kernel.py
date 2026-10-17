@@ -24,6 +24,7 @@ import uuid
 from dataclasses import dataclass
 
 from .memory import MemoryWriter
+from .models import RefutedStatement
 from .queries import K1_KERNEL_FACTS, K2_KERNEL_CONFLICTS, K3_KERNEL_STATS, K5_FACT_PROVENANCE
 from .schema import KERNEL_ACTIVE, TRUST_PRIMARY
 
@@ -129,6 +130,33 @@ class Kernel:
             "source": row[5], "source_url": row[6],
             "related_infections": [x for x in (row[7] or []) if x],
         }
+
+    # ------------------------------------------------------------- negative
+
+    def register_refuted(
+        self, text: str, fact_id: str | None = None, reason: str = ""
+    ) -> str:
+        """Record a statement known to be false. Kept beside the facts, not in them."""
+        statement = RefutedStatement(
+            id=f"rf_{uuid.uuid4().hex[:10]}",
+            text=text,
+            fact_id=fact_id,
+            reason=reason,
+        )
+        return self.writer.record_refuted_statement(statement)
+
+    def refuted(self) -> list[RefutedStatement]:
+        rows = self.store.rows(
+            "MATCH (r:RefutedStatement) "
+            "RETURN r.id, r.text, r.fact_id, r.reason, r.created_at"
+        )
+        return [
+            RefutedStatement(
+                id=row[0], text=row[1], fact_id=row[2] or None,
+                reason=row[3] or "", created_at=row[4] or "",
+            )
+            for row in rows
+        ]
 
     def is_empty(self) -> bool:
         return int(self.store.scalar("MATCH (k:KernelFact) RETURN count(k)") or 0) == 0

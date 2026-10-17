@@ -185,6 +185,33 @@ def conflicts_on_numbers(claim: str, fact: str) -> float | None:
     return context
 
 
+def subject_head(text: str) -> str | None:
+    """The leading content token — the entity a statement is about.
+
+    Crude on purpose. "Enterprise plan costs 499" and "Team plan costs 99" are
+    about different things, and every token after the head is shared between
+    them ("plan", "costs", "usd", "per", "seat", "year"). Matching on those is
+    how a defence ends up contradicting itself.
+    """
+    for token in normalise_text(text).split():
+        if len(token) >= 3:
+            return token
+    return None
+
+
+def same_subject(left: str, right: str) -> bool:
+    """Do these two statements concern the same entity?
+
+    If either side has no identifiable subject, assume yes — better to check
+    than to silently skip a contradiction.
+    """
+    left_head = subject_head(left)
+    right_head = subject_head(right)
+    if left_head is None or right_head is None:
+        return True
+    return left_head == right_head
+
+
 def fingerprint(text: str) -> str:
     """Stable short hash of the normalised claim text."""
     normalised = normalise_text(text)
@@ -253,6 +280,33 @@ class Source:
             "name": self.name,
             "url": self.url,
             "trust_level": self.trust_level,
+        }
+
+
+@dataclass
+class RefutedStatement:
+    """A statement the swarm has confirmed to be false, kept as negative memory.
+
+    The kernel holds what is *true*. This holds what is *known false* — the
+    things an audit proved cannot be caught by comparison, because they are not
+    contradictions of a fact but plausible mutations of one. A company saying
+    "we do not offer a Starter plan" is knowledge, and it is not derivable from
+    the facts it contradicts.
+    """
+
+    id: str
+    text: str
+    fact_id: str | None = None
+    reason: str = ""
+    created_at: str = field(default_factory=utcnow)
+
+    def to_properties(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "text": self.text,
+            "fact_id": self.fact_id or "",
+            "reason": self.reason,
+            "created_at": self.created_at,
         }
 
 

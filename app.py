@@ -20,6 +20,7 @@ st.set_page_config(
 )
 
 from immunegraph.agents import MARS_CASCADE, MARS_REPEAT, MARS_TOPIC  # noqa: E402
+from immunegraph.audit import KernelAuditor  # noqa: E402
 from immunegraph.company import COMPANY, DOCUMENTS, CompanyBrain  # noqa: E402
 from immunegraph.config import (  # noqa: E402
     STREAMLIT_SECRETS_BRIDGED,
@@ -518,6 +519,104 @@ def _run_company_stream(swarm: Swarm, brain: CompanyBrain) -> None:
         severity_slot.metric("Infection severity", "contained")
 
 
+def render_audit(swarm: Swarm) -> None:
+    """Track 01/02: measure what the defence catches AND what it wrongly catches."""
+    st.markdown("#### Self-audit — two-sided, because one number is gameable")
+    st.caption(
+        "A defence that flags everything scores **100% coverage** and is worthless. Coverage "
+        "alone cannot tell you that. So the audit generates adversarial probes from the "
+        "swarm's own kernel and measures three things: what it **catches**, what it "
+        "**wrongly catches** (autoimmunity), and whether it fired at the **right fact**."
+    )
+
+    auditor = KernelAuditor(swarm)
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("🔬  Run self-audit", type="primary", width="stretch"):
+            st.session_state["audit_before"] = auditor.audit()
+            st.session_state.pop("audit_after", None)
+    with col_b:
+        if st.button("💉  Vaccinate blind spots", width="stretch",
+                     disabled="audit_before" not in st.session_state):
+            created = auditor.vaccinate(st.session_state["audit_before"])
+            st.session_state["audit_vaccinated"] = len(created)
+            st.session_state["audit_after"] = auditor.audit()
+
+    facts = swarm.kernel.facts()
+    if len(facts) < 3:
+        st.warning(
+            f"The kernel holds {len(facts)} fact(s) — too few to audit meaningfully. "
+            "The audit mutates facts, so it needs a corpus. Load the company documents, "
+            "which come with numbers, policies and a shared subject."
+        )
+        if st.button("📚  Load company knowledge, then audit", type="primary"):
+            CompanyBrain(swarm).seed()
+            st.rerun()
+        return
+
+    before = st.session_state.get("audit_before")
+    if before is None:
+        st.info(
+            "Nothing audited yet. The audit mutates the kernel's own facts and tests the "
+            "defence against them."
+        )
+        return
+
+    after = st.session_state.get("audit_after")
+    shown = after or before
+    cols = st.columns(3)
+    cols[0].metric("Coverage", f"{shown.coverage:.0%}",
+                   help="Generated contradictions the defence caught")
+    cols[1].metric("Autoimmunity", f"{shown.autoimmunity:.0%}",
+                   help="True statements wrongly flagged — the immune system attacking the host")
+    cols[2].metric("Attribution", f"{shown.attribution:.0%}",
+                   help="Caught against the RIGHT fact, not by luck")
+
+    st.caption(
+        f"{shown.probes} probes: {shown.contradictions} contradictions, {shown.controls} controls "
+        f"that must not fire — in {shown.elapsed_ms:.0f} ms."
+    )
+
+    if after is not None and before is not before:
+        st.success(
+            f"Vaccinated {st.session_state.get('audit_vaccinated', 0)} blind spots. "
+            f"Uncovered {len(before.uncovered)} → {len(after.uncovered)}, "
+            f"autoimmunity {before.autoimmunity:.0%} → {after.autoimmunity:.0%}."
+        )
+
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.markdown("##### Uncovered — falsehoods no fact contradicts")
+        if shown.uncovered:
+            st.dataframe(
+                [{"statement": u["text"]} for u in shown.uncovered],
+                width="stretch", hide_index=True,
+            )
+            st.caption(
+                "Nothing here is contradicted by the kernel, so no comparison can catch it. "
+                "What is missing is the knowledge that the thing does not exist — which is "
+                "why vaccinating means recording it as known-false."
+            )
+        else:
+            st.caption("None. Every generated mutation is either caught or recorded.")
+    with right:
+        st.markdown("##### Every probe, and what happened")
+        st.dataframe(
+            [
+                {"probe": o["kind"], "expected": o["expected"], "got": o["result"],
+                 "statement": o["text"][:58]}
+                for o in shown.outcomes
+            ],
+            width="stretch", hide_index=True, height=260,
+        )
+        st.caption(
+            f"{shown.caught} of {shown.contradictions} contradictions caught; "
+            f"{len(shown.misattributed)} caught against the wrong fact."
+        )
+        if shown.false_alarms:
+            st.error(f"{shown.false_alarms} true statements were flagged. That is autoimmunity.")
+
+
 def render_company(swarm: Swarm) -> None:
     """Track 03: a shared brain over one company's documents."""
     st.markdown(f"#### {COMPANY} — a company brain that can be corrected")
@@ -790,8 +889,9 @@ def main() -> None:
     if note := st.session_state.get("recall_note"):
         st.success(note)
 
-    demo_tab, claim_tab, company_tab, knowledge_tab = st.tabs(
-        ["  Live demo  ", "  Check any claim  ", "  Company brain  ", "  Kernel & durability  "]
+    demo_tab, claim_tab, company_tab, audit_tab, knowledge_tab = st.tabs(
+        ["  Live demo  ", "  Check any claim  ", "  Company brain  ", "  Self-audit  ",
+         "  Kernel & durability  "]
     )
 
     with demo_tab:
@@ -811,6 +911,9 @@ def main() -> None:
 
     with company_tab:
         render_company(swarm)
+
+    with audit_tab:
+        render_audit(swarm)
 
     with knowledge_tab:
         render_knowledge(swarm)

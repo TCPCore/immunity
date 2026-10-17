@@ -314,6 +314,70 @@ query and checks the *shape* of each result before commit. Eighteen queries, all
 Number 5 is my favourite, because the fingerprint caught it — the rebuild *looked* fine and was not.
 Number 6 is the one a reviewer would never catch by reading.
 
+## The metric nobody reports
+
+Every system of this kind reports **coverage**: how much it catches. That number is gameable — a
+detector that flags everything scores 100% and is worthless. So I built the other half and pointed
+it at my own code.
+
+The [Agent-Native Immune System](https://arxiv.org/abs/2606.28270) paper names this missing metric
+— the **Autoimmunity Rate**, the false-positive intervention rate — among the field's open
+challenges. It does not define or compute it. Here it is, paired with coverage so neither can be
+optimised alone:
+
+```
+COVERAGE       how many generated falsehoods the defence catches
+AUTOIMMUNITY   how many TRUE statements it wrongly flags      <- nobody reports this
+ATTRIBUTION    did it fire at the RIGHT fact, or just at A fact
+```
+
+The probes are generated from the system's own kernel: perturbed numbers, transplanted numbers,
+substituted entities, and truth-preserving paraphrases that must **not** fire. No labelled dataset
+required — the knowledge base is the test set.
+
+### What it found, with 154 tests passing
+
+**The defence was subject-blind.** `"Enterprise costs 499 USD per seat per year"` is true. It was
+judged to **conflict**, because it numerically mismatches the *Team* plan's fact and the rule never
+checked which entity the claim was about.
+
+```
+AUTOIMMUNITY RATE: 2/10 = 20% of true statements wrongly flagged
+```
+
+Binding a conflict to a shared subject took that to **0% with coverage unchanged at 100%**. A bug
+invisible to every test I had written, because my tests asked "does it catch the false thing?" and
+never "does it leave the true thing alone?".
+
+**Then the repair nearly made it worse.** With subject binding in place, the audit found five
+falsehoods that no fact contradicts — `"The Starter plan costs 499 USD per seat per year"` is not
+contradicted by anything, because Halcyon sells no Starter plan. Closing that gap means recording
+it as known-false. Which scored:
+
+```
+uncovered   : 5 -> 0          the repair worked
+coverage    : 100% -> 100%    still looks perfect
+autoimmunity: 0% -> 81.8%     the vaccine was attacking the host
+```
+
+Recording "Starter plan costs 499" made it fuzzily match the **true** "Enterprise plan costs 499"
+on every word but one. **A system reporting only coverage would have shipped that as a success.**
+Applying subject binding one level deeper — to the vaccine itself — closed the holes with
+autoimmunity held at zero.
+
+That is the whole argument for a two-sided metric in one sequence. One number would have shown a
+perfect score twice.
+
+### Why this is the part I would defend
+
+Detection is the published part; I have said so. But a defence that cannot measure its own
+false-positive rate is not deployable in a company brain, because blocking a **correct** answer has
+a real cost — a customer told the wrong price by a system "protecting" them from a true sentence —
+and that cost is invisible in every metric currently reported.
+
+It also turns the demo's claim from "trust us" into "run it": the probes come from your own
+knowledge base, so the number is about *your* corpus.
+
 ## Where this is useful, measured
 
 | Claim | Measured |
@@ -324,7 +388,7 @@ Number 6 is the one a reviewer would never catch by reading.
 | Real policy conflict | **7.2 ms** local · 97 ms cloud |
 | Rebuild from log | **73 writes, 0 failed, identical** |
 | Concurrent sequence allocation | **200/200** under 8 writers |
-| Regression suite | **134 tests** |
+| Regression suite | **154 tests** |
 
 The local-vs-cloud gap is **pure network round-trips** — same code, same query, 16× slower. So the
 compute is cheap and the *topology* is what you optimise.
@@ -368,5 +432,5 @@ Saying that out loud is worth more than another feature.
 
 ---
 
-*Built on [FalkorDB](https://www.falkordb.com/). 44 commits, 134 tests, 18 queries verified against
+*Built on [FalkorDB](https://www.falkordb.com/). 46 commits, 154 tests, 18 queries verified against
 a live instance. Graph model and every query: [github.com/TCPCore/immunity](https://github.com/TCPCore/immunity).*

@@ -24,16 +24,24 @@ from .kernel import Fact, Kernel
 from .memory import MemoryWriter
 from .models import (
     ALIGNMENT_OVERLAP,
+    fingerprint,
+    same_subject,
     conflicts_on_numbers,
     conflicts_with_fact,
     overlap_coefficient,
 )
 from .queries import K4_UNSANITISED_CLAIMS
 from .schema import (
+    TRUST_UNRELIABLE,
     VERDICT_CLEAN,
     VERDICT_CONFLICTS,
     VERDICT_UNKNOWN,
 )
+
+
+# A refuted statement is a known falsehood, so recognition only needs to be
+# close — there is no risk of a false positive from being lenient here.
+REFUTED_OVERLAP = 0.80
 
 
 @dataclass
@@ -85,16 +93,55 @@ class Sanitizer:
 
         conflicts: list[dict] = []
         aligned: list[dict] = []
+
+        # Negative memory first, and cheapest. Some falsehoods are not
+        # contradictions of anything the swarm holds — they are plausible
+        # mutations of it ("a Starter plan at the Enterprise price"). No amount
+        # of comparison against true facts will catch those, because nothing
+        # they say is contradicted; what is missing is the knowledge that the
+        # thing does not exist. The audit finds such gaps and this closes them.
+        claim_print = fingerprint(text)
+        for statement in self.kernel.refuted():
+            # Subject binding applies here too, and the audit is the reason we
+            # know. A refuted "Starter plan costs 499" matches the *true*
+            # "Enterprise plan costs 499" on every word but one, so a fuzzy
+            # blocklist without subject binding scored 82% autoimmunity — the
+            # vaccine attacking the host. Without this measurement that would
+            # have shipped, because coverage looked perfect.
+            if not same_subject(text, statement.text):
+                continue
+            if (
+                claim_print == fingerprint(statement.text)
+                or overlap_coefficient(text, statement.text) >= REFUTED_OVERLAP
+            ):
+                conflicts.append(
+                    {
+                        "fact_id": statement.fact_id or statement.id,
+                        "fact": statement.text,
+                        "trust_level": TRUST_UNRELIABLE,
+                        "overlap": 1.0,
+                        "refuted": True,
+                    }
+                )
+                break
         for fact in facts:
             # Score with the overlap coefficient: a terse claim judged against a
             # longer canonical fact would otherwise be diluted by Jaccard and
             # missed entirely.
             score = overlap_coefficient(text, fact.text)
-            conflict_score = conflicts_with_fact(text, fact.text)
-            if conflict_score is None:
-                # Negation misses quantity disagreements, and a company brain is
-                # mostly quantities: prices, SLAs, limits, dates.
-                conflict_score = conflicts_on_numbers(text, fact.text)
+
+            # Subject binding. A claim can only contradict a fact about the same
+            # entity. Without this, "Enterprise costs 499" was judged to conflict
+            # with the *Team* fact — which is priced 99 — because the two share
+            # every word except the entity and the number. That is the immune
+            # system attacking the host, and the self-audit measured it at 20%.
+            conflict_score = None
+            if same_subject(text, fact.text):
+                conflict_score = conflicts_with_fact(text, fact.text)
+                if conflict_score is None:
+                    # Negation misses quantity disagreements, and a company brain
+                    # is mostly quantities: prices, SLAs, limits, dates.
+                    conflict_score = conflicts_on_numbers(text, fact.text)
             if conflict_score is not None:
                 conflicts.append(
                     {
