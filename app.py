@@ -20,7 +20,11 @@ st.set_page_config(
 )
 
 from immunegraph.agents import MARS_CASCADE, MARS_REPEAT, MARS_TOPIC  # noqa: E402
-from immunegraph.config import Settings  # noqa: E402
+from immunegraph.config import (  # noqa: E402
+    STREAMLIT_SECRETS_BRIDGED,
+    STREAMLIT_SECRETS_ERROR,
+    Settings,
+)
 from immunegraph.db import GraphStore  # noqa: E402
 from immunegraph.event_log import WriteLog  # noqa: E402
 from immunegraph.projection import import_jsonl  # noqa: E402
@@ -98,9 +102,30 @@ def restore_if_empty(swarm: Swarm, store: GraphStore, settings: Settings) -> str
 def require_db(store: GraphStore) -> bool:
     if store.ping():
         return True
+
     st.error(
-        f"Cannot reach FalkorDB at **{store.settings.host}:{store.settings.port}**.\n\n"
-        "Start it with `docker compose up -d`, or point `FALKORDB_HOST` in `.env` at a "
+        f"Cannot reach FalkorDB at **{store.settings.host}:{store.settings.port}**."
+    )
+    # Diagnose the most common hosted failure: secrets were never applied, so
+    # the app quietly fell back to localhost and looks broken for no visible
+    # reason.
+    if store.settings.host in {"localhost", "127.0.0.1"}:
+        st.warning(
+            "`FALKORDB_HOST` is still **localhost**, so no secrets reached the app.\n\n"
+            "On Streamlit Community Cloud: **App settings → Secrets**, paste the block "
+            "from `docs/DEPLOY.md`, then **Reboot app**. Editing secrets does not take "
+            "effect until the app restarts."
+        )
+    if STREAMLIT_SECRETS_ERROR:
+        st.error("The secrets block could not be read — check its TOML syntax:")
+        st.code(STREAMLIT_SECRETS_ERROR, language="text")
+
+    st.caption(
+        f"secrets bridged: {STREAMLIT_SECRETS_BRIDGED} · "
+        f"graph `{store.settings.graph}` · extractor `{store.settings.extractor}`"
+    )
+    st.markdown(
+        "Locally: `docker compose up -d`, or point `FALKORDB_HOST` in `.env` at a "
         "FalkorDB Cloud instance."
     )
     return False

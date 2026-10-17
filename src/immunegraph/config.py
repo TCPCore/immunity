@@ -18,6 +18,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(REPO_ROOT / ".env")
 
 
+STREAMLIT_SECRETS_BRIDGED = 0
+STREAMLIT_SECRETS_ERROR: str | None = None
+
+
 def _load_streamlit_secrets() -> int:
     """Expose Streamlit Cloud secrets as environment variables.
 
@@ -30,6 +34,7 @@ def _load_streamlit_secrets() -> int:
     CLI tools, so those avoid the import cost and the bare-mode warnings.
     ``setdefault`` means a real environment variable always wins over a secret.
     """
+    global STREAMLIT_SECRETS_ERROR
     if "streamlit" not in sys.modules:
         return 0
     try:
@@ -42,7 +47,11 @@ def _load_streamlit_secrets() -> int:
                 os.environ[key] = str(value)
                 bridged += 1
         return bridged
-    except Exception:  # noqa: BLE001 - no secrets configured is normal
+    except Exception as exc:  # noqa: BLE001 - no secrets configured is normal
+        # Recorded rather than swallowed. A malformed TOML block otherwise looks
+        # exactly like "no secrets set", and the app then silently talks to
+        # localhost — which is a genuinely confusing failure to debug remotely.
+        STREAMLIT_SECRETS_ERROR = f"{type(exc).__name__}: {exc}"
         return 0
 
 
