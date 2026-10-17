@@ -819,6 +819,7 @@ def main() -> None:
     st.caption(
         "Track 01 — Agents That Act on Connected Data · "
         "Track 02 — Agent Memory and Coordination · "
+        "Track 03 — Company Brain · "
         "Graph Hacks: Context for AI Agents (WeMakeDevs × FalkorDB)"
     )
 

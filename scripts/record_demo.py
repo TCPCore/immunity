@@ -153,6 +153,24 @@ BEATS: list[Beat] = [
         hold=9.0,
     ),
     Beat(
+        "TRACK 03 — a company brain. Four synthetic documents load as Source nodes; the facts "
+        "they establish become the kernel of truth, each linked to the document it came from.",
+        hold=9.0,
+        tab="Company brain",
+    ),
+    Beat(
+        "A department agent invents a price. Support repeats it — with a real DERIVED_FROM edge "
+        "back to Sales, so this is a cascade and not two coincidences. Severity 4.0, from Q4.",
+        hold=14.0,
+        button="Ask the company brain",
+    ),
+    Beat(
+        "Then the price actually changes. The old fact is SUPERSEDED, not deleted, and the "
+        "answer that was correct last week is caught in 89ms. A brain that cannot forget is as "
+        "dangerous as one that cannot learn.",
+        hold=11.0,
+    ),
+    Beat(
         "The kernel of truth: what the swarm holds as TRUE, with the antibody that established "
         "each fact and the source behind it. Opposite in kind to Infection, which records "
         "what was wrong.",
