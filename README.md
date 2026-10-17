@@ -335,7 +335,7 @@ A Cypher query that has never been executed is not a feature. Three layers of pr
 
 ```bash
 .venv/bin/python -m immunegraph.verify_queries   # every query, against a live instance
-.venv/bin/python -m pytest                       # 101 tests
+.venv/bin/python -m pytest                       # 106 tests
 .venv/bin/python -m immunegraph.demo             # the full arc; exits non-zero on failure
 ```
 

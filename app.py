@@ -23,6 +23,7 @@ from immunegraph.agents import MARS_CASCADE, MARS_REPEAT, MARS_TOPIC  # noqa: E4
 from immunegraph.config import (  # noqa: E402
     STREAMLIT_SECRETS_BRIDGED,
     STREAMLIT_SECRETS_ERROR,
+    STREAMLIT_SECRETS_SEEN,
     Settings,
 )
 from immunegraph.db import GraphStore  # noqa: E402
@@ -122,8 +123,14 @@ def require_db(store: GraphStore) -> bool:
 
     st.caption(
         f"secrets bridged: {STREAMLIT_SECRETS_BRIDGED} · "
+        f"secret keys seen: {list(STREAMLIT_SECRETS_SEEN) or 'none'} · "
         f"graph `{store.settings.graph}` · extractor `{store.settings.extractor}`"
     )
+    if not STREAMLIT_SECRETS_SEEN:
+        st.info(
+            "The app sees **no secrets at all**. That means the Secrets box is empty, or "
+            "it was saved to a different app, or the app has not been rebooted since."
+        )
     st.markdown(
         "Locally: `docker compose up -d`, or point `FALKORDB_HOST` in `.env` at a "
         "FalkorDB Cloud instance."

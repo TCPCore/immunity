@@ -15,6 +15,7 @@ Two things are checked here that nothing else covers:
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -217,3 +218,39 @@ def test_secrets_bridge_is_a_noop_outside_streamlit(monkeypatch):
         cwd=REPO_ROOT,
     )
     assert "noop-ok" in result.stdout, result.stdout + result.stderr
+
+
+# ------------------------------------------------------- secrets shapes
+
+
+def test_flat_secrets_become_environment_variables(monkeypatch):
+    from immunegraph.config import _apply_secret
+
+    monkeypatch.delenv("FALKORDB_HOST", raising=False)
+    assert _apply_secret("FALKORDB_HOST", "cloud.example") == 1
+    assert os.environ["FALKORDB_HOST"] == "cloud.example"
+
+
+def test_nested_secret_sections_flatten(monkeypatch):
+    """A [falkordb] TOML section must work as well as the flat form.
+
+    "Which shape does it want" is not something a deployer should have to
+    discover by trial and error.
+    """
+    from immunegraph.config import _apply_secret
+
+    for name in ("IMMUNEGRAPH_PORT", "IMMUNEGRAPH_EXTRACTOR"):
+        monkeypatch.delenv(name, raising=False)
+
+    assert _apply_secret("immunegraph", {"PORT": "1234", "EXTRACTOR": "rule"}) == 2
+    assert os.environ["IMMUNEGRAPH_PORT"] == "1234"
+    assert os.environ["IMMUNEGRAPH_EXTRACTOR"] == "rule"
+
+
+def test_environment_wins_over_a_secret(monkeypatch):
+    """A real env var must not be clobbered by a secret of the same name."""
+    from immunegraph.config import _apply_secret
+
+    monkeypatch.setenv("FALKORDB_HOST", "from-environment")
+    assert _apply_secret("FALKORDB_HOST", "from-secret") == 0
+    assert os.environ["FALKORDB_HOST"] == "from-environment"

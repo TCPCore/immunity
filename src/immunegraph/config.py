@@ -20,6 +20,33 @@ load_dotenv(REPO_ROOT / ".env")
 
 STREAMLIT_SECRETS_BRIDGED = 0
 STREAMLIT_SECRETS_ERROR: str | None = None
+# Key *names* the app could see. Never values — this exists so a misconfigured
+# deployment can be diagnosed from a screenshot without exposing a secret.
+STREAMLIT_SECRETS_SEEN: tuple[str, ...] = ()
+
+
+def _apply_secret(key: str, value) -> int:
+    """Map one secret onto environment variables. Returns how many were set."""
+    name = str(key).upper()
+    if isinstance(value, (str, int, float, bool)):
+        if name not in os.environ:
+            os.environ[name] = str(value)
+            return 1
+        return 0
+    # A TOML section such as [falkordb] with host/port/user flattens to
+    # FALKORDB_HOST / FALKORDB_PORT / FALKORDB_USER. Both that and the flat
+    # form are accepted, because "which shape does it want" is not a thing a
+    # deployer should have to discover.
+    if hasattr(value, "items"):
+        count = 0
+        for sub_key, sub_value in value.items():
+            if isinstance(sub_value, (str, int, float, bool)):
+                flat = f"{name}_{str(sub_key).upper()}"
+                if flat not in os.environ:
+                    os.environ[flat] = str(sub_value)
+                    count += 1
+        return count
+    return 0
 
 
 def _load_streamlit_secrets() -> int:
@@ -32,20 +59,19 @@ def _load_streamlit_secrets() -> int:
     Only runs when Streamlit is already imported — which is true under
     ``streamlit run`` (app.py imports it before this module) and false for the
     CLI tools, so those avoid the import cost and the bare-mode warnings.
-    ``setdefault`` means a real environment variable always wins over a secret.
+    ``setdefault`` semantics mean a real environment variable always wins.
     """
-    global STREAMLIT_SECRETS_ERROR
+    global STREAMLIT_SECRETS_ERROR, STREAMLIT_SECRETS_SEEN
     if "streamlit" not in sys.modules:
         return 0
     try:
         import streamlit as st
 
+        keys = [str(k) for k in st.secrets]
+        STREAMLIT_SECRETS_SEEN = tuple(keys)
         bridged = 0
-        for key in st.secrets:
-            value = st.secrets[key]
-            if isinstance(value, (str, int, float, bool)) and key not in os.environ:
-                os.environ[key] = str(value)
-                bridged += 1
+        for key in keys:
+            bridged += _apply_secret(key, st.secrets[key])
         return bridged
     except Exception as exc:  # noqa: BLE001 - no secrets configured is normal
         # Recorded rather than swallowed. A malformed TOML block otherwise looks
