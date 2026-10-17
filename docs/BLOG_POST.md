@@ -1,35 +1,32 @@
-# Blog post — ImmuneGraph
+# Your agent swarm is confidently wrong, and your memory layer cannot tell
 
-For publishing on dev.to / Hashnode / your own site. Structured around the three tracks of
-Graph Hacks, all three of which this project enters, with a section of evidence for each.
-
-> **Note on prizes.** The current rules (rule 14) list three track prizes and no separate prize
-> for blogging. Publish this because it is the clearest explanation of the work and judges read
-> it, not because there is a side prize for it.
+*ImmuneGraph — WeMakeDevs × FalkorDB, Graph Hacks: Context for AI Agents (Oct 2026).
+Entered in all three tracks. Code: [github.com/TCPCore/immunity](https://github.com/TCPCore/immunity).*
 
 ---
 
-## Your agent swarm is confidently wrong, and your memory layer cannot tell
+Everyone building multi-agent systems hits the same wall. Not a crash. Not a timeout. Something
+worse: the swarm agrees on something false, and every individual step was valid.
 
-Everyone building multi-agent systems hits the same wall eventually. Not a crash. Not a timeout.
-Something worse: the swarm agrees on something false, and every agent is behaving perfectly.
+Agent A says *"Mars has breathable oxygen at night."* Agent B, whose job is to reason, says *"then
+we don't need helmets."* Agent C, whose job is to plan, says *"then we can skip life support."*
+Three agents. Zero errors. Zero exceptions. A plan that kills the crew.
 
-Here is the shape of it. Agent A says *"Mars has breathable oxygen at night."* Agent B, whose job
-is to reason, says *"then we don't need helmets."* Agent C, whose job is to plan, says *"then we
-can skip life support."* Three agents. Zero errors. Zero exceptions. A plan that kills the crew.
+The standard answer — *"add a memory layer"* — does not address this. Memory layers are excellent
+at answering **"what was said?"** They persist it, embed it, retrieve it, and hand it back with
+impressive recall. None of them answer **"is this swarm getting epistemically sick?"**
 
-I built a demo around this because the standard answer — *"add a memory layer"* — does not
-address it. Memory layers are extremely good at answering **"what was said?"** They persist it,
-embed it, retrieve it, and hand it back with impressive recall.
+What makes the failure expensive is that **the errors are correlated**. Three agents independently
+hallucinating gives you three bad outputs, each detectable. One agent hallucinating while two derive
+from it gives you **one** bad output that three agents agree on — and human reviewers use agreement
+as a signal of truth. The swarm has manufactured consensus out of nothing.
 
-None of them answer **"is this swarm getting epistemically sick?"**
+## The reframe: memory should store support, not just content
 
-### The reframe: memory should store support, not just content
+The failure is not a storage problem. It is a *structure* problem. Agent B's claim is not wrong in
+isolation — it is a valid inference. It is wrong because of what it points at.
 
-The failure is not a storage problem, it is a *structure* problem. Agent B's claim is not wrong
-in isolation — it is a valid inference. It is wrong because of what it points at.
-
-So I stopped modelling claims as records and started modelling them as a graph:
+So stop modelling claims as records and model them as a graph:
 
 - a claim **is supported by** a source
 - a claim **is derived from** another claim
@@ -43,99 +40,93 @@ Once belief has that shape, the pathologies stop being vague and become *travers
 | Self-justifying belief | a cycle in the support edges |
 | Unsupported root | a claim with no source and no parent |
 | Contradiction | a `CONTRADICTS` edge between two asserted claims |
-| Cascade | reachability along derivation edges back to a bad root |
+| Cascade | reach along derivation edges back to a bad root |
 
 That is the whole idea. Everything below is consequence.
 
----
+## What is genuinely new here, and what is not
 
-## Track 02 — Agent Memory and Coordination
+I am not going to claim this is unprecedented. It is not, and anyone who searches will find out.
+Being precise about the boundary is worth more than a bold claim.
 
-This track asks what an agent *remembers*, and how agents stay in step. The interesting answer
-turned out to be that a swarm needs three kinds of memory, and they do not behave alike.
+**Classic AI got here first.** Belief revision (AGM) and justification-based truth maintenance
+(Doyle 1979; de Kleer 1986) are the direct ancestors of "track why a system believes something and
+retract when the justification fails." [Beyond Prediction](https://arxiv.org/abs/2506.17331) argues
+for exactly this discipline in AI systems — epistemic integrity, contradiction detection, truth
+maintenance — as a theoretical blueprint.
 
-**Episodic** — `Message` and `Session` nodes. What was said, in what order.
+**Contemporary research has the cascade insight.** [From Spark to Fire](https://arxiv.org/html/2603.04474)
+models multi-agent collaboration as a **directed dependency graph**, identifies cascade amplification
+and consensus inertia as intrinsic pathologies across six frameworks, and proposes a
+**genealogy-graph governance layer** that suppresses propagation without altering the architecture —
+raising defence success from 0.32 to above 0.89. If you take one thing from this post — that the
+propagation structure is the thing worth modelling — they said it first.
 
-**Semantic** — `Claim`, `Source`, `Agent`, and `KernelFact`. What is believed, on what authority.
+**So what is actually different?**
 
-**Procedural** — `Antibody` and `Infection`. Not *what* happened but *what to do* when it happens
-again. This is the memory that makes the system immune rather than merely observant: an
-`Antibody` records the correction *and its outcome*, so effectiveness is measurable rather than
-assumed.
+| | What it does | What it leaves open |
+| --- | --- | --- |
+| Vector memory (Mem0, Zep, Letta) | stores and retrieves what was said | no support structure; contradictions live side by side |
+| GraphRAG (Microsoft, Neo4j, FalkorDB SDK) | entity/community graph for better *retrieval* | the graph is a retrieval index, not a model of belief |
+| Guardrails (NeMo, Guardrails AI) | validate one output against rules | pointwise; no notion of one agent deriving from another |
+| Hallucination scoring (Galileo, Patronus, Vectara) | score a response against its retrieved context | no propagation; cannot tell "wrong" from "wrong and contagious" |
+| Observability (LangSmith, Langfuse) | trace calls | shows what happened, not what was justified |
+| Error-cascade research | models and **suppresses** propagation | suppression is not accumulation — the system never learns the truth |
+| Truth maintenance (Doyle; Beyond Prediction) | belief revision, justifications | classic/theoretical; not a deployed multi-agent LLM system |
 
-**Trust is derived, never stored.** The naive design decrements a trust counter in Python when an
-agent is blamed. Then it drifts, because you now maintain the same fact in two places. Instead:
+The contribution is three specific things, and I would rather state them narrowly than claim a
+category:
 
-```cypher
-MATCH (a:Agent)
-OPTIONAL MATCH (a)-[:ASSERTS]->(c:Claim)<-[:TARGETS]-(i1:Infection)
-  WHERE i1.status IN ['active', 'contained']
-OPTIONAL MATCH (a)-[:ASSERTS]->(d:Claim)-[:DERIVED_FROM*1..5]->(:Claim)<-[:TARGETS]-(i2:Infection)
-  WHERE i2.status IN ['active', 'contained']
-WITH a, collect(DISTINCT i1) + collect(DISTINCT i2) AS raw
-WITH a, [x IN raw WHERE x IS NOT NULL] AS infs
-RETURN a.name, a.base_trust - (0.15 * size(infs)) AS effective_trust
-```
+**1. Two memories, not one.** Every system above tracks **one** thing. ImmuneGraph tracks two, of
+opposite polarity: `Infection` and quarantined `Claim` nodes record **what was wrong**; a
+`KernelFact` records **what is now held true**, written by the antibody that established it, citing
+the source and the claim it refutes. Suppression alone leaves the swarm unable to answer "what
+*should* we believe?" — which is the question a company actually needs answered.
 
-Two kinds of exposure: asserting an infected claim, or asserting something *derived from* one.
-That second clause matters more than it looks. The Planner's trust drops to **0.85** even though
-it never touched the false claim — it inherited the infection through the chain. Trust that is
-recomputed cannot desynchronise from the belief graph, because there is only one copy of the
-truth.
+**2. Immunity that compounds, with the split measured.** Corrected facts make future detection
+*cheaper*, not just better. Detecting a cascade is a graph search that grows with the graph —
+measured at **20.3 ms** for one sweep on a small graph. Checking a new claim against the kernel is a
+comparison against a handful of facts — **1.31 ms median, 2.25 ms p95**. The ratio is roughly 15×,
+and every correction moves work from the expensive path to the cheap one. Most systems treat
+falsehood as a static anomaly to be filtered; this treats it as a flow whose handling cost *falls*
+over time.
 
-**The swarm keeps a kernel of truth.** The hardest thing to explain about this system is that it
-has two opposite memories. `Infection` and quarantined `Claim` nodes record what was **wrong**.
-A `KernelFact` records what is now held to be **true** — written by the antibody that established
-it, citing the source and the claim it refutes:
+**3. It is a deployed system, not a benchmark result.** Query correctness verified against a live
+instance, durability with a write-ahead log and a rebuild proven byte-identical, concurrency fixed
+and measured, three working demos. The research says the idea is right. This says the idea runs.
 
-```
-(Claim)<-[:CONFLICTS_WITH]-(KernelFact)-[:ESTABLISHED_BY]->(Antibody)
-(KernelFact)-[:CITES]->(Source)
-```
+I would rather be judged on the third than on the first two.
 
-That distinction is what makes immunity *fast*. Detecting a cascade is a graph search that gets
-more expensive as the graph grows — about **3.1 seconds** in the demo. Checking a new claim
-against the kernel is a comparison against a handful of known facts:
+## How it was built
 
-```
-SANITISER : contradicts kernel fact 'Mars has no breathable oxygen'
-            overlap 0.67, decided in 4.6ms — no model call, no cascade scan
-```
+### The schema
 
-Detection finds lies it has never seen and gets slower. The kernel recognises lies it already
-knows and does not. A correct immune system needs both.
-
-**And the memory survives the database.** FalkorDB Cloud's free tier has no persistence and no
-backups — instances stop after a day idle and are deleted after seven. A kernel of truth that
-evaporates is not much of a truth. So every write is appended to a log *before* it is applied,
-and the graph is treated as a projection that can be rebuilt:
+Seven node types and eleven relationships in FalkorDB. The load-bearing parts:
 
 ```
-writes logged : 73
-replayed      : 73 writes, 0 failed
-identical     : True
+(Agent)-[:ASSERTS]->(Claim)          who committed to what
+(Claim)-[:DERIVED_FROM]->(Claim)     child -> parent, so cascades walk backwards
+(Claim)-[:SUPPORTED_BY {quote}]->(Source)
+(Infection)-[:TARGETS]->(Claim)      what is sick
+(Infection)-[:NEUTRALIZES]-(Antibody)
+(Antibody)-[:INJECTS]->(Claim)       the correction
+(Antibody)-[:ESTABLISHES]->(KernelFact)
+(Claim)-[:CONFLICTS_WITH]->(KernelFact)
 ```
 
-"Identical" includes node ids, which is why the log stores whole statements rather than semantic
-events. Events read better, but replay would have to reconstruct which write each implied — and
-infection ids are UUIDs, so a replay that regenerated them would produce a different graph with
-every reference broken. Statements cannot diverge; replaying them *is* the original write.
+`DERIVED_FROM` points child -> parent deliberately. It makes every cascade query a single backward
+traversal: `(downstream)-[:DERIVED_FROM*1..5]->(root)`.
 
----
+### Making the database load-bearing
 
-## Track 01 — Agents That Act on Connected Data
+Here is the trap I nearly fell into: a nice graph *visualisation* on top of ordinary storage. A
+pretty node-link diagram proves nothing.
 
-Detection is the easy half. This track is about agents doing something with what the graph knows.
+The fix was to define the product's core quantities **as graph queries**, so removing the database
+removes the concepts themselves.
 
-When the swarm finds an unsupported root it does not log a warning. It **acts**:
-
-1. An `Infection` opens, `TARGETS` the claim, and its severity is *defined* as the traversal.
-2. An `Antibody` is dispatched, which `NEUTRALIZES` the infection and `INJECTS` a sourced
-   correction.
-3. The correction `CONTRADICTS` the original, whose status becomes `quarantined`.
-4. `contain_cascade` walks the derivation edges and invalidates every claim that reasoned from it.
-
-**Severity is graph reach, not a judgement call:**
+**Severity is graph reach.** How bad is an outbreak? Not a judgement call — it is how many claims
+descend from the bad root and how many agents asserted them:
 
 ```cypher
 MATCH (root:Claim {id: $root_claim_id})
@@ -148,160 +139,234 @@ RETURN root.id, size(downs) AS infected_claims, count(DISTINCT a) AS exposed_age
 ```
 
 Two contaminated claims and three exposed agents gives severity **6.0**. Delete the graph and
-"severity" has no definition — which is rule 3's actual test.
+"severity" has no definition.
 
-### The part I am most pleased with: anyone can submit a claim
+**Trust is derived, never stored.** The naive design decrements a counter when an agent is blamed.
+Then it drifts, because you maintain the same fact in two places:
 
-A scripted scenario proves the mechanism works. It does not prove it works on anything you did
-not choose. So the swarm accepts claims it has never seen and grounds them against **Wikipedia** —
-free, no API key, and unambiguously public data per rule 6 — then runs the *same* machinery:
-
-```
-🗣️  Visitor asserts: "Venus has a breathable atmosphere"
-🔎  Sanitised against the kernel — no stored fact matches yet.
-🌐  Public source consulted: Atmosphere of Venus.
-🦠  Infection open on the claim — severity 2.0
-↗️  Analyst reasons from it — severity 4.0
-↗️  Planner reasons from it — severity 6.0
-🛡️  Antibody dispatched, citing the public source.
-✅  Quarantined — the cascade is contained.
+```cypher
+MATCH (a:Agent)
+OPTIONAL MATCH (a)-[:ASSERTS]->(c:Claim)<-[:TARGETS]-(i1:Infection)
+  WHERE i1.status IN ['active', 'contained']
+OPTIONAL MATCH (a)-[:ASSERTS]->(d:Claim)-[:DERIVED_FROM*1..5]->(:Claim)<-[:TARGETS]-(i2:Infection)
+  WHERE i2.status IN ['active', 'contained']
+WITH a, collect(DISTINCT i1) + collect(DISTINCT i2) AS raw
+WITH a, [x IN raw WHERE x IS NOT NULL] AS infs
+RETURN a.name, a.base_trust - (0.15 * size(infs)) AS effective_trust
 ```
 
-**The propagation is real, not an animation.** The Analyst and Planner genuinely derive claims
-from the visitor's statement, with `DERIVED_FROM` edges written to the database. The severity
-shown at each step is read back from Q4 *after* the write — `1 + infected + exposed` computed
-from edges that exist — which is why it climbs 2 → 4 → 6 rather than stepping through fixed
-numbers. Containment is `contain_cascade` over that real structure.
+The second clause matters more than it looks. The Planner's trust drops to **0.85** even though it
+never touched the false claim — it inherited the infection through the derivation chain. Trust that
+is recomputed cannot desynchronise from the belief graph, because there is only one copy of truth.
 
-### Two decisions that keep grounding honest
+### The two speeds
 
-**The subject check.** Wikipedia's search matches individual *words*. Asking about "Mars is made
-of cheese" returns articles about cheese, and my first version duly reported that claim as
-**supported** — by an article about Cheez-Its. An article is now only considered if its *title*
-shares a token with the claim. No cheese article is called anything with "Mars" in it, so that
-claim comes back **inconclusive**.
+**Detection** finds lies the swarm has never seen. It is a graph search, so it gets slower as the
+graph grows: **20.3 ms** for a full sweep locally, **234 ms** over a network.
 
-**Sentence-level coverage.** Judging a whole article fires on unrelated text, and the overlap
-coefficient flatters short claims — two shared words out of three reads as 0.67. Agreement now
-requires a single sentence to contain essentially everything the claim asserts. I also removed
-"only" from the limiting-word list after it refuted the *true* claim that the Moon orbits the
-Earth.
-
-Where it cannot decide, it says so. A confidently wrong verdict would make the whole demo
-theatre.
-
----
-
-## Track 03 — Company Brain
-
-This started as a generalisation I was not going to claim. Then I built it, because the claim
-only becomes honest if the artefact exists.
-
-A company brain's characteristic failure is **not** retrieval failure. It is that one agent's
-confident wrong answer gets repeated by another department until it becomes doctrine. A wrong
-price is a million-dollar hallucination, not an embarrassing paragraph.
-
-So: four synthetic documents ([`data/company/`](../data/company/)) load as `Source` nodes, and
-the facts they establish become `KernelFact`s linked to them. Provenance is a traversal, not a
-citation a model wrote from memory. Then the scenario runs:
+**The kernel** recognises lies it already knows. It compares a new claim against a handful of facts:
+**1.31 ms median**, **2.25 ms p95** locally.
 
 ```
-📚  Loaded 4 company documents into the kernel as 5 facts.
-⚖️  Sales answers 'What does the Enterprise plan cost?' with
-    'The Enterprise plan is 399 USD per seat per year.' — conflict in 66.6ms.
-↗️  Support repeats it to a customer — the wrong price is now spreading.
-🦠  Infection opened across two departments — severity 4.0.
-🛡️  Quarantined both. The antibody cites Enterprise and Team pricing (2026).
-📝  Finance raises the price to 549 USD. The old fact is SUPERSEDED, not deleted.
-⏳  Sales quotes the old 499 price — correct last week, wrong now. Caught in 89.7ms.
+SANITISER : contradicts kernel fact 'Mars has no breathable oxygen'
+            overlap 0.67, decided in 1.3 ms — no model call, no cascade scan
 ```
 
-Support is not independently wrong — it is repeating a colleague, so its claim carries a real
-`DERIVED_FROM` edge back to Sales. That is what makes it a cascade rather than two coincidences,
-and it is why severity is 4.0 rather than 1.0.
+That asymmetry is the design. Detection is *insurance*; the kernel is *immunity*. Anything that only
+detects has to pay the expensive path forever.
 
-### Two things a company brain needs that Mars did not
+### The design decision I would defend hardest
+
+Immunity recall is the money shot: the same lie comes back and is caught instantly. My first version
+had the LLM emit "this claim repeats that claim" edges.
+
+That is a terrible idea and it took me a while to see why. The single most important moment in the
+demo would depend on a non-deterministic model noticing a similarity. On stage. In front of judges.
+
+So claims carry a deterministic `fingerprint` — normalised tokens, hashed — and recall is an
+**indexed equality lookup**, not a judgement. When that misses (because "Mars has oxygen at night"
+is not "Mars has breathable oxygen at night"), a vector index catches the paraphrase, and if vector
+support is missing there is a token-overlap fallback whose *candidate set still comes from the
+graph*. The model parses language; the database decides what the swarm believes.
+
+## The three tracks
+
+### Track 01 — Agents that act on connected data
+
+Detection is the easy half. This track is about agents doing something with what the graph knows.
+
+When the swarm finds an unsupported root it does not log a warning. An `Infection` opens and
+`TARGETS` the claim; an `Antibody` is dispatched, `NEUTRALIZES` the infection and `INJECTS` a sourced
+correction; the correction `CONTRADICTS` the original, which becomes `quarantined`; and
+`contain_cascade` walks the derivation edges to invalidate everything that reasoned from it.
+
+**The part I am most pleased with: anyone can submit a claim.** A scripted scenario proves the
+mechanism works; it does not prove it works on anything you did not choose. So the swarm accepts
+claims it has never seen, grounds them against Wikipedia — free, no API key, public data — and runs
+the same machinery:
+
+```
+Visitor asserts: "Venus has a breathable atmosphere"
+Sanitised against the kernel — no stored fact matches yet.
+Public source consulted: Atmosphere of Venus.
+Infection open on the claim — severity 2.0
+Analyst reasons from it — severity 4.0
+Planner reasons from it — severity 6.0
+Antibody dispatched, citing the public source.
+Quarantined — the cascade is contained.
+```
+
+**The propagation is real, not an animation.** The Analyst and Planner genuinely derive claims from
+the visitor's statement, with `DERIVED_FROM` edges written to the database. The severity shown at
+each step is read back from Q4 *after* the write — `1 + infected + exposed`, computed from edges that
+exist — which is why it climbs 2 -> 4 -> 6 rather than stepping through fixed numbers.
+
+Two decisions keep grounding honest. **The subject check:** Wikipedia's search matches individual
+words, so "Mars is made of cheese" returns cheese articles, and my first version duly reported that
+claim as **supported** — by an article about Cheez-Its. An article is now only considered if its
+*title* shares a token with the claim. **Sentence-level coverage:** agreement needs one sentence to
+contain essentially everything the claim asserts, because the overlap coefficient flatters short
+claims. I also removed "only" from the limiting-word list after it refuted the *true* claim that the
+Moon orbits the Earth.
+
+Where it cannot decide, it returns **inconclusive**. A confidently wrong verdict would make the whole
+demo theatre.
+
+### Track 02 — Agent memory and coordination
+
+Three kinds of memory, behaving differently. **Episodic** — `Message` and `Session`. **Semantic** —
+`Claim`, `Source`, `Agent`, `KernelFact`. **Procedural** — `Antibody` and `Infection`: not *what*
+happened but *what to do* when it happens again, including the recorded outcome, so effectiveness is
+measurable rather than assumed.
+
+And the memory outlives the database. FalkorDB Cloud's free tier has **no persistence and no
+backups** — instances stop after a day idle and are deleted after a week. So every write is appended
+to a log *before* it is applied, and the graph is a projection that can be rebuilt:
+
+```
+writes logged : 73
+replayed      : 73 writes, 0 failed
+identical     : True
+```
+
+"Identical" includes node ids, which is why the log stores whole statements rather than semantic
+events. Events read better, but replay would have to reconstruct which write each implied — and
+infection ids are UUIDs, so a replay that regenerated them would produce a different graph with every
+reference broken. Statements cannot diverge; replaying them *is* the original write.
+
+### Track 03 — Company brain
+
+A company's characteristic failure is not retrieval failure. It is that one agent's confident wrong
+**price** gets repeated by another department until it becomes doctrine. Four synthetic documents load
+as `Source` nodes, and the facts they establish become `KernelFact`s linked to them:
+
+```
+Loaded 4 company documents into the kernel as 5 facts.
+Sales: "Enterprise is 399 USD per seat per year" — conflict found in 66.6ms.
+Support repeats it — the wrong price is now spreading.
+Infection opened across two departments — severity 4.0.
+Quarantined both. The antibody cites Enterprise and Team pricing (2026).
+Finance raises the price to 549 USD. The old fact is SUPERSEDED, not deleted.
+Sales quotes the old 499 price — correct last week, wrong now. Caught in 89.7ms.
+```
+
+Two things a company brain needs that Mars did not.
 
 **Quantity conflicts.** Everything a company states as fact is a number — price, SLA, retention
-window, seat count. My existing conflict rule was negation-based: does one side say "not" and the
-other not. But *"Enterprise is 399 per seat"* does not negate *"Enterprise costs 499 per seat"*.
-The two agree on every word except the only one that matters, so the sanitiser scored the wrong
+window, seat count. My conflict rule was negation-based, and *"399 per seat" does not negate "499 per
+seat."* The two agree on every word except the one that matters, so the sanitiser scored the wrong
 price as **aligned** with the pricing policy and blessed it as doctrine.
 
-That is the worst class of bug this project can have: a system built to catch confident wrongness,
-confidently wrong itself. `conflicts_on_numbers` now requires both sides to state a number, the
-numbers to differ, and the non-numeric context to be the same subject — so a refund window and an
-incident SLA never conflict just because both contain digits.
+That is the worst possible bug in a system built to catch confident wrongness: confidently wrong
+itself. `conflicts_on_numbers` now requires both sides to state a number, the numbers to differ, and
+the non-numeric context to be the same subject — so a refund window and an incident SLA never
+conflict just because both contain digits.
 
-**Policy drift.** Facts are versioned. When the price changes, the old fact is `superseded` and
-kept rather than deleted, so "when did we stop believing this" stays answerable. Every claim still
-active is then re-judged against the new truth, and the answer that was correct last week is
-flagged. A brain that cannot forget is as dangerous as one that cannot learn.
+**Policy drift.** Facts are versioned. A price change supersedes the old fact rather than deleting
+it, and every active claim is re-judged against the new truth. A brain that cannot forget is as
+dangerous as one that cannot learn.
 
-The corpus is synthetic, so rule 6 is satisfied by construction.
+## Six bugs that only running the code found
 
-## Five bugs that only running the code found
-
-This is the part I would tell anyone building on a graph database to take seriously: **a Cypher
-query that has never been executed is not a feature.** FalkorDB implements a subset of openCypher,
-and my assumptions were wrong repeatedly. So I wrote a verifier that seeds a fixture containing a
-cascade, a 3-hop cycle, a contradiction cluster and embeddings, then executes every query and
-checks the *shape* of each result before commit.
-
-What it caught:
+**A Cypher query that has never been executed is not a feature.** FalkorDB implements a subset of
+openCypher, and my assumptions were wrong repeatedly. So I wrote a verifier that seeds a fixture
+containing a cascade, a 3-hop cycle, a contradiction cluster and embeddings, then executes every
+query and checks the *shape* of each result before commit. Eighteen queries, all executed.
 
 1. **`ORDER BY score DESC` was backwards.** The vector index yields a cosine **distance**
-   (0.0 = identical) even though the option is named `similarityFunction`. My query was returning
-   the *least* similar candidates — a silent correctness bug that only appears at scale.
-2. The query vector **must** be wrapped in `vecf32(...)`. A bare list raises
+   (0.0 = identical) despite the option being named `similarityFunction`. My query returned the
+   *least* similar candidates — silent at small scale, fatal at large.
+2. The query vector **must** be wrapped in `vecf32(...)`; a bare list raises
    `Invalid arguments for procedure`.
-3. **A false-positive contradiction.** "If X, we don't need helmets" was detected as
-   *contradicting* X, because lexical negation cannot tell "the premise implies a negation" from
-   "this negates the premise". It produced an outbreak rooted at the wrong claim.
-4. **`count(*)` under `OPTIONAL MATCH` counts rows, not edges.** An empty kernel reported one
-   conflict that did not exist — in exactly the direction that flattered the project. Named
-   relationship counts ignore nulls; `count(*)` does not.
-5. **A hidden write.** The cascade-containment update returned ids, so it *read* like a query and
-   had been written with the read helper — which is not logged. It worked, and a rebuild from the
-   log silently lost it. Two claims reverted from `suspect` to `active`. There is now a
-   structural test that fails if any write hides inside a read helper.
-6. **The concurrency bug I would have shipped.** Reading `max(seq)` and adding one is a
-   *read-only* query — concurrent readers legitimately see the same value. With 8 concurrent
-   writers and 200 writes, the naive version produced **37 distinct sequence numbers** (163
-   collisions). Allocating with a `SET`, so the database serialises it, gives 200/200.
+3. **A false-positive contradiction.** "If X, we don't need helmets" was detected as *contradicting*
+   X, because lexical negation cannot tell "the premise implies a negation" from "this negates the
+   premise." It produced an outbreak rooted at the wrong claim.
+4. **`count(*)` under `OPTIONAL MATCH` counts rows, not edges.** An empty kernel reported a conflict
+   that did not exist — in exactly the direction that flattered the project.
+5. **A hidden write.** Cascade containment returned ids, so it *read* like a query and had been
+   written with the read helper — which is not logged. It worked, and a rebuild silently lost it. Two
+   claims reverted from `suspect` to `active`. There is now a structural test that fails if any write
+   hides inside a read helper.
+6. **The concurrency bug I would have shipped.** `max(seq) + 1` is a read-only query; concurrent
+   readers legitimately see the same value. With 8 writers and 200 writes the naive version produced
+   **37 distinct sequence numbers** (163 collisions). Allocating with a `SET` gives 200/200.
 
----
+Number 5 is my favourite, because the fingerprint caught it — the rebuild *looked* fine and was not.
+Number 6 is the one a reviewer would never catch by reading.
+
+## Where this is useful, measured
+
+| Claim | Measured |
+| --- | --- |
+| Every Cypher query executes, expected shape | **18/18**, local and cloud |
+| Kernel fast path | **1.31 ms** median / 2.25 ms p95 local · 21 ms cloud |
+| Full detection sweep | **20.3 ms** local · 234 ms cloud |
+| Real policy conflict | **7.2 ms** local · 97 ms cloud |
+| Rebuild from log | **73 writes, 0 failed, identical** |
+| Concurrent sequence allocation | **200/200** under 8 writers |
+| Regression suite | **134 tests** |
+
+The local-vs-cloud gap is **pure network round-trips** — same code, same query, 16× slower. So the
+compute is cheap and the *topology* is what you optimise.
+
+That produces the architecture: the **1.3 ms** kernel check belongs inline, blocking bad answers
+before a customer sees them; the **20 ms** detection sweep belongs asynchronous, producing a
+severity-ranked review queue. One sweep in the hot path would be the wrong system.
+
+It applies first where **output is acted on and a wrong answer costs more than the check**:
+customer-facing agent fleets (few, stable, written-down facts); multi-agent analysis pipelines
+(severity as a triage queue — review three cascades, not ninety outputs); regulated domains
+(provenance as a traversal, `supersede` for "what did we believe that day"); and RAG output
+verification (the answer that cites a source and contradicts it). Not worth it for low-stakes,
+high-volume work with **no written ground truth** — the kernel would have nothing to hold.
 
 ## What I am not claiming
 
-- The antibody is a model, and a model can be wrong. It is constrained to cite a source, record
-  its outcome, and make a bad correction visible in the graph. This is a **containment system,
-  not a truth oracle.**
-- The durability log protects against a graph wipe *within* a session. True cross-restart
-  durability needs the log on durable storage or a paid FalkorDB tier.
-- Grounding is lexical. It cannot refute a claim whose contradiction is phrased in entirely
-  different vocabulary, and it returns "inconclusive" instead of guessing.
+- **The core idea is not mine.** Dependency-graph cascade modelling and genealogy-based governance
+  are published; truth maintenance dates to 1979. The contribution is the dual memory, the measured
+  two-speed split, and that it runs.
+- The antibody is a model and can be wrong. It is constrained to cite a source, record its outcome,
+  and make a bad correction visible. This is a **containment system, not a truth oracle.**
+- **No labelled evaluation set.** There is no precision/recall figure for conflict detection. The
+  tests assert behaviour on hand-written cases, not accuracy on a corpus.
+- **Matching is lexical.** A contradiction in different vocabulary is missed; the system says
+  "inconclusive" rather than guessing.
+- **Scale is untested.** Every number above is on a graph of tens of nodes.
+- **Durability is within a session.** True cross-restart durability needs durable storage.
 
 Saying that out loud is worth more than another feature.
 
----
-
-## If you are building something similar
+## If you build something similar
 
 - **Pick the quantity that should be a traversal, and make it one.** If you can compute your
   product's core metric without the database, you do not have a graph product.
-- **Never let a model decide something the demo depends on.** Use the model for language, the
-  graph for belief.
-- **Execute every query and assert on the results.** Documentation is not verification. Most of
-  the bugs above were invisible in the source.
+- **Never let a model decide something your demo depends on.** Model for language, graph for belief.
+- **Execute every query and assert on the results.** Documentation is not verification.
+- **Track what is true, not only what is wrong.** Detection tells you the swarm is sick; only a
+  kernel tells it what to believe instead.
 - **Write down what you are not claiming.** The scope you draw honestly is part of the design.
 
 ---
 
-*ImmuneGraph is built on [FalkorDB](https://www.falkordb.com/) for the WeMakeDevs × FalkorDB
-**Graph Hacks: Context for AI Agents** hackathon (Oct 15–18, 2026), entered in all three tracks:
-**01 — Agents That Act on Connected Data**, **02 — Agent Memory and Coordination**, and
-**03 — Company Brain**.*
-
-Code, graph model and every Cypher query: [github.com/TCPCore/immunity](https://github.com/TCPCore/immunity).
-134 tests, all of which run against a live instance.*
+*Built on [FalkorDB](https://www.falkordb.com/). 44 commits, 134 tests, 18 queries verified against
+a live instance. Graph model and every query: [github.com/TCPCore/immunity](https://github.com/TCPCore/immunity).*

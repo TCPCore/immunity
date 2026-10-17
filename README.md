@@ -513,6 +513,7 @@ material for that rather than asserting it:
 | [`docs/SUBMISSION.md`](docs/SUBMISSION.md) | Copy-paste text for the submission form and the final checklist |
 | [`docs/EXPLAINER.md`](docs/EXPLAINER.md) | How to defend the model, every query, and the trade-offs |
 | [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) | The schema and the queries the product depends on |
+| [`docs/SUBMISSION_PER_TRACK.md`](docs/SUBMISSION_PER_TRACK.md) | Copy-paste submission write-up for each of the three tracks |
 | [`docs/APPLICABILITY.md`](docs/APPLICABILITY.md) | What this is good for in production, measured latency, and what is not proven |
 | [`docs/DEPLOY.md`](docs/DEPLOY.md) | Getting a clickable live link: FalkorDB Cloud + Streamlit |
 | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Shot-by-shot script for the demo video |
