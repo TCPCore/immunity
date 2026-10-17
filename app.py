@@ -444,6 +444,49 @@ def reinject(swarm: Swarm) -> str:
     )
 
 
+PHASE_ICON = {
+    "asserted": "🗣️",
+    "sanitised": "🔎",
+    "grounded": "🌐",
+    "infected": "🦠",
+    "spread": "↗️",
+    "antibody": "🛡️",
+    "arrested": "✅",
+    "clear": "✅",
+    "unknown": "❔",
+    "rejected": "❔",
+}
+
+
+def _run_claim_stream(swarm: Swarm, text: str) -> dict | None:
+    """Run a submitted claim, showing the cascade as the graph changes.
+
+    Every line here corresponds to a real write: the agents genuinely derive
+    from the claim, and the severity shown is read back from Q4 after each one
+    rather than narrated. If the claim is not refuted, the run stops early and
+    nothing is contaminated.
+    """
+    placeholder = st.empty()
+    severity_slot = st.empty()
+    lines: list[str] = []
+    result: dict | None = None
+
+    for step in swarm.submit_claim_stream(text):
+        phase = step["phase"]
+        lines.append(f"{PHASE_ICON.get(phase, '•')}  {step['message']}")
+        placeholder.markdown("\n\n".join(lines))
+        if step.get("severity"):
+            severity_slot.metric("Infection severity", f"{step['severity']:.1f}")
+        if phase in {"asserted", "infected", "spread", "arrested"}:
+            time.sleep(0.55)
+        if "result" in step:
+            result = step["result"]
+
+    if result and result.get("arrest"):
+        severity_slot.metric("Infection severity", "contained")
+    return result
+
+
 def render_check_claim(swarm: Swarm) -> None:
     """Let a visitor submit a claim the swarm has never seen."""
     st.markdown("#### Submit a claim the swarm has never seen")
@@ -474,8 +517,7 @@ def render_check_claim(swarm: Swarm) -> None:
     submitted = st.button("⚖️  Check this claim", type="primary")
 
     if submitted and text.strip():
-        with st.spinner("Grounding against public sources…"):
-            st.session_state["last_check"] = swarm.submit_claim(text.strip())
+        st.session_state["last_check"] = _run_claim_stream(swarm, text.strip())
 
     result = st.session_state.get("last_check")
     if not result:

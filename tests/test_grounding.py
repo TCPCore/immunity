@@ -232,3 +232,94 @@ def test_submitting_before_any_session_exists_works():
         assert result["accepted"], "a cold start must not raise 'call Swarm.start() first'"
     finally:
         store.graph.delete()
+
+
+# ------------------------------------------------- the cascade, step by step
+
+
+@pytest.mark.skipif(not _db_available(), reason="FalkorDB not reachable")
+def test_the_cascade_spreads_then_is_contained():
+    """The infection must propagate through real agents before it is arrested.
+
+    Every step is a write, so this asserts the shape of the story: the claim is
+    asserted, an infection opens, agents genuinely derive from it, severity is
+    read back from Q4, and only then does the antibody contain the cascade.
+    """
+    store = _store("_test_cascade")
+    store.reset()
+    store.create_indexes()
+    try:
+        swarm = Swarm(store)
+        swarm.start("visitor", "s_cascade")
+        swarm.grounder = _StubGrounder(
+            Evidence(
+                claim="Venus has a breathable atmosphere",
+                query="venus breathable atmosphere",
+                title="Atmosphere of Venus",
+                url="https://en.wikipedia.org/wiki/Atmosphere_of_Venus",
+                sentence="Venus's atmosphere is 96.5% carbon dioxide.",
+                verdict="contradicts",
+                overlap=0.8,
+            )
+        )
+
+        steps = list(swarm.submit_claim_stream("Venus has a breathable atmosphere"))
+        phases = [s["phase"] for s in steps]
+
+        assert phases[0] == "asserted"
+        assert "infected" in phases and "arrested" in phases
+        assert phases.index("infected") < phases.index("arrested")
+
+        spread = [s for s in steps if s["phase"] == "spread"]
+        assert spread, "the claim must actually propagate through the swarm"
+        # Severity is read back from Q4 after each hop, so it must be monotonic
+        # and strictly greater than the infection's opening severity.
+        severities = [s["severity"] for s in spread]
+        assert severities == sorted(severities)
+        assert severities[-1] > 1.0
+        assert all(s["agent"] for s in spread)
+
+        # The immune system itself must never catch the infection.
+        assert "Antibody" not in " ".join(s["agent"] for s in spread)
+
+        final = steps[-1]
+        assert final["phase"] == "arrested"
+        assert final["result"]["arrest"] is not None
+
+        infections = store.rows("MATCH (i:Infection) RETURN i.status, i.severity")
+        assert infections and all(row[0] == "contained" for row in infections)
+
+        # Every claim that reasoned from the false premise is contained too.
+        # The injected correction is the exception and must stay active: it is
+        # the true statement the antibody put there, not a suspect.
+        still_active = store.rows(
+            "MATCH (c:Claim) WHERE c.status = 'active' AND c.verification <> 'sourced' "
+            "RETURN c.id, c.text"
+        )
+        assert still_active == [], f"contained claims still active: {still_active}"
+    finally:
+        store.graph.delete()
+
+
+@pytest.mark.skipif(not _db_available(), reason="FalkorDB not reachable")
+def test_a_supported_claim_produces_no_infection():
+    store = _store("_test_cascade_ok")
+    store.reset()
+    store.create_indexes()
+    try:
+        swarm = Swarm(store)
+        swarm.start("visitor", "s_ok")
+        swarm.grounder = _StubGrounder(
+            Evidence(
+                claim="The Earth orbits the Sun", query="earth orbits sun",
+                title="Earth's orbit", verdict="supports", overlap=1.0,
+            )
+        )
+        steps = list(swarm.submit_claim_stream("The Earth orbits the Sun"))
+        phases = [s["phase"] for s in steps]
+        assert "infected" not in phases
+        assert "spread" not in phases
+        assert steps[-1]["phase"] == "clear"
+        assert store.rows("MATCH (i:Infection) RETURN i.id") == []
+    finally:
+        store.graph.delete()

@@ -140,6 +140,24 @@ Refuted by Atmosphere of Venus — the claim is false.
 🛡️ Arrested by the same mechanism — Infection contained · Antibody external citation · Kernel fact added
 ```
 
+You can watch it happen. The cascade is not an animation over a fixed script — each step is a
+real write, and the severity shown is read back from **Q4** at that moment:
+
+```
+🗣️  Visitor asserts: "Venus has a breathable atmosphere"
+🔎  Sanitised against the kernel — no stored fact matches yet.
+🌐  Public source consulted: Atmosphere of Venus.
+🦠  Infection open on the claim — severity 2.0.
+↗️  Analyst reasons from it — severity 4.0.
+↗️  Planner reasons from it — severity 6.0.
+🛡️  Antibody dispatched, citing the public source.
+✅  Quarantined — the cascade is contained.
+```
+
+The Analyst and Planner genuinely derive from the visitor's claim, which is why severity climbs:
+`1 + infected + exposed` is computed from the `DERIVED_FROM` edges that exist. The whole cascade
+is then contained, not just the claim that started it.
+
 Nothing about the mechanism changes. Only where the evidence comes from. A refuted claim becomes
 a new `Infection` class (`external_contradiction`), it appears in the same dashboard, the same
 trust table, the same Q8 panel — and because the fact lands in the kernel, **a repeat of that

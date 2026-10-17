@@ -311,81 +311,41 @@ class Swarm:
 
     VISITOR_ID = "ag_visitor"
 
-    def submit_claim(self, text: str) -> dict:
-        """A visitor submits a claim: ground it publicly, arrest it if false.
+    # Templates for agents that take the visitor's claim at face value. The
+    # restatements become real nodes, so the cascade is a real traversal rather
+    # than an animation: Q4 computes severity from edges that actually exist.
+    SPREAD_TEMPLATES: tuple[str, ...] = (
+        "Taking that as given: {claim}",
+        "Planning on the basis that {claim}",
+    )
 
-        This is the same immune machinery the Mars scenario drives, minus the
-        script: the claim becomes a node, the sanitiser judges it against
-        everything already learned, and a public source decides whether it is
-        false. Nothing about the mechanism changes — only where the evidence
-        comes from.
-        """
-        # A visitor can submit before anything else has happened: on a fresh
-        # deployment the session does not exist yet. Starting one here is what
-        # makes the tab usable the moment someone lands on it.
-        if self.session_id is None:
-            self.start(topic="Visitor claims", session_id="session_visitors")
-        session = self._require_session()
-        self.writer.upsert_agent(
-            Agent(id=self.VISITOR_ID, name="Visitor", role="visitor", base_trust=0.5)
+    def _susceptible_agents(self, limit: int = 2) -> list[tuple[str, str]]:
+        # An explicit allowlist, not a blocklist. The Antibody System's role is
+        # 'immune', so excluding 'antibody' let the immune system itself catch
+        # the infection — which is nonsense, and it showed up in the animation.
+        rows = self.store.rows(
+            "MATCH (a:Agent) "
+            "WHERE a.role IN ['researcher', 'analyst', 'planner'] "
+            "RETURN a.id, a.name ORDER BY a.name LIMIT $limit",
+            {"limit": limit},
         )
-        message_id, _seq = self.writer.record_message(session, self.VISITOR_ID, text)
+        return [(row[0], row[1]) for row in rows]
 
-        extraction = self.extractor.extract(text, self.recent_claim_texts())
-        claims: list[tuple[str, str]] = []
-        for extracted in extraction.claims:
-            claim_id = self._new_claim_id()
-            claim = Claim(
-                id=claim_id, text=extracted.text, confidence=extracted.confidence
-            )
-            self.writer.record_claim(claim, self.VISITOR_ID, session, message_id)
-            claims.append((claim_id, extracted.text))
+    def _open_infection(self, claim_id: str) -> str:
+        infection = Infection(
+            id=f"{_id_prefix()}_ext",
+            type=INFECTION_EXTERNAL,
+            status="active",
+            severity=1.0,
+        )
+        self.writer.record_infection(infection)
+        self.writer.link_infection_target(infection.id, claim_id)
+        return infection.id
 
-        if not claims:
-            return {
-                "accepted": False,
-                "reason": "no checkable claim found in that text",
-                "claim_id": None,
-                "evidence": None,
-                "arrest": None,
-            }
-
-        verdicts = [self.sanitizer.judge(cid, txt) for cid, txt in claims]
-
-        try:
-            evidence = self.grounder.ground(text)
-        except Exception as exc:  # noqa: BLE001 - grounding is best-effort
-            evidence = None
-            ground_error = f"{type(exc).__name__}: {exc}"
-        else:
-            ground_error = None
-
-        arrest = None
-        if evidence is not None and evidence.is_false:
-            claim_id, claim_text = claims[0]
-            arrest = self._arrest(claim_id, claim_text, evidence)
-
-        return {
-            "accepted": True,
-            "claim_id": claims[0][0],
-            "claim_text": claims[0][1],
-            "verdicts": [
-                {"claim_id": v.claim_id, "verdict": v.verdict, "ms": round(v.elapsed_ms, 2)}
-                for v in verdicts
-            ],
-            "evidence": evidence,
-            "ground_error": ground_error,
-            "arrest": arrest,
-        }
-
-    def _arrest(self, claim_id: str, claim_text: str, evidence) -> dict:
-        """Quarantine a false claim, citing the public source that refuted it.
-
-        Deliberately the same shape as the Mars response: an Infection targets
-        the claim, an Antibody neutralises it, and a KernelFact records what the
-        swarm now knows — so the next claim in this family is caught by
-        comparison, with no network call at all.
-        """
+    def _arrest(
+        self, claim_id: str, claim_text: str, evidence, infection_id: str | None = None
+    ) -> dict:
+        """Quarantine a false claim, citing the public source that refuted it."""
         source = Source(
             id="src_wikipedia_" + (evidence.title or "unknown").lower().replace(" ", "_")[:40],
             name=f"Wikipedia: {evidence.title}" if evidence.title else "Wikipedia",
@@ -394,15 +354,8 @@ class Swarm:
         )
         self.writer.upsert_source(source)
 
-        infected, exposed = self.scanner.cascade_reach(claim_id)
-        infection = Infection(
-            id=f"{_id_prefix()}_ext",
-            type=INFECTION_EXTERNAL,
-            status=INFECTION_CONTAINED,
-            severity=float(1 + infected + exposed),
-        )
-        self.writer.record_infection(infection)
-        self.writer.link_infection_target(infection.id, claim_id)
+        if infection_id is None:
+            infection_id = self._open_infection(claim_id)
 
         correction = Claim(
             id=f"{_id_prefix()}_fix",
@@ -418,14 +371,20 @@ class Swarm:
             strategy="external_grounding",
             outcome="effective",
         )
-        self.writer.record_antibody(antibody, infection.id)
+        self.writer.record_antibody(antibody, infection_id)
         self.writer.link_antibody_injection(antibody.id, correction.id)
         self.writer.link_contradiction(
-            correction.id, claim_id, reason=f"refuted by {source.name}", update_verification=False
+            correction.id,
+            claim_id,
+            reason=f"refuted by {source.name}",
+            update_verification=False,
         )
 
+        # Quarantine the root and everything that reasoned from it, so the whole
+        # cascade is contained rather than only the claim that started it.
         self.writer.set_status(claim_id, "quarantined")
         self.writer.set_verification(claim_id, "contradicted")
+        self.writer.contain_cascade(claim_id)
 
         fact_id = None
         fact_text = evidence.fact_text()
@@ -437,14 +396,173 @@ class Swarm:
                 antibody_id=antibody.id,
             )
 
+        self.writer.set_infection_status(infection_id, INFECTION_CONTAINED)
+
         return {
-            "infection_id": infection.id,
+            "infection_id": infection_id,
             "antibody_id": antibody.id,
             "source": source.name,
             "source_url": source.url,
             "fact_id": fact_id,
             "quarantined": claim_id,
         }
+
+    def submit_claim_stream(self, text: str):
+        """Submit a claim, yielding each step so the UI can show it happening.
+
+        Every step corresponds to something that actually changed in the graph.
+        The severity reported is read back from Q4 at that moment rather than
+        narrated, so what the animation shows is the traversal the graph really
+        computes.
+        """
+        if self.session_id is None:
+            self.start(topic="Visitor claims", session_id="session_visitors")
+        session = self._require_session()
+        self.writer.upsert_agent(
+            Agent(id=self.VISITOR_ID, name="Visitor", role="visitor", base_trust=0.5)
+        )
+        message_id, _seq = self.writer.record_message(session, self.VISITOR_ID, text)
+
+        extraction = self.extractor.extract(text, self.recent_claim_texts())
+        claims: list[tuple[str, str]] = []
+        for extracted in extraction.claims:
+            claim_id = self._new_claim_id()
+            self.writer.record_claim(
+                Claim(id=claim_id, text=extracted.text, confidence=extracted.confidence),
+                self.VISITOR_ID,
+                session,
+                message_id,
+            )
+            claims.append((claim_id, extracted.text))
+
+        if not claims:
+            reason = "no checkable claim found in that text"
+            yield {
+                "phase": "rejected",
+                "message": "No checkable claim found in that text.",
+                "result": {
+                    "accepted": False,
+                    "reason": reason,
+                    "claim_id": None,
+                    "evidence": None,
+                    "arrest": None,
+                },
+            }
+            return
+
+        claim_id, claim_text = claims[0]
+        yield {
+            "phase": "asserted",
+            "claim_id": claim_id,
+            "message": f"Visitor asserts: \u201c{claim_text}\u201d",
+        }
+
+        verdicts = [self.sanitizer.judge(cid, txt) for cid, txt in claims]
+        yield {
+            "phase": "sanitised",
+            "message": "Sanitised against the kernel \u2014 no stored fact matches yet.",
+            "verdicts": [v.verdict for v in verdicts],
+        }
+
+        try:
+            evidence = self.grounder.ground(text)
+        except Exception as exc:  # noqa: BLE001 - grounding is best-effort
+            evidence = None
+            ground_error = f"{type(exc).__name__}: {exc}"
+        else:
+            ground_error = None
+
+        if evidence is not None:
+            yield {
+                "phase": "grounded",
+                "message": f"Public source consulted: {evidence.title or 'none'}.",
+                "verdict": evidence.verdict,
+            }
+
+        result: dict = {
+            "accepted": True,
+            "claim_id": claim_id,
+            "claim_text": claim_text,
+            "verdicts": [
+                {"claim_id": v.claim_id, "verdict": v.verdict, "ms": round(v.elapsed_ms, 2)}
+                for v in verdicts
+            ],
+            "evidence": evidence,
+            "ground_error": ground_error,
+            "arrest": None,
+            "spread": [],
+        }
+
+        if evidence is None or not evidence.is_false:
+            yield {
+                "phase": "clear" if evidence is not None else "unknown",
+                "message": (
+                    "Nothing to arrest \u2014 the swarm only quarantines what a source refutes."
+                ),
+                "result": result,
+            }
+            return
+
+        infection_id = self._open_infection(claim_id)
+        infected, exposed = self.scanner.cascade_reach(claim_id)
+        severity = float(1 + infected + exposed)
+        self.writer.set_infection_severity(infection_id, severity)
+        yield {
+            "phase": "infected",
+            "message": f"Infection open on the claim \u2014 severity {severity:.1f}.",
+            "severity": severity,
+        }
+
+        for (agent_id, agent_name), template in zip(
+            self._susceptible_agents(), self.SPREAD_TEMPLATES
+        ):
+            derived_text = template.format(claim=claim_text)
+            derived_id = self._new_claim_id()
+            msg_id, _ = self.writer.record_message(session, agent_id, derived_text)
+            self.writer.record_claim(
+                Claim(id=derived_id, text=derived_text, confidence=0.8),
+                agent_id,
+                session,
+                msg_id,
+            )
+            self.writer.link_derivation(derived_id, claim_id)
+            self.writer.link_infection_spread(infection_id, derived_id)
+
+            infected, exposed = self.scanner.cascade_reach(claim_id)
+            severity = float(1 + infected + exposed)
+            self.writer.set_infection_severity(infection_id, severity)
+            result["spread"].append({"agent": agent_name, "claim_id": derived_id})
+            yield {
+                "phase": "spread",
+                "agent": agent_name,
+                "claim_id": derived_id,
+                "message": f"{agent_name} reasons from it \u2014 severity {severity:.1f}.",
+                "severity": severity,
+            }
+
+        yield {"phase": "antibody", "message": "Antibody dispatched, citing the public source."}
+
+        arrest = self._arrest(claim_id, claim_text, evidence, infection_id=infection_id)
+        result["arrest"] = arrest
+        yield {
+            "phase": "arrested",
+            "message": (
+                f"Quarantined. {arrest['source']} refutes the claim and the cascade is contained."
+            ),
+            "arrest": arrest,
+            "result": result,
+        }
+
+    def submit_claim(self, text: str) -> dict:
+        """Synchronous wrapper around submit_claim_stream.
+
+        Returns the final result. A single source of truth, so the animated and
+        non-animated paths cannot drift apart.
+        """
+        result: dict = {"accepted": False, "reason": "no result"}
+        for step in self.submit_claim_stream(text):
+            result = step.get("result", result)
+        return result
 
     # ------------------------------------------------------------ durability
 
