@@ -124,6 +124,55 @@ RETURN k.text, ab.id AS established_by, s.name AS source, s.url AS source_url
 
 ---
 
+## Check any claim — grounding in public knowledge
+
+The Mars scenario is scripted. **Check any claim** is not: type a statement and the swarm
+grounds it against **Wikipedia** — free, no API key, and a citable public source — then runs it
+through the *same* immune machinery. If a public source refutes it, the claim is quarantined, an
+antibody cites that source, and the fact enters the kernel:
+
+```
+Claim: Venus has a breathable atmosphere
+Refuted by Atmosphere of Venus — the claim is false.
+  "Venus's atmosphere is composed of 96.5% carbon dioxide and 3.5% nitrogen,
+   with other chemical compounds present only in trace amounts."
+  Source: Atmosphere of Venus
+🛡️ Arrested by the same mechanism — Infection contained · Antibody external citation · Kernel fact added
+```
+
+Nothing about the mechanism changes. Only where the evidence comes from. A refuted claim becomes
+a new `Infection` class (`external_contradiction`), it appears in the same dashboard, the same
+trust table, the same Q8 panel — and because the fact lands in the kernel, **a repeat of that
+claim is caught with no network call at all**.
+
+### Two design decisions that keep it honest
+
+**The subject check.** Wikipedia's search matches individual *words*. Asking about "Mars is made
+of cheese" returns articles about cheese, and an early version duly reported that claim as
+**supported** — by an article about Cheez-Its. An article is now only considered if its *title*
+shares a token with the claim. No article called anything with "Mars" in it exists among cheese
+results, so that claim comes back **inconclusive** instead.
+
+**Sentence-level, coverage-scored agreement.** Judging a whole article at once fires on unrelated
+text, and the overlap coefficient flatters short claims — two shared words out of three reads as
+0.67. Agreement now requires one sentence to contain essentially everything the claim asserts.
+"only" was also removed from the limiting-word list after it refuted the *true* claim that the
+Moon orbits the Earth.
+
+When it cannot decide, it **says so**:
+
+| Verdict | Meaning | Effect |
+| --- | --- | --- |
+| `contradicts` | a source limits or negates the claim | quarantined, antibody, kernel fact |
+| `supports` | a source states the same thing | corroborated, nothing arrested |
+| `silent` | no reachable source settles it | reported as inconclusive |
+
+A confidently wrong verdict would be worse than no feature: it would make the whole demo
+theatre. `tests/test_grounding.py` pins the Cheez-It regression and the wording that must never
+corroborate a claim.
+
+---
+
 ## Durability — the graph is a projection
 
 **FalkorDB Cloud's free tier has no persistence and no backups.** Instances are stopped after
@@ -335,7 +384,7 @@ A Cypher query that has never been executed is not a feature. Three layers of pr
 
 ```bash
 .venv/bin/python -m immunegraph.verify_queries   # every query, against a live instance
-.venv/bin/python -m pytest                       # 106 tests
+.venv/bin/python -m pytest                       # 120 tests
 .venv/bin/python -m immunegraph.demo             # the full arc; exits non-zero on failure
 ```
 

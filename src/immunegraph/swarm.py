@@ -13,13 +13,22 @@ from dataclasses import dataclass, field
 from .agents import DEFAULT_SWARM, MARS_TOPIC, Persona
 from .antibody import AntibodyAgent, AntibodyResult
 from .extractor import ExtractedSource, get_extractor
+from .grounding import WikipediaGrounder
 from .immune import ImmuneScanner, RecallResult, TRUST_DECAY_PER_INFECTION
 from .kernel import Kernel
 from .memory import MemoryWriter
-from .models import Agent, Claim, Source
+from .models import Agent, Antibody, Claim, Infection, Source
 from .projection import rebuild_and_verify
 from .sanitizer import Sanitizer
-from .schema import CLAIM_ACTIVE
+from uuid import uuid4
+
+
+def _id_prefix() -> str:
+    """Short opaque id for nodes created outside the session counters."""
+    return f"x{uuid4().hex[:10]}"
+
+
+from .schema import CLAIM_ACTIVE, INFECTION_CONTAINED, INFECTION_EXTERNAL, TRUST_REPUTABLE
 
 
 @dataclass
@@ -53,6 +62,8 @@ class Swarm:
         self.kernel = Kernel(store, self.writer)
         self.antibody = AntibodyAgent(store, self.writer, kernel=self.kernel)
         self.sanitizer = Sanitizer(store, self.writer, kernel=self.kernel)
+        # Public-knowledge grounding for claims a visitor submits.
+        self.grounder = WikipediaGrounder()
         self.tenant_id = tenant_id
         self.session_id: str | None = None
         # Attaching a write-ahead log makes every mutation below recoverable:
@@ -295,6 +306,145 @@ class Swarm:
 
     def sanitizer_summary(self) -> dict:
         return self.sanitizer.summary()
+
+    # ------------------------------------------------- visitor-submitted claims
+
+    VISITOR_ID = "ag_visitor"
+
+    def submit_claim(self, text: str) -> dict:
+        """A visitor submits a claim: ground it publicly, arrest it if false.
+
+        This is the same immune machinery the Mars scenario drives, minus the
+        script: the claim becomes a node, the sanitiser judges it against
+        everything already learned, and a public source decides whether it is
+        false. Nothing about the mechanism changes — only where the evidence
+        comes from.
+        """
+        # A visitor can submit before anything else has happened: on a fresh
+        # deployment the session does not exist yet. Starting one here is what
+        # makes the tab usable the moment someone lands on it.
+        if self.session_id is None:
+            self.start(topic="Visitor claims", session_id="session_visitors")
+        session = self._require_session()
+        self.writer.upsert_agent(
+            Agent(id=self.VISITOR_ID, name="Visitor", role="visitor", base_trust=0.5)
+        )
+        message_id, _seq = self.writer.record_message(session, self.VISITOR_ID, text)
+
+        extraction = self.extractor.extract(text, self.recent_claim_texts())
+        claims: list[tuple[str, str]] = []
+        for extracted in extraction.claims:
+            claim_id = self._new_claim_id()
+            claim = Claim(
+                id=claim_id, text=extracted.text, confidence=extracted.confidence
+            )
+            self.writer.record_claim(claim, self.VISITOR_ID, session, message_id)
+            claims.append((claim_id, extracted.text))
+
+        if not claims:
+            return {
+                "accepted": False,
+                "reason": "no checkable claim found in that text",
+                "claim_id": None,
+                "evidence": None,
+                "arrest": None,
+            }
+
+        verdicts = [self.sanitizer.judge(cid, txt) for cid, txt in claims]
+
+        try:
+            evidence = self.grounder.ground(text)
+        except Exception as exc:  # noqa: BLE001 - grounding is best-effort
+            evidence = None
+            ground_error = f"{type(exc).__name__}: {exc}"
+        else:
+            ground_error = None
+
+        arrest = None
+        if evidence is not None and evidence.is_false:
+            claim_id, claim_text = claims[0]
+            arrest = self._arrest(claim_id, claim_text, evidence)
+
+        return {
+            "accepted": True,
+            "claim_id": claims[0][0],
+            "claim_text": claims[0][1],
+            "verdicts": [
+                {"claim_id": v.claim_id, "verdict": v.verdict, "ms": round(v.elapsed_ms, 2)}
+                for v in verdicts
+            ],
+            "evidence": evidence,
+            "ground_error": ground_error,
+            "arrest": arrest,
+        }
+
+    def _arrest(self, claim_id: str, claim_text: str, evidence) -> dict:
+        """Quarantine a false claim, citing the public source that refuted it.
+
+        Deliberately the same shape as the Mars response: an Infection targets
+        the claim, an Antibody neutralises it, and a KernelFact records what the
+        swarm now knows — so the next claim in this family is caught by
+        comparison, with no network call at all.
+        """
+        source = Source(
+            id="src_wikipedia_" + (evidence.title or "unknown").lower().replace(" ", "_")[:40],
+            name=f"Wikipedia: {evidence.title}" if evidence.title else "Wikipedia",
+            url=evidence.url or "",
+            trust_level=TRUST_REPUTABLE,
+        )
+        self.writer.upsert_source(source)
+
+        infected, exposed = self.scanner.cascade_reach(claim_id)
+        infection = Infection(
+            id=f"{_id_prefix()}_ext",
+            type=INFECTION_EXTERNAL,
+            status=INFECTION_CONTAINED,
+            severity=float(1 + infected + exposed),
+        )
+        self.writer.record_infection(infection)
+        self.writer.link_infection_target(infection.id, claim_id)
+
+        correction = Claim(
+            id=f"{_id_prefix()}_fix",
+            text=evidence.fact_text(220) or claim_text,
+            verification="sourced",
+        )
+        self.writer.record_claim(correction, agent_id=self.antibody.ensure_system_agent())
+        self.writer.link_source(correction.id, source.id, quote=evidence.sentence)
+
+        antibody = Antibody(
+            id=f"{_id_prefix()}_ab",
+            correction_text=evidence.sentence or evidence.reason,
+            strategy="external_grounding",
+            outcome="effective",
+        )
+        self.writer.record_antibody(antibody, infection.id)
+        self.writer.link_antibody_injection(antibody.id, correction.id)
+        self.writer.link_contradiction(
+            correction.id, claim_id, reason=f"refuted by {source.name}", update_verification=False
+        )
+
+        self.writer.set_status(claim_id, "quarantined")
+        self.writer.set_verification(claim_id, "contradicted")
+
+        fact_id = None
+        fact_text = evidence.fact_text()
+        if fact_text:
+            fact_id = self.kernel.register_fact(
+                fact_text,
+                source=source.id,
+                trust_level=TRUST_REPUTABLE,
+                antibody_id=antibody.id,
+            )
+
+        return {
+            "infection_id": infection.id,
+            "antibody_id": antibody.id,
+            "source": source.name,
+            "source_url": source.url,
+            "fact_id": fact_id,
+            "quarantined": claim_id,
+        }
 
     # ------------------------------------------------------------ durability
 

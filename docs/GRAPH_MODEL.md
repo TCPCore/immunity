@@ -324,6 +324,36 @@ ORDER BY outbreaks DESC
 
 ---
 
+## 5c. External contradictions — grounding a visitor's claim
+
+The Mars scenario is scripted; **Check any claim** is not. A visitor submits a statement, it is
+grounded against Wikipedia (`src/immunegraph/grounding.py`), and a refutation is treated by the
+same machinery that handles everything else the swarm catches.
+
+`Infection.type` therefore takes a third value:
+
+| type | how it is discovered |
+| --- | --- |
+| `unsupported_root` | **Q2** — active, no trusted source, no parent |
+| `repeat_offender` | **Q6/Q7** — matches something already neutralised |
+| `external_contradiction` | **grounding** — a public source refutes it |
+
+The shape written on a refutation:
+
+```
+(Claim)<-[:TARGETS]-(Infection {type: 'external_contradiction'})
+(Infection)-[:NEUTRALIZES]-(Antibody {strategy: 'external_grounding'})
+(Antibody)-[:INJECTS]->(Claim {verification: 'sourced'})
+(correction)-[:SUPPORTED_BY {quote}]->(Source {name: 'Wikipedia: ...', trust_level: 'reputable'})
+(correction)-[:CONTRADICTS]->(Claim {status: 'quarantined'})
+```
+
+Storing the deciding sentence as the `SUPPORTED_BY` quote means **why** a claim was refuted is a
+traversal rather than a log line — the same principle as every other verdict here.
+
+Because a refutation also registers a `KernelFact`, a second visitor repeating that claim is
+caught by the sanitiser with **no network call at all**.
+
 ## 5b. The kernel of truth — recognising lies the swarm already knows
 
 Q1–Q8 **detect new lies** by walking the support structure. They are thorough and they are

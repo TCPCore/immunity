@@ -175,7 +175,7 @@ def render_transcript(swarm: Swarm) -> None:
             st.markdown(text)
 
 
-def _short_label(text: str, words: int = 5, chars: int = 30) -> str:
+def _short_label(text: str, words: int = 4, chars: int = 24) -> str:
     """Keep node labels legible; full text stays in the hover tooltip."""
     short = " ".join((text or "").split()[:words])
     if len(short) > chars:
@@ -245,14 +245,14 @@ def render_graph(swarm: Swarm, height: int = 660) -> None:
         highlightColor="#F7E7A1",
         collapsible=False,
         node={"labelProperty": "label"},
-        link={"labelProperty": "label", "renderLabel": True},
+        link={"labelProperty": "label", "renderLabel": False, "title": "label"},
         physics={
             "enabled": True,
             "solver": "barnesHut",
             "barnesHut": {
-                "gravitationalConstant": -16000,
+                "gravitationalConstant": -20000,
                 "centralGravity": 0.2,
-                "springLength": 220,
+                "springLength": 260,
                 "springConstant": 0.04,
                 "avoidOverlap": 0.5,
             },
@@ -324,7 +324,6 @@ def render_dashboard(swarm: Swarm) -> None:
     else:
         st.caption("No antibodies have responded yet.")
 
-    render_kernel(swarm)
 
 
 def render_kernel(swarm: Swarm) -> None:
@@ -445,29 +444,154 @@ def reinject(swarm: Swarm) -> str:
     )
 
 
+def render_check_claim(swarm: Swarm) -> None:
+    """Let a visitor submit a claim the swarm has never seen."""
+    st.markdown("#### Submit a claim the swarm has never seen")
+    st.caption(
+        "Grounded against **Wikipedia** — free, public, and citable — then run through the same "
+        "immune machinery as the Mars scenario. If a public source refutes it, the claim is "
+        "quarantined, an antibody cites that source, and the fact enters the kernel."
+    )
+
+    examples = [
+        "Venus has a breathable atmosphere",
+        "The Earth orbits the Sun",
+        "Mars is made of cheese",
+    ]
+    cols = st.columns(len(examples))
+    for column, example in zip(cols, examples):
+        if column.button(example, key=f"ex_{example[:12]}", width="stretch"):
+            st.session_state["claim_input"] = example
+
+    # A plain input plus a button rather than a form: forms swallow the Enter key
+    # in some harnesses and make the flow harder to exercise end to end.
+    text = st.text_input(
+        "Claim",
+        key="claim_input",
+        placeholder="e.g. Venus has a breathable atmosphere",
+        label_visibility="collapsed",
+    )
+    submitted = st.button("⚖️  Check this claim", type="primary")
+
+    if submitted and text.strip():
+        with st.spinner("Grounding against public sources…"):
+            st.session_state["last_check"] = swarm.submit_claim(text.strip())
+
+    result = st.session_state.get("last_check")
+    if not result:
+        st.info("Nothing checked yet. Try one of the examples above, or write your own claim.")
+        return
+
+    if not result["accepted"]:
+        st.warning(result["reason"])
+        return
+
+    evidence = result["evidence"]
+    st.divider()
+    st.markdown(f"**Claim:** {result['claim_text']}")
+
+    if result.get("ground_error"):
+        st.warning(f"Grounding unavailable: {result['ground_error']}")
+    elif evidence is None:
+        st.warning("Grounding unavailable.")
+    elif evidence.is_false:
+        st.error(f"**Refuted** by {evidence.title} — the claim is false.")
+    elif evidence.verdict == "supports":
+        st.success(f"**Corroborated** by {evidence.title}.")
+    else:
+        st.info(f"**Inconclusive** — a public source was found but does not settle it.")
+
+    if evidence is not None:
+        with st.container(border=True):
+            if evidence.sentence:
+                st.markdown(f"> {evidence.sentence.strip()[:600]}")
+            if evidence.url:
+                st.markdown(f"Source: [{evidence.title}]({evidence.url})")
+            st.caption(f"Matched by lexical grounding — {evidence.reason}")
+
+    if result["arrest"]:
+        arrest = result["arrest"]
+        st.markdown("##### 🛡️ Arrested by the same mechanism")
+        cols = st.columns(3)
+        cols[0].metric("Infection", "contained")
+        cols[1].metric("Antibody", "external citation")
+        cols[2].metric("Kernel fact", "added" if arrest["fact_id"] else "none")
+        st.caption(
+            f"Antibody `{arrest['antibody_id']}` cites **{arrest['source']}**; the claim is "
+            f"quarantined and the fact is now in the kernel, so a repeat is caught without "
+            f"touching the network."
+        )
+    elif evidence is not None and not evidence.is_false:
+        st.caption("Nothing to arrest — the swarm only quarantines what a source refutes.")
+
+    st.divider()
+    st.markdown("##### What the swarm already knew")
+    verdicts = result.get("verdicts") or []
+    if verdicts:
+        st.caption(
+            "Sanitised against the kernel before any network call: "
+            + ", ".join(f"{v['verdict']} ({v['ms']}ms)" for v in verdicts)
+        )
+
+
+def render_knowledge(swarm: Swarm) -> None:
+    """Kernel of truth and durability, gathered in one place."""
+    left, right = st.columns([1.15, 1], gap="large")
+    with left:
+        st.markdown("#### Kernel of truth")
+        st.caption(
+            "What the swarm holds as **true**, as opposed to Infection/Claim which record what "
+            "was wrong. Written by antibodies, consulted by the sanitiser."
+        )
+        render_kernel(swarm)
+    with right:
+        st.markdown("#### Durability")
+        st.caption(
+            "FalkorDB Cloud's free tier has no persistence. Every write is appended to a log "
+            "first, so the graph is a projection that can be rebuilt."
+        )
+        st.metric("Writes in the log", swarm.log_count())
+        if st.button("♻️  Rebuild from log", width="stretch", key="rebuild_inline"):
+            st.session_state["rebuild_note"] = _rebuild(swarm)
+            st.rerun()
+        rows = swarm.log_entries(limit=12)
+        if rows:
+            st.dataframe(
+                [{"#": r["seq"], "event": r["label"], "statement": r["summary"]} for r in rows],
+                width="stretch",
+                hide_index=True,
+            )
+        else:
+            st.caption("Nothing logged yet.")
+
+
+def _rebuild(swarm: Swarm) -> str:
+    result = swarm.rebuild_from_log()
+    if result.get("error"):
+        return result["error"]
+    if result["identical"]:
+        return (
+            f"Rebuilt {result['applied']} writes — the graph is **identical** to the one "
+            f"before the wipe ({result['nodes']} nodes)."
+        )
+    return f"Rebuilt {result['applied']} writes, but the result differs ({result['failed']} failed)."
+
+
 def main() -> None:
     swarm, store, log, settings = get_context()
 
     st.title("🧬 ImmuneGraph")
     st.markdown(
-        "**A self-healing memory for AI agent swarms.** Multi-agent systems fail in a way "
-        "ordinary memory layers cannot see: one agent invents a claim, another derives a plan "
-        "from it, and the swarm acts on a lie. ImmuneGraph models belief as a graph, so "
-        "unsupported claims, self-justifying cycles and cascades become *traversals* — and "
-        "FalkorDB is the immune system, not a picture of one."
+        "**A self-healing memory for AI agent swarms.** Ordinary memory records what agents "
+        "*said*. ImmuneGraph records **what supports what**, so an unsupported claim, a "
+        "self-justifying cycle and a cascade all become graph traversals — and the swarm "
+        "arrests them."
     )
-    st.caption(f"Connected to {store.settings.host}:{store.settings.port} · graph "
-               f"`{store.settings.graph}` · extractor `{store.settings.extractor}`")
 
     if not require_db(store):
         return
 
-    # Safe to touch the database now. Idempotent: re-creating an existing index
-    # is swallowed by create_indexes().
     store.create_indexes()
-
-    # If the database came back empty — a restarted free-tier Cloud instance, a
-    # wiped volume — rebuild it from the durable log before rendering anything.
     notice = restore_if_empty(swarm, store, settings)
     if notice:
         st.info(notice)
@@ -489,52 +613,36 @@ def main() -> None:
             swarm.reset_all()
             st.session_state.pop("recall_note", None)
             st.session_state.pop("rebuild_note", None)
+            st.session_state.pop("last_check", None)
             st.rerun()
         if st.button("♻️  Rebuild from log", width="stretch"):
-            # The durability claim, demonstrated rather than asserted: wipe the
-            # graph and reconstruct it from the durable log, then compare.
-            result = swarm.rebuild_from_log()
-            if result.get("error"):
-                st.session_state["rebuild_note"] = result["error"]
-            elif result["identical"]:
-                st.session_state["rebuild_note"] = (
-                    f"Rebuilt {result['applied']} writes from the log — the graph is "
-                    f"**identical** to the one before the wipe ({result['nodes']} nodes)."
-                )
-            else:
-                st.session_state["rebuild_note"] = (
-                    f"Rebuilt {result['applied']} writes, but the result differs — "
-                    f"{result['failed']} statement(s) failed."
-                )
+            st.session_state["rebuild_note"] = _rebuild(swarm)
             st.rerun()
 
         st.divider()
+        st.caption(
+            f"Connected to `{store.settings.host}:{store.settings.port}` · graph "
+            f"`{store.settings.graph}` · extractor `{store.settings.extractor}` · "
+            f"secrets bridged {STREAMLIT_SECRETS_BRIDGED}"
+        )
         with st.expander("Graph data model"):
             st.markdown(
-                "**Nodes** — `Agent` `Claim` `Source` `Infection` `Antibody` `Message` `Session`\n\n"
-                "**Memory** — episodic (`Message`/`Session`), semantic (`Claim`/`Source`/`Agent`), "
-                "procedural (`Antibody`/`Infection`)\n\n"
+                "**Nodes** — `Agent` `Claim` `KernelFact` `Source` `Infection` `Antibody` "
+                "`Message` `Session`\n\n"
+                "**Memory** — episodic (`Message`/`Session`), semantic "
+                "(`Claim`/`Source`/`KernelFact`), procedural (`Antibody`/`Infection`)\n\n"
                 "**Edges** — `ASSERTS` `SUPPORTED_BY` `DERIVED_FROM` `CONTRADICTS` `REPEATS` "
-                "`TRUSTS` `TARGETS` `SPREAD_TO` `NEUTRALIZES` `INJECTS`\n\n"
+                "`TARGETS` `SPREAD_TO` `NEUTRALIZES` `ESTABLISHES` `CONFLICTS_WITH`\n\n"
                 "`DERIVED_FROM` points **child → parent**, so cascades walk "
                 "`(downstream)-[:DERIVED_FROM*1..5]->(root)`."
             )
         with st.expander("The queries doing the work"):
             st.markdown(
-                "**How the swarm detects new lies**\n\n"
-                "**Q1** cycles in the support structure\n\n"
-                "**Q2** active claims with no trusted source and no parent\n\n"
-                "**Q3** contradiction clusters between agents\n\n"
-                "**Q4** cascade reach — severity is *defined* as this traversal\n\n"
-                "**Q5** trust derived from exposure\n\n"
-                "**Q6/Q7** immunity recall, exact and paraphrase\n\n"
-                "**Q8** antibody effectiveness\n\n"
-                "**How it recognises lies it already knows**\n\n"
-                "**K1** the kernel of truth, with provenance\n\n"
-                "**K2** claims in conflict with the kernel\n\n"
-                "**K3** kernel health — facts held, aligned, in conflict\n\n"
-                "**K4** claims not yet sanitised\n\n"
-                "**K5** who established a fact, citing what"
+                "**Detect new lies:** **Q1** cycles · **Q2** unsupported roots · **Q3** "
+                "contradictions · **Q4** cascade reach (severity) · **Q5** derived trust · "
+                "**Q6/Q7** immunity recall · **Q8** effectiveness\n\n"
+                "**Recognise known ones:** **K1** kernel facts · **K2** conflicts · **K3** "
+                "kernel health · **K4** unsanitised claims · **K5** provenance"
             )
             st.caption("Full text in docs/GRAPH_MODEL.md and src/immunegraph/queries.py")
         with st.expander("Verify it yourself"):
@@ -552,19 +660,27 @@ def main() -> None:
     if note := st.session_state.get("recall_note"):
         st.success(note)
 
-    left, middle, right = st.columns([1.05, 1.5, 1.05], gap="medium")
+    demo_tab, claim_tab, knowledge_tab = st.tabs(
+        ["  Live demo  ", "  Check any claim  ", "  Kernel & durability  "]
+    )
 
-    with left:
-        st.subheader("Conversation")
-        render_transcript(swarm)
+    with demo_tab:
+        left, middle, right = st.columns([1.05, 1.5, 1.05], gap="medium")
+        with left:
+            st.subheader("Conversation")
+            render_transcript(swarm)
+        with middle:
+            st.subheader("Belief graph")
+            render_graph(swarm)
+        with right:
+            st.subheader("Immune dashboard")
+            render_dashboard(swarm)
 
-    with middle:
-        st.subheader("Belief graph")
-        render_graph(swarm)
+    with claim_tab:
+        render_check_claim(swarm)
 
-    with right:
-        st.subheader("Immune dashboard")
-        render_dashboard(swarm)
+    with knowledge_tab:
+        render_knowledge(swarm)
 
     st.divider()
     st.caption(

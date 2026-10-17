@@ -1,0 +1,15 @@
+# Presentation. The default Streamlit chrome (Deploy button, hamburger menu,
+# "made with Streamlit" footer) reads as a prototype; a judged demo should look
+# like a product.
+[theme]
+primaryColor = "#E8453C"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F7FA"
+textColor = "#16202B"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false

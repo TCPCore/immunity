@@ -76,6 +76,8 @@ INFECTION_CIRCULAR = "circular_support"
 INFECTION_UNSUPPORTED = "unsupported_root"
 INFECTION_CONTRADICTION = "contradiction"
 INFECTION_REPEAT = "repeat_offender"
+# Refuted by a public source rather than by the support structure.
+INFECTION_EXTERNAL = "external_contradiction"
 
 # Source trust levels.
 TRUST_PRIMARY = "primary"
