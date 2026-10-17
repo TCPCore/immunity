@@ -147,6 +147,44 @@ def conflicts_with_fact(claim: str, fact: str) -> float | None:
     return score
 
 
+_NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
+
+
+def numbers_in(text: str) -> set[str]:
+    """Every numeric token in the text, normalised: "1,499" and "1499" agree."""
+    return {match.group(0).replace(",", "") for match in _NUMBER.finditer(text)}
+
+
+def _without_numbers(text: str) -> str:
+    return _NUMBER.sub(" ", text)
+
+
+def conflicts_on_numbers(claim: str, fact: str) -> float | None:
+    """Two statements about the same subject that disagree on a quantity.
+
+    Negation cannot catch the failure mode a company brain actually has. "The
+    Enterprise plan is 399 USD per seat" and "The Enterprise plan costs 499 USD
+    per seat" agree on every word and disagree on the only part that matters.
+    Without this check the claim scored as *aligned* with the pricing policy —
+    the sanitiser would have blessed a wrong price as doctrine.
+
+    Requires both sides to state a number, the numbers to differ, and the
+    non-numeric context to be the same subject. A claim about refunds is never
+    in conflict with a fact about incident response just because both contain
+    digits.
+    """
+    claim_numbers = numbers_in(claim)
+    fact_numbers = numbers_in(fact)
+    if not claim_numbers or not fact_numbers:
+        return None
+    if claim_numbers == fact_numbers:
+        return None
+    context = overlap_coefficient(_without_numbers(claim), _without_numbers(fact))
+    if context < KERNEL_CONFLICT_OVERLAP:
+        return None
+    return context
+
+
 def fingerprint(text: str) -> str:
     """Stable short hash of the normalised claim text."""
     normalised = normalise_text(text)

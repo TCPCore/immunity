@@ -53,6 +53,9 @@ class Beat:
     # the middle of the video is a still image with changing captions.
     highlight: str | None = None
     highlight_index: int | None = None
+    # Switch to a tab before acting. The app is multi-tab now, and a click on a
+    # button inside an inactive tab still fires even though nobody can see it.
+    tab: str | None = None
 
 
 # One Re-inject click, deliberately. Each click is a fresh offence and creates
@@ -125,6 +128,50 @@ BEATS: list[Beat] = [
         highlight='[data-testid="stAlert"]',
     ),
     Beat(
+        "Every claim so far was scripted. This one is not — anyone can submit a claim "
+        "the swarm has never seen.",
+        hold=6.0,
+        tab="Check any claim",
+    ),
+    Beat(
+        "A false statement a judge can type themselves. It goes through exactly the same "
+        "machinery as the Mars cascade.",
+        hold=5.0,
+        button="Venus has a breathable atmosphere",
+    ),
+    Beat(
+        "GROUNDED AGAINST WIKIPEDIA — free, public and citable, so no API key and no private "
+        "data. Watch the infection spread: the Analyst and Planner genuinely derive from it, "
+        "so severity climbs 2.0 -> 4.0 -> 6.0. Those numbers are Q4, computed after each write.",
+        hold=14.0,
+        button="Check this claim",
+    ),
+    Beat(
+        "Refuted, quarantined, and the correcting fact enters the KERNEL — so a repeat of this "
+        "claim is caught with no network call at all. Same infection, same antibody, same "
+        "kernel. Only the source of truth changed.",
+        hold=9.0,
+    ),
+    Beat(
+        "The kernel of truth: what the swarm holds as TRUE, with the antibody that established "
+        "each fact and the source behind it. Opposite in kind to Infection, which records "
+        "what was wrong.",
+        hold=9.0,
+        tab="Kernel & durability",
+    ),
+    Beat(
+        "FalkorDB Cloud's free tier has no persistence or backups, so every write is logged "
+        "BEFORE it is applied. Now wipe the graph and rebuild it from that log.",
+        hold=8.0,
+        button="Rebuild from log",
+    ),
+    Beat(
+        "73 writes replayed, 0 failures, and the result is identical — including node ids. "
+        "That is why the log stores whole statements rather than semantic events: replaying "
+        "a statement reproduces its generated id exactly.",
+        hold=11.0,
+    ),
+    Beat(
         "Q8: both outbreak types contained, none recurred, and one fast-path recognition "
         "recorded. Detection finds lies the swarm has never seen; the kernel recognises "
         "lies it already knows. That difference is what immunity means here.",
@@ -142,6 +189,16 @@ def click_js(label: str) -> str:
       if (!b) return 'NOT_FOUND';
       b.click();
       return 'CLICKED';
+    })()""" % json.dumps(label)
+
+
+def tab_js(label: str) -> str:
+    return """(() => {
+      const t = [...document.querySelectorAll('[role="tab"]')]
+        .find(x => (x.innerText || '').includes(%s));
+      if (!t) return 'NOT_FOUND';
+      t.click();
+      return 'SWITCHED';
     })()""" % json.dumps(label)
 
 
@@ -367,6 +424,10 @@ async def record(frames_dir: Path) -> int:
         print("Recording ...", flush=True)
 
         for index, beat in enumerate(BEATS, start=1):
+            if beat.tab:
+                switched = await cdp.js(tab_js(beat.tab))
+                print(f"  tab -> {beat.tab}: {switched}", flush=True)
+                await asyncio.sleep(2.0)
             await cdp.js(caption_js(beat.caption))
             await cdp.js(highlight_js(beat.highlight, beat.highlight_index))
             action = ""

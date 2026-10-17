@@ -12,6 +12,15 @@ run through before you hit submit.
 
 - **Track 01 — Agents That Act on Connected Data**
 - **Track 02 — Agent Memory and Coordination**
+- **Track 03 — Company Brain**
+
+Each is a real tab in the deployed app, not a claim in a paragraph:
+
+| Track | The tab | What it demonstrates |
+| --- | --- | --- |
+| 01 | **Check any claim** | A visitor's false claim propagates through real agents, severity climbs from Q4, and the cascade is contained |
+| 02 | **Kernel & durability** | Kernel of truth, provenance, write-ahead log, rebuild proven identical |
+| 03 | **Company brain** | Four synthetic documents become the kernel; a wrong price spreads between departments and is caught; a policy change supersedes the old fact and the previously-correct answer is flagged |
 
 ---
 
@@ -126,7 +135,7 @@ the written form of that explanation.
 - [ ] **Rule 12/13 review complete** — see `COMPLIANCE.md` for the five concrete steps
 - [x] MIT licence present
 - [x] `python -m immunegraph.verify_queries` passes
-- [x] `python -m pytest` passes (122 tests)
+- [x] `python -m pytest` passes (134 tests)
 
 **Final five minutes**
 

@@ -32,7 +32,7 @@ render from the remote.
 | --- | --- |
 | FalkorDB is the only datastore and does the detection | 13 Cypher queries, all executed against a live instance |
 | Every query actually runs | `python -m immunegraph.verify_queries` → "All non-optional queries executed and returned expected shapes" |
-| The product works end to end | `python -m immunegraph.demo` exits 0; 122 tests pass, twice consecutively |
+| The product works end to end | `python -m immunegraph.demo` exits 0; 134 tests pass, twice consecutively |
 | The documented quickstart works for a judge | verified by exporting a fresh clone with `git archive` and following the README verbatim against a recreated database |
 | Opening the app before Docker is running | shows "Cannot reach FalkorDB … start it with docker compose up -d", not a traceback |
 | High-concurrency reads and writes (Track 02) | 8 concurrent writers, 200 writes: 200/200 unique sequence numbers vs 37/200 for the naive read-then-write. See `tests/test_concurrency.py` |

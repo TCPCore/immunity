@@ -22,7 +22,12 @@ from dataclasses import dataclass, field
 
 from .kernel import Fact, Kernel
 from .memory import MemoryWriter
-from .models import ALIGNMENT_OVERLAP, conflicts_with_fact, overlap_coefficient
+from .models import (
+    ALIGNMENT_OVERLAP,
+    conflicts_on_numbers,
+    conflicts_with_fact,
+    overlap_coefficient,
+)
 from .queries import K4_UNSANITISED_CLAIMS
 from .schema import (
     VERDICT_CLEAN,
@@ -86,6 +91,10 @@ class Sanitizer:
             # missed entirely.
             score = overlap_coefficient(text, fact.text)
             conflict_score = conflicts_with_fact(text, fact.text)
+            if conflict_score is None:
+                # Negation misses quantity disagreements, and a company brain is
+                # mostly quantities: prices, SLAs, limits, dates.
+                conflict_score = conflicts_on_numbers(text, fact.text)
             if conflict_score is not None:
                 conflicts.append(
                     {

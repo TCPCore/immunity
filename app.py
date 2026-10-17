@@ -20,6 +20,7 @@ st.set_page_config(
 )
 
 from immunegraph.agents import MARS_CASCADE, MARS_REPEAT, MARS_TOPIC  # noqa: E402
+from immunegraph.company import COMPANY, DOCUMENTS, CompanyBrain  # noqa: E402
 from immunegraph.config import (  # noqa: E402
     STREAMLIT_SECRETS_BRIDGED,
     STREAMLIT_SECRETS_ERROR,
@@ -487,6 +488,93 @@ def _run_claim_stream(swarm: Swarm, text: str) -> dict | None:
     return result
 
 
+COMPANY_ICON = {
+    "seeded": "📚",
+    "conflict": "⚖️",
+    "spread": "↗️",
+    "infected": "🦠",
+    "arrested": "🛡️",
+    "revised": "📝",
+    "stale": "⏳",
+    "done": "✅",
+}
+
+
+def _run_company_stream(swarm: Swarm, brain: CompanyBrain) -> None:
+    """Play the company scenario, showing each step as it lands."""
+    placeholder = st.empty()
+    severity_slot = st.empty()
+    lines: list[str] = []
+
+    for step in brain.scenario():
+        lines.append(f"{COMPANY_ICON.get(step['phase'], '•')}  {step['message']}")
+        placeholder.markdown("\n\n".join(lines))
+        if step.get("severity"):
+            severity_slot.metric("Infection severity", f"{step['severity']:.1f}")
+        if step["phase"] in {"conflict", "spread", "infected", "arrested", "revised", "stale"}:
+            time.sleep(0.65)
+
+    if lines:
+        severity_slot.metric("Infection severity", "contained")
+
+
+def render_company(swarm: Swarm) -> None:
+    """Track 03: a shared brain over one company's documents."""
+    st.markdown(f"#### {COMPANY} — a company brain that can be corrected")
+    st.caption(
+        "Every department agent answers from the same documents. The failure this prevents is "
+        "not retrieval failure: it is one agent's confident wrong **price** being repeated by "
+        "another department until it becomes doctrine. The corpus is synthetic, so no private "
+        "information is anywhere near it."
+    )
+
+    brain = CompanyBrain(swarm)
+    col_a, col_b = st.columns([1, 1], gap="medium")
+    with col_a:
+        if st.button("▶  Ask the company brain", type="primary", width="stretch"):
+            _run_company_stream(swarm, brain)
+    with col_b:
+        st.metric("Documents in the brain", len(DOCUMENTS))
+
+    st.divider()
+    left, right = st.columns([1, 1], gap="large")
+    with left:
+        st.markdown("##### Documents")
+        st.dataframe(
+            [
+                {"document": doc.title, "department": doc.department, "facts": len(doc.facts)}
+                for doc in DOCUMENTS
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+        st.caption(
+            "Each document is a `Source` node; each fact it establishes is a `KernelFact` "
+            "linked to it, so provenance is a traversal rather than a citation a model wrote "
+            "from memory."
+        )
+    with right:
+        st.markdown("##### Facts in force")
+        facts = swarm.kernel_facts()
+        if facts:
+            st.dataframe(
+                [
+                    {"fact": f["text"], "trust": f["trust_level"], "source": f["source"] or "—"}
+                    for f in facts
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+        else:
+            st.caption("Nothing loaded yet — run the scenario.")
+        st.markdown("##### Policy drift")
+        st.caption(
+            "When a price changes the old fact is **superseded**, not deleted. Claims that were "
+            "correct last week are re-judged against the new truth, so nothing stale stays "
+            "blessed. A brain that cannot forget is as dangerous as one that cannot learn."
+        )
+
+
 def render_check_claim(swarm: Swarm) -> None:
     """Let a visitor submit a claim the swarm has never seen."""
     st.markdown("#### Submit a claim the swarm has never seen")
@@ -702,8 +790,8 @@ def main() -> None:
     if note := st.session_state.get("recall_note"):
         st.success(note)
 
-    demo_tab, claim_tab, knowledge_tab = st.tabs(
-        ["  Live demo  ", "  Check any claim  ", "  Kernel & durability  "]
+    demo_tab, claim_tab, company_tab, knowledge_tab = st.tabs(
+        ["  Live demo  ", "  Check any claim  ", "  Company brain  ", "  Kernel & durability  "]
     )
 
     with demo_tab:
@@ -720,6 +808,9 @@ def main() -> None:
 
     with claim_tab:
         render_check_claim(swarm)
+
+    with company_tab:
+        render_company(swarm)
 
     with knowledge_tab:
         render_knowledge(swarm)

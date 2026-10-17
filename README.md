@@ -191,6 +191,45 @@ corroborate a claim.
 
 ---
 
+## Company brain — Track 03
+
+A company's characteristic failure is not retrieval failure. It is that **one agent's confident
+wrong price gets repeated by another department until it becomes doctrine.** That is the same
+pathology, with the company's own documents as the kernel of truth.
+
+Four synthetic documents ([`data/company/`](data/company/)) are loaded as `Source` nodes, and the
+facts they establish become `KernelFact`s linked to them — so provenance is a traversal, not a
+citation a model wrote from memory. Then:
+
+```
+📚  Loaded 4 company documents into the kernel as 5 facts.
+⚖️  Sales answers 'What does the Enterprise plan cost?' with
+    'The Enterprise plan is 399 USD per seat per year.' — conflict found in 66.6ms.
+↗️  Support repeats it to a customer — the wrong price is now spreading.
+🦠  Infection opened across two departments — severity 4.0.
+🛡️  Quarantined both. The antibody cites Enterprise and Team pricing (2026).
+📝  Finance raises the price to 549 USD. The old fact is SUPERSEDED, not deleted.
+⏳  Sales quotes the old 499 price — correct last week, wrong now. Caught in 89.7ms.
+```
+
+### Two things a company brain needs that Mars did not
+
+**Quantity conflicts.** Everything a company states as fact is a number — price, SLA, retention
+window, seat count. `conflicts_with_fact` is negation-based, and "399 per seat" does not negate
+"499 per seat"; the two agree on every word except the one that matters. Without
+`conflicts_on_numbers` the sanitiser scored a wrong price as **aligned** with the pricing policy
+and blessed it as doctrine. It now requires both sides to state a number, the numbers to differ,
+and the non-numeric context to be the same subject.
+
+**Policy drift.** Facts are versioned. When the price changes, the old fact is `superseded` and
+kept rather than deleted, so "when did we stop believing this" stays answerable — and every claim
+still active is re-judged against the new truth. An agent quoting last quarter's price is caught.
+A brain that cannot forget is as dangerous as one that cannot learn.
+
+The corpus is synthetic, so rule 6 is satisfied by construction and nothing private goes near it.
+
+---
+
 ## Durability — the graph is a projection
 
 **FalkorDB Cloud's free tier has no persistence and no backups.** Instances are stopped after
