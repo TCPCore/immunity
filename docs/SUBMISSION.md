@@ -162,9 +162,18 @@ FalkorDB Cloud works too, point `FALKORDB_HOST` / `FALKORDB_PORT` / `FALKORDB_US
 ## Data statement (rule 6)
 
 The Mars mission scenario is **synthetic**, written for this demo. No private, personal,
-login-protected or paywalled data is used. The single real-world factual claim is the
-composition of the Martian atmosphere, which is public NASA science and is cited in the graph
-as a `Source` node pointing at <https://science.nasa.gov/mars/facts/>.
+login-protected or paywalled data is used anywhere in the project.
+
+Two sources of real-world fact, both public:
+
+**Seeded.** The composition of the Martian atmosphere, which is public NASA science and is stored
+in the graph as a `Source` node pointing at <https://science.nasa.gov/mars/facts/>.
+
+**Fetched at runtime.** The "Check any claim" tab grounds a visitor's statement against
+**Wikipedia**, through its public API, with no API key. The article title, URL and the specific
+sentence that decided the verdict are written into the graph as a `Source`, so a refutation is
+traceable to a citable public page. This is the only outbound network call the app makes, and it
+is user-initiated: nothing is fetched unless someone submits a claim.
 
 ## AI assistant disclosure (rule 11)
 
@@ -194,7 +203,7 @@ the written form of that explanation.
 
 **Other rules**
 
-- [x] FalkorDB is the only datastore and the graph does real work (rule 2/3)
+- [x] FalkorDB is the only **graph** datastore and the graph does real work (rule 2/3). SQLite holds the append-only write-ahead log, which is a log rather than a data model; nothing is queried from it, and the graph is rebuilt from it.
 - [x] Synthetic / public data only (rule 6)
 - [x] All work began after the hackathon opened (rule 8), first commit 12:36 IST vs 00:01 IST open
 - [x] AI assistant use disclosed (rule 11)

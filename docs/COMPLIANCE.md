@@ -30,7 +30,7 @@ render from the remote.
 
 | Claim | Evidence |
 | --- | --- |
-| FalkorDB is the only datastore and does the detection | 18 Cypher queries, all executed against a live instance |
+| FalkorDB is the only graph datastore and does the detection (SQLite holds only the append-only write log) | 18 Cypher queries, all executed against a live instance |
 | Every query actually runs | `python -m immunegraph.verify_queries` → "All non-optional queries executed and returned expected shapes" |
 | The product works end to end | `python -m immunegraph.demo` exits 0; 162 tests pass, twice consecutively |
 | The documented quickstart works for a judge | verified by exporting a fresh clone with `git archive` and following the README verbatim against a recreated database |
