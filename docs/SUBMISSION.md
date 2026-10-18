@@ -177,18 +177,35 @@ is user-initiated: nothing is fetched unless someone submits a claim.
 
 ## AI assistant disclosure (rule 11)
 
-Full version in the README. The division, stated plainly:
+Required by hackathon rule 11. Stated plainly rather than vaguely.
 
-**Human:** the idea and every iteration of it, the structure of the project, every scoping
-decision, the Mars scenario, and the verification of every claim by running it.
+**Human: the idea, and everything done with it.** The concept of an immune system for agent
+swarms, and the reframe underneath it, that belief should be modelled as a graph of justifications
+rather than a table of records. Every iteration of that idea: the kernel of truth as a second
+memory, the visitor-submitted claim path, the company-brain scenario, the self-audit and its
+two-sided metric, negative memory as a third store, and the decision to enter all three tracks
+rather than one. The structure of the project, from the graph model to the five tabs. Every
+scoping call, including what to cut, what to refuse to claim, and which prior art to credit by
+name. The Mars scenario and its beats. And the verification of every claim in this repository by
+running it.
 
-**AI:** code edits. The implementation in `src/immunegraph/` and `app.py`, the test suite, and the
-documentation text, written and modified under that direction. That is the whole of the AI
+**AI: code edits.** The implementation in `src/immunegraph/` and `app.py`, the test suite, and the
+documentation text, written and modified under the direction above. That is the whole of the AI
 contribution.
 
-**Why rule 13 is not a problem:** AI wrote code, but it did not decide what to build and it did not
-verify what it wrote. Every Cypher query was executed against a live instance before commit, and
-running them rather than assuming them caught six defects that reading the source would not have.
+**Why rules 12 and 13 are satisfied, in one sentence:** AI wrote code, but it did not decide what
+to build and it did not verify what it wrote. Every Cypher query was executed against a live
+FalkorDB instance before being committed, and running them rather than assuming them caught six
+defects that reading the source would not have: an inverted `ORDER BY` in the vector path, missing
+`vecf32()` wrapping, a false-positive contradiction, a `count(*)` that counted rows instead of
+edges, a write hiding inside a read helper, and 163 lost sequence numbers under concurrency. Each
+was found, fixed and pinned with a test.
+
+The numbers in this repository were measured rather than asserted. Where measurement disagreed
+with what a document claimed, the document was corrected.
+
+`docs/EXPLAINER.md` is the written defence of the graph model, each detection query and the
+trade-offs made, so the reasoning behind the design can be checked by someone else.
 
 > Confirm every sentence is true before submitting.
 

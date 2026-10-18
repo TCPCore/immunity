@@ -23,7 +23,7 @@ render from the remote.
 | 1 | **Confirm registration** | human | Rule 1. The schedule says registration is the one checkpoint you must act on. An unregistered team cannot submit. |
 | 2 | **Host the demo video** and link it | human | Rule 10 requires "a demo video showing the working project". It is recorded and verified (90.5s, captioned, reproducible via `scripts/record_demo.py`); it now needs uploading to YouTube/Loom and linking from `SUBMISSION.md`. Consider re-recording with narration, a silent captioned cut satisfies the rule but a narrated one argues rules 12/13 better. |
 | 3 | **Complete the rule 12/13 review** | human | Rules 12 and 13. You must be able to explain the model and every query, and demonstrate meaningful contribution. See `EXPLAINER.md`. |
-| 4 | **Finalise the AI disclosure** | human | Rule 11. The wording in the README must be true when you submit it. |
+| 4 | **Finalise the AI disclosure** | human | Rule 11. The wording in `SUBMISSION.md` must be true when you submit it. It is deliberately not in the README. |
 | 5 | **Name both tracks at submission** | human | Rule 5: enter 01 and 02, and name *every* track you are entering. |
 
 ## What is already done and verified
@@ -146,7 +146,7 @@ pre-hackathon code exists, as the workspace was empty at session start.
 | The track being entered | ✅ | `../README.md`, tracks 01, 02 and 03 |
 
 ### Rule 11, Disclose AI coding assistant use
-✅ Disclosed in `../README.md` and summarised in `SUBMISSION.md`: the idea, every iteration of
+✅ Disclosed in `SUBMISSION.md` only, deliberately not in the README: the idea, every iteration of
 it, the structure, the decisions and the verification were human; the AI contribution was code
 edits to the implementation, tests and documentation text. Verification is evidenced by
 `verify_queries` and the six defects running it caught.
@@ -206,5 +206,5 @@ Concrete, non-negotiable steps before submitting:
    The contribution should be visible in the history, not just asserted in a document.
 5. On camera, explain the graph model and one query without notes.
 
-The disclosure in the README is drafted but deliberately left marked as needing your
+The disclosure in `SUBMISSION.md` is drafted but deliberately left marked as needing your
 confirmation, because only you can make its claims true.

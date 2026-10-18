@@ -203,4 +203,4 @@ between teams, and last quarter's answer still being served.
       *Settings → Sharing → anyone with the link* and verify in an incognito window. If it cannot be
       made public, the README's Docker instructions satisfy the "complete local setup" alternative.
 - [x] The tracks entered, all three, named above
-- [x] AI assistant use disclosed (see README)
+- [x] AI assistant use disclosed in `SUBMISSION.md` rule 11

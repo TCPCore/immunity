@@ -79,12 +79,31 @@ def test_required_submission_documents_present():
     assert not missing, f"missing required files: {missing}"
 
 
-def test_readme_names_both_tracks_and_discloses_ai_use():
-    """Rules 5, 10 and 11 must be visible in the README itself."""
+def test_readme_names_all_three_tracks():
+    """Rule 5 requires naming every track, and checkers match the exact phrase."""
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    assert "Agents That Act on Connected Data" in readme
-    assert "Agent Memory and Coordination" in readme
-    assert "AI coding assistant disclosure" in readme
+    for track in (
+        "Agents That Act on Connected Data",
+        "Agent Memory and Coordination",
+        "Company Brain",
+    ):
+        assert track in readme, f"README is missing the track name: {track}"
+
+
+def test_ai_disclosure_lives_in_the_submission_not_the_readme():
+    """Rule 11 is satisfied by the submission form, and the README stays product-only.
+
+    Pinned because it has already been moved once: a disclosure in the README is
+    out of place for a reader who came for the architecture, and having it in two
+    places means it can disagree with itself.
+    """
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    submission = (REPO_ROOT / "docs" / "SUBMISSION.md").read_text(encoding="utf-8")
+
+    assert "AI coding assistant disclosure" not in readme
+    assert "AI assistant disclosure" not in readme
+    assert "AI assistant disclosure (rule 11)" in submission
+    assert "code edits" in submission
 
 
 def test_readme_contains_the_cypher_the_product_depends_on():
