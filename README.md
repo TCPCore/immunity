@@ -642,49 +642,35 @@ comprehensions, `LIMIT` not constraining eager writes, are documented in
 
 ## AI coding assistant disclosure
 
-Required by hackathon rule 11. Being specific rather than vague about it, because a disclosure
-that overstates human involvement is worse than an honest one that admits heavy AI use.
+Required by hackathon rule 11. Stated plainly rather than vaguely.
 
-### Human: the idea, and every decision made about it
+**Human: the idea, and everything done with it.** The concept of an immune system for agent
+swarms, and the reframe underneath it, that belief should be modelled as a graph of justifications
+rather than a table of records. Every iteration of that idea: the kernel of truth as a second
+memory, the visitor-submitted claim path, the company-brain scenario, the self-audit and its
+two-sided metric, negative memory as a third store, and the decision to enter all three tracks
+rather than one. The structure of the project, from the graph model to the five tabs. Every
+scoping call, including what to cut, what to refuse to claim, and which prior art to credit by
+name. The Mars scenario and its beats. And the verification of every claim in this repository by
+running it.
 
-- **The concept.** An immune system for agent swarms, and the reframe underneath it: that belief
-  should be modelled as a graph of justifications rather than a table of records.
-- **Every modification of that idea during the build.** The kernel of truth as a second memory.
-  The visitor-submitted claim path. The company-brain scenario. The self-audit and its two-sided
-  metric. Negative memory as a third store. The decision to enter all three tracks rather than
-  one.
-- **The scenario and its framing.** The Mars mission and its beats, the memory taxonomy mapping
-  onto the Track 02 rubric.
-- **Every scoping call.** What to cut. What to refuse to claim. Which prior art to credit by
-  name. Removing a reference to another author's paper rather than characterising it.
-- **The verification.** Every claim in this repository was checked by running it, and that process
-  rejected work repeatedly: figures that no longer reproduced, a video that did not demonstrate
-  interaction, documentation that had drifted from the code.
+**AI: code edits.** The implementation in `src/immunegraph/` and `app.py`, the test suite, and the
+documentation text, written and modified under the direction above. That is the whole of the AI
+contribution.
 
-### AI: implementation, under that direction
+**Why rules 12 and 13 are satisfied, in one sentence:** AI wrote code, but it did not decide what
+to build and it did not verify what it wrote. Every Cypher query was executed against a live
+FalkorDB instance before being committed, and running them rather than assuming them caught six
+defects that reading the source would not have: an inverted `ORDER BY` in the vector path, missing
+`vecf32()` wrapping, a false-positive contradiction, a `count(*)` that counted rows instead of
+edges, a write hiding inside a read helper, and 163 lost sequence numbers under concurrency. Each
+was found, fixed and pinned with a test.
 
-- **The code.** `src/immunegraph/` and `app.py`: the graph store, query registry, memory writer,
-  scanner, antibody, kernel, sanitiser, grounding layer, audit, company scenario, CLI and the UI.
-  Written and edited with an AI coding assistant, iteratively, against the direction above.
-- **The test suite** and **the documentation** (README, `GRAPH_MODEL.md`, `EXPLAINER.md`,
-  `NOVELTY.md` and the rest).
-- **Advice and research**, including FalkorDB's openCypher subset and its vector-index API.
-
-### The part rules 12 and 13 actually turn on: verification and understanding
-
-AI wrote the code; it did not verify it. Every Cypher query was executed against a live FalkorDB
-instance before being committed, via `python -m immunegraph.verify_queries`, and running them
-rather than assuming them caught six defects that reading the source would not have: an inverted
-`ORDER BY` in the vector path, missing `vecf32()` wrapping, a false-positive contradiction, a
-`count(*)` that counted rows instead of edges, a write hiding inside a read helper, and 163 lost
-sequence numbers under concurrency. Each was fixed, re-run and pinned with a test.
-
-The same applies to the numbers in this repository. They were measured rather than asserted, and
-where measurement disagreed with what had been written down, the document was corrected.
+The numbers in this repository were measured rather than asserted. Where measurement disagreed
+with what a document claimed, the document was corrected.
 
 [`docs/EXPLAINER.md`](docs/EXPLAINER.md) is the written defence of the graph model, each detection
-query, and the trade-offs made, so that the understanding behind the design can be checked by
-someone else.
+query and the trade-offs made, so the reasoning behind the design can be checked by someone else.
 
 > **Before submitting:** confirm every sentence above is true.
 

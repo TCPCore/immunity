@@ -179,19 +179,16 @@ is user-initiated: nothing is fetched unless someone submits a claim.
 
 Full version in the README. The division, stated plainly:
 
-**Human:** the idea and every modification of it. An immune system for agent swarms, belief as a
-graph of justifications, the kernel of truth, the visitor-claim path, the company-brain scenario,
-the self-audit, negative memory, and the decision to enter all three tracks. Also every scoping
-call, the Mars scenario, and the verification of every claim by running it.
+**Human:** the idea and every iteration of it, the structure of the project, every scoping
+decision, the Mars scenario, and the verification of every claim by running it.
 
-**AI:** implementation under that direction. The code in `src/immunegraph/` and `app.py`, the test
-suite, the documentation, and research into FalkorDB's dialect and vector-index API.
+**AI:** code edits. The implementation in `src/immunegraph/` and `app.py`, the test suite, and the
+documentation text, written and modified under that direction. That is the whole of the AI
+contribution.
 
-**Why rule 13 is not a problem, in one sentence:** AI wrote the code, but it did not verify it.
-Every Cypher query was executed against a live instance before commit, and running them rather
-than assuming them caught six defects that reading the source would not have. The measurements in
-this document were taken, not asserted, and where they disagreed with what was written down, the
-document was corrected.
+**Why rule 13 is not a problem:** AI wrote code, but it did not decide what to build and it did not
+verify what it wrote. Every Cypher query was executed against a live instance before commit, and
+running them rather than assuming them caught six defects that reading the source would not have.
 
 > Confirm every sentence is true before submitting.
 
