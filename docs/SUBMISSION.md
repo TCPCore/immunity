@@ -60,6 +60,36 @@ indexed fingerprint match or a vector-similarity lookup recalls the prior infect
 with no cascade re-detection. Q8 measures whether antibodies actually worked, turning "the
 swarm develops immunity" into a number.
 
+## Measured results
+
+Copy these into any form field asking what has been verified.
+
+```
+Cypher queries executed against a live instance     18 / 18
+Kernel fast path (local)                            1.31 ms median, 2.25 ms p95
+Detection sweep, 12-node graph (local)              20.3 ms
+Rebuild from the write-ahead log                    73 writes, 0 failed, identical
+Concurrent sequence allocation, 8 writers           200 / 200 unique
+Conflict detection precision / recall / F1          1.00 / 1.00 / 1.00  (including after a policy revision)
+Autoimmunity rate (true statements wrongly flagged) 0%
+Regression suite                                    160 tests
+Track qualification                                 21 / 21 checks across 3 tracks
+```
+
+Two of those deserve their condition attached, because a number without one is marketing:
+
+**Precision and recall** are measured on a generated labelled set: falsehoods produced by mutating
+the kernel's own facts, and negatives that include six hand-written true restatements phrased the
+way a person would say them. It is not human-labelled production traffic.
+
+**Sweep scaling** was measured at 1.1 s for 100 claims and 14.9 s for 1,000 in the worst case,
+where every claim is an unsupported root and the sweep writes an infection for each. The fast path
+stayed flat at 1.3 ms throughout. That asymmetry is why the check that blocks answers is the fast
+path and the sweep is asynchronous.
+
+Both are reproducible: `python scripts/verify_tracks.py`, `python scripts/bench_scale.py`,
+`python -m immunegraph.verify_queries`, `python -m pytest`.
+
 ## Links
 
 | Item | Value |
@@ -77,8 +107,8 @@ docker compose up -d                                   # FalkorDB on localhost:6
 uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -e ".[dev]"   # installs the package itself
 cp .env.example .env                                   # optional: add OPENAI_API_KEY
-.venv/bin/python -m immunegraph.verify_queries          # executes all 13 queries
-.venv/bin/python -m pytest                              # 106 tests
+.venv/bin/python -m immunegraph.verify_queries          # executes all 18 queries
+.venv/bin/python -m pytest                              # 160 tests
 .venv/bin/streamlit run app.py
 ```
 
@@ -135,7 +165,7 @@ the written form of that explanation.
 - [ ] **Rule 12/13 review complete**, see `COMPLIANCE.md` for the five concrete steps
 - [x] MIT licence present
 - [x] `python -m immunegraph.verify_queries` passes
-- [x] `python -m pytest` passes (154 tests)
+- [x] `python -m pytest` passes (160 tests)
 
 **Final five minutes**
 

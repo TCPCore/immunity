@@ -157,7 +157,7 @@ RECALL         of the falsehoods, how many were flagged
 
 The probes are generated from the system's own knowledge base: perturbed numbers, transplanted numbers, substituted entities, and truth-preserving paraphrases that must not fire. No labelled dataset required. Your knowledge base is the test set. That makes the number about your corpus rather than someone else's benchmark.
 
-## What it found, with 134 tests passing
+## What it found, with the whole suite green
 
 Two things, and the second is the argument for the metric.
 
@@ -180,6 +180,10 @@ autoimmunity 0% -> 81.8%   the vaccine was attacking the host
 Recording "Starter plan costs 499" made it fuzzily match the **true** "Enterprise plan costs 499" on every word but one. A system reporting only coverage would have shipped that as a success. Applying subject binding one level deeper, to the vaccine itself, closed the holes with autoimmunity held at zero.
 
 One number would have shown a perfect score twice.
+
+There is a third thing the audit caught, on itself. My first hard negatives had the price written into them, and the company scenario supersedes that price from 499 to 549. Overnight, two of my labelled "true statements" became false ones, and the detector was correctly flagging them. The audit reported 71% precision and I went looking for a bug in the detector. There wasn't one. The labels had gone stale.
+
+The fix was to read the quantities out of the facts in force instead of writing them down, which also means the audit survives a policy change without needing to be re-edited. Precision went back to 1.00. A benchmark that rots when your data changes is a benchmark that will lie to you later.
 
 ## The engineering that made it survive contact
 

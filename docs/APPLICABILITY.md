@@ -18,7 +18,7 @@ code; where something is unproven it says so.
 | Rebuild from the write-ahead log | **73 writes, 0 failed, identical** | including node ids |
 | Concurrent sequence allocation | **200/200 unique** under 8 writers | naive `max(seq)+1` gave 37 |
 | Grounding verdicts | correct on the test cases, **inconclusive on nonsense** | `tests/test_grounding.py` |
-| Regression suite | **134 tests** | `python -m pytest` |
+| Regression suite | **160 tests** | `python -m pytest` |
 
 **Two things to read carefully.**
 
@@ -140,7 +140,7 @@ That last row is the reason this matters commercially: **an untrustworthy guardr
 and then it protects nothing. The false-positive rate is not a quality metric, it is a survival
 metric.
 
-We measured our own: **20% autoimmunity with 134 tests passing.** The fix took it to zero. The
+We measured our own: **20% autoimmunity with 160 tests passing.** The fix took it to zero. The
 obvious repair for the next gap drove it to **82.8% while coverage still read 100%**.
 
 ### What the number unlocks

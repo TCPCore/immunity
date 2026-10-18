@@ -177,8 +177,9 @@ BEATS: list[Beat] = [
         tab="Self-audit",
     ),
     Beat(
-        "Three numbers, never one. Coverage, autoimmunity, the rate at which it wrongly flags "
-        "TRUE statements, and attribution: did it fire at the right fact, or just at one?",
+        "Five numbers, never one. Precision and recall on a labelled set, F1, autoimmunity "
+        "(the rate at which it wrongly flags TRUE statements), and attribution: did it fire at "
+        "the right fact, or just at one?",
         hold=13.0,
         button="Run self-audit",
     ),
@@ -190,8 +191,8 @@ BEATS: list[Beat] = [
         button="Vaccinate blind spots",
     ),
     Beat(
-        "That pair earned its place on our own code. With 134 tests green it measured 20% "
-        "autoimmunity, we fixed it to zero, and the obvious repair drove it to 82% while "
+        "That pair earned its place on our own code. With the whole suite green it measured "
+        "20% autoimmunity, we fixed it to zero, and the obvious repair drove it to 82% while "
         "coverage still read 100%. One number would have shipped that as a success.",
         hold=13.0,
     ),

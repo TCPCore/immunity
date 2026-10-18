@@ -48,13 +48,20 @@ UNKNOWN_ENTITIES = ("Starter", "Basic", "Legacy", "Partner", "Trial")
 # negatives that make precision mean something: a detector that flags "customers
 # can request a refund within 30 days of buying" against "Refunds are available
 # within 30 days of purchase" is too blunt to put in front of a customer.
-HARD_NEGATIVES: tuple[str, ...] = (
-    "Enterprise seats are billed at 499 USD per seat each year",
-    "The Enterprise tier costs 499 USD per seat per year",
-    "Customers can request a refund within 30 days of buying",
-    "Critical incidents are picked up within 15 minutes",
+# The numbers are read from the facts in force rather than written down here.
+# Hardcoding them was the first attempt and the audit caught it: once the company
+# scenario supersedes the price from 499 to 549, a negative still claiming 499 is
+# no longer true, and flagging it is correct rather than autoimmune. A label that
+# goes stale is a measurement fault, not a detection fault.
+HARD_NEGATIVE_TEMPLATES: tuple[tuple[str, str], ...] = (
+    ("Enterprise seats are billed at {n} USD per seat each year", "Enterprise plan costs"),
+    ("The Enterprise tier costs {n} USD per seat per year", "Enterprise plan costs"),
+    ("Customers can request a refund within {n} days of buying", "Refunds are available within"),
+    ("Critical incidents are picked up within {n} minutes", "Critical incidents"),
+    ("A Team seat is {n} USD for the year", "Team plan costs"),
+)
+HARD_NEGATIVES_PLAIN: tuple[str, ...] = (
     "EU customer telemetry stays in the EU",
-    "A Team seat is 99 USD for the year",
 )
 
 
@@ -198,8 +205,25 @@ class KernelAuditor:
                     )
                 )
 
-        # Hand-labelled negatives, included once rather than per fact.
-        for statement in HARD_NEGATIVES:
+        # Hand-labelled negatives, with their quantities read from the facts in
+        # force so a policy change cannot quietly invalidate the label.
+        for template, anchor in HARD_NEGATIVE_TEMPLATES:
+            for fact in facts:
+                if anchor not in fact.text:
+                    continue
+                number = _NUMBER.search(fact.text)
+                if number is None:
+                    continue
+                probes.append(
+                    Probe(
+                        "hard_negative",
+                        template.replace("{n}", number.group(0)),
+                        fact.id,
+                        should_conflict=False,
+                    )
+                )
+                break
+        for statement in HARD_NEGATIVES_PLAIN:
             probes.append(Probe("hard_negative", statement, None, should_conflict=False))
 
         return probes

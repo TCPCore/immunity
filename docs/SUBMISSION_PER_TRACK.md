@@ -60,7 +60,7 @@ through the same machinery, with the infection spreading through real agents bef
 - Trust derived from exposure, never written: the Planner drops to 0.85 without ever touching the
   false claim, because it inherited the infection through the derivation chain.
 - Containment invalidates the whole cascade, not just the root.
-- 134 tests, including the cascade ordering and containment.
+- 160 tests, including the cascade ordering and containment.
 
 ## Why it fits this track
 

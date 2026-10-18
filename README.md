@@ -14,6 +14,78 @@ Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB, Oct 15
 > Each track name is kept unbroken on its own line so an automated submission
 > checker can match it exactly.
 
+**See it run:** <!-- PASTE THE HOSTED VIDEO LINK HERE -->
+&nbsp;·&nbsp; **Live app:** <!-- PASTE THE STREAMLIT LINK HERE -->
+&nbsp;·&nbsp; **Run it locally:** `docker compose up -d && streamlit run app.py` ([setup](#setup))
+
+---
+
+## Where the graph does the work
+
+FalkorDB is not a store behind this product, it is the thing the product reasons with. Every
+branch the agent takes, open an infection, dispatch an antibody, quarantine a claim, supersede a
+fact, is decided by a query result. No model decides any of it.
+
+The diagram is the whole model. Arrows point the way the edge points.
+
+```
+BELIEF, who claims what, on what authority
+
+    (Agent) --ASSERTS-------> (Claim) --SUPPORTED_BY---> (Source)
+                                 |
+                                 | DERIVED_FROM   (child points at parent,
+                                 v                 so cascades walk backwards)
+                              (Claim)
+                                 |
+                                 v
+                              (Claim)
+
+
+IMMUNITY, what happens when a claim is found to be unsupported
+
+    (Infection) --TARGETS------> (Claim)          the bad root
+         |
+         +--NEUTRALIZES--> (Antibody) --INJECTS-------> (Claim)      the correction
+                                 |
+                                 +--ESTABLISHES--> (KernelFact) --CITES--> (Source)
+
+
+TRUTH, the second memory, which is what makes the next detection cheap
+
+    (KernelFact) --CONFLICTS_WITH--> (Claim)          a claim judged against what is known
+    (KernelFact) --SUPERSEDES------> (KernelFact)     a price changed, history kept
+```
+
+Read the diagram backwards and you get the three questions the product answers: which claim is
+unsupported, who reasoned from it, and what should the swarm believe instead.
+
+### Which query produces which decision
+
+This is the mapping that matters. The left column is a decision the swarm makes; the right is the
+Cypher that makes it.
+
+| Decision the swarm makes | Query | What the graph returns |
+| --- | --- | --- |
+| Is this claim unsupported? | **Q2** | claim id and fingerprint, for active claims with no source and no parent |
+| Is the support structure circular? | **Q1** | the cycle path, walked over `SUPPORTED_BY` and `DERIVED_FROM` |
+| How bad is this outbreak? | **Q4** | `infected_claims` and `exposed_agents`, so severity is `1 + both` |
+| Which agents are exposed? | **Q5** | `effective_trust` per agent, recomputed from what they asserted |
+| Have we seen this exact lie? | **Q6** | the prior claim and its infection, by indexed fingerprint equality |
+| Have we seen it in other words? | **Q7** | vector neighbours of the claim, ranked by cosine distance |
+| Does it contradict written policy? | **K2** | the fact id and overlap score of the conflicting `KernelFact` |
+| What should the swarm believe instead? | **K1** | kernel facts in force, with trust level and source |
+| Why do we believe that? | **K5** | the antibody, the source, and the claim the fact refutes |
+| What did we believe before the change? | `SUPERSEDES` | the retired fact, kept rather than deleted |
+
+Ten decisions, ten queries. The agent has no other input: `src/immunegraph/swarm.py` reads these
+results and branches on them directly. The model in the loop is used for two narrow things, parsing
+free text into claims and optionally writing a correction in prose, and a correction that cannot
+cite a source is not allowed to become a fact.
+
+Watch for it in the video: severity climbing as `DERIVED_FROM` edges are added (Q4 re-read after
+each write), a claim quarantined in about a millisecond because `fingerprint` matched (Q6), and a
+fact's provenance expanding to show the antibody and source behind it (K5).
+
 ---
 
 ## The 30-second version
@@ -469,13 +541,13 @@ A Cypher query that has never been executed is not a feature. Three layers of pr
 
 ```bash
 .venv/bin/python -m immunegraph.verify_queries   # every query, against a live instance
-.venv/bin/python -m pytest                       # 120 tests
+.venv/bin/python -m pytest                       # 160 tests
 .venv/bin/python -m immunegraph.demo             # the full arc; exits non-zero on failure
 ```
 
 - **`verify_queries.py`** seeds a fixture graph containing a cascade, a 3-hop epistemic cycle,
   a contradiction cluster, two infections, two antibodies and embeddings, then executes all
-  13 queries and checks the shape of each result. The optional vector path reports `SKIP`
+  18 queries and checks the shape of each result. The optional vector path reports `SKIP`
   rather than failing on builds without vector support.
 - **Unit tests** cover fingerprinting, contraction handling, similarity, source
   canonicalisation and severity.

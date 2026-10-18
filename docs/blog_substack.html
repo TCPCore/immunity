@@ -118,7 +118,7 @@ PRECISION      of the flags raised, how many were false
 RECALL         of the falsehoods, how many were flagged
 </code></pre>
 <p>The probes are generated from the system's own knowledge base: perturbed numbers, transplanted numbers, substituted entities, and truth-preserving paraphrases that must not fire. No labelled dataset required. Your knowledge base is the test set. That makes the number about your corpus rather than someone else's benchmark.</p>
-<h2>What it found, with 134 tests passing</h2>
+<h2>What it found, with 160 tests passing</h2>
 <p>Two things, and the second is the argument for the metric.</p>
 <p><strong>First, the defence was subject-blind.</strong> The claim "Enterprise costs 499 USD per seat per year" is true. It was judged <strong>conflicting</strong>, because it numerically mismatches the Team plan's fact and nothing checked which entity the claim was about.</p>
 <pre><code>AUTOIMMUNITY RATE: 2/10 = 20% of true statements wrongly flagged
@@ -131,6 +131,8 @@ autoimmunity 0% -&gt; 81.8%   the vaccine was attacking the host
 </code></pre>
 <p>Recording "Starter plan costs 499" made it fuzzily match the <strong>true</strong> "Enterprise plan costs 499" on every word but one. A system reporting only coverage would have shipped that as a success. Applying subject binding one level deeper, to the vaccine itself, closed the holes with autoimmunity held at zero.</p>
 <p>One number would have shown a perfect score twice.</p>
+<p>There is a third thing the audit caught, on itself. My first hard negatives had the price written into them, and the company scenario supersedes that price from 499 to 549. Overnight, two of my labelled "true statements" became false ones, and the detector was correctly flagging them. The audit reported 71% precision and I went looking for a bug in the detector. There wasn't one. The labels had gone stale.</p>
+<p>The fix was to read the quantities out of the facts in force instead of writing them down, which also means the audit survives a policy change without needing to be re-edited. Precision went back to 1.00. A benchmark that rots when your data changes is a benchmark that will lie to you later.</p>
 <h2>The engineering that made it survive contact</h2>
 <p>A Cypher query that has never been executed is not a feature. FalkorDB implements a subset of openCypher, and my assumptions were wrong repeatedly, so the repository ships a verifier that seeds a fixture containing a cascade, a three-hop cycle, a contradiction cluster and embeddings, then executes every query and checks the shape of each result before commit. Eighteen queries, all executed.</p>
 <p>Six bugs only appeared when the code ran. The two I would point at:</p>

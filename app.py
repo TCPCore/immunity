@@ -523,10 +523,10 @@ def render_audit(swarm: Swarm) -> None:
     """Track 01/02: measure what the defence catches AND what it wrongly catches."""
     st.markdown("#### Self-audit, two-sided, because one number is gameable")
     st.caption(
-        "A defence that flags everything scores **100% coverage** and is worthless. Coverage "
-        "alone cannot tell you that. So the audit generates adversarial probes from the "
-        "swarm's own kernel and measures three things: what it **catches**, what it "
-        "**wrongly catches** (autoimmunity), and whether it fired at the **right fact**."
+        "A defence that flags everything scores **100% recall** and is worthless. Recall alone "
+        "cannot tell you that. So the audit generates adversarial probes from the swarm's own "
+        "kernel and scores the detector both ways: precision against hand-written true "
+        "restatements, autoimmunity against the host, and whether it fired at the **right fact**."
     )
 
     auditor = KernelAuditor(swarm)
@@ -564,12 +564,16 @@ def render_audit(swarm: Swarm) -> None:
 
     after = st.session_state.get("audit_after")
     shown = after or before
-    cols = st.columns(3)
-    cols[0].metric("Coverage", f"{shown.coverage:.0%}",
-                   help="Generated contradictions the defence caught")
-    cols[1].metric("Autoimmunity", f"{shown.autoimmunity:.0%}",
-                   help="True statements wrongly flagged, the immune system attacking the host")
-    cols[2].metric("Attribution", f"{shown.attribution:.0%}",
+    cols = st.columns(5)
+    cols[0].metric("Precision", f"{shown.precision:.0%}",
+                   help="Of every flag raised, how many were genuinely false")
+    cols[1].metric("Recall", f"{shown.recall:.0%}",
+                   help="Of every generated falsehood, how many were caught (also called coverage)")
+    cols[2].metric("F1", f"{shown.f1:.2f}",
+                   help="Harmonic mean of precision and recall")
+    cols[3].metric("Autoimmunity", f"{shown.autoimmunity:.0%}",
+                   help="True statements wrongly flagged. The immune system attacking the host.")
+    cols[4].metric("Attribution", f"{shown.attribution:.0%}",
                    help="Caught against the RIGHT fact, not by luck")
 
     st.caption(
