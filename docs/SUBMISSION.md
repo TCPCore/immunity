@@ -60,6 +60,21 @@ indexed fingerprint match or a vector-similarity lookup recalls the prior infect
 with no cascade re-detection. Q8 measures whether antibodies actually worked, turning "the
 swarm develops immunity" into a number.
 
+## What is new here
+
+Detection is the published part. The new piece is that the system **audits its own detector**.
+
+Every tool in this space reports recall, how much it catches, and recall is gameable: flag
+everything and it reads 100%. The audit generates adversarial probes from the swarm's own kernel
+and scores both sides, precision against hand-written true restatements, autoimmunity against the
+host, and attribution (did it fire at the *right* fact). Gaps it finds are written back as
+`RefutedStatement` nodes through the same append-only log, then re-measured to prove the holes
+closed without poisoning the kernel.
+
+It earned its place on this codebase: with the whole suite green it measured 20% autoimmunity, the
+fix took it to zero, and the obvious repair for the next gap drove it to 82% while recall still
+read 100%. One number would have shipped that as a success.
+
 ## Measured results
 
 Copy these into any form field asking what has been verified.

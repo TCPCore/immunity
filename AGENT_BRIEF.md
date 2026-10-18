@@ -1,7 +1,9 @@
 # Agent Brief, ImmuneGraph
 
-**Hand this whole file to your coding agent.** It is self-contained. Everything marked
-⚠️ is a correction to an earlier brief that contained wrong facts, do not regress them.
+> **Status: historical.** This is the build brief written before the project existed, kept for
+> provenance. It has drifted: it predates the kernel of truth, the self-audit, negative memory
+> and Track 03, and it says Track 02 is home when all three are entered. **Where this file
+> disagrees with the code, the README, or `docs/GRAPH_MODEL.md`, those win.**
 
 ---
 
@@ -17,7 +19,7 @@
 | Tracks | **01 Agents That Act on Connected Data** (iPhone 18 Pro) · **02 Agent Memory and Coordination** (PS5 + GTA VI) · **03 Company Brain** (M6 Mac Mini) · side: AirPods 5 (best blog post), T-shirts (top 50) |
 
 **Tracks we are entering: 01 and 02.** Rule 5 permits entering multiple tracks, but every
-track must be named at submission. Track 02 is home; Track 01 covers the antibody agent
+track must be named at submission. All three are entered; Track 02 is the centre of gravity, Track 01 covers the antibody agent
 taking action on the graph.
 
 Sources: [rules](https://www.wemakedevs.org/hackathons/falkordb/rules) ·

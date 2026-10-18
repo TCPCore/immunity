@@ -30,11 +30,12 @@ render from the remote.
 
 | Claim | Evidence |
 | --- | --- |
-| FalkorDB is the only datastore and does the detection | 13 Cypher queries, all executed against a live instance |
+| FalkorDB is the only datastore and does the detection | 18 Cypher queries, all executed against a live instance |
 | Every query actually runs | `python -m immunegraph.verify_queries` → "All non-optional queries executed and returned expected shapes" |
 | The product works end to end | `python -m immunegraph.demo` exits 0; 160 tests pass, twice consecutively |
 | The documented quickstart works for a judge | verified by exporting a fresh clone with `git archive` and following the README verbatim against a recreated database |
 | Opening the app before Docker is running | shows "Cannot reach FalkorDB … start it with docker compose up -d", not a traceback |
+| Measurable detection quality (Tracks 01, 02) | Self-audit: precision 1.00, recall 1.00, F1 1.00, autoimmunity 0%, attribution 1.00 on a generated labelled set. `scripts/verify_tracks.py` proves all three tracks qualify against the live graph. |
 | High-concurrency reads and writes (Track 02) | 8 concurrent writers, 200 writes: 200/200 unique sequence numbers vs 37/200 for the naive read-then-write. See `tests/test_concurrency.py` |
 | The UI works | 5 headless `AppTest` tests execute `app.py`, click through the mission and assert recall fires |
 | The repo is public and fully pushed | verified via the GitHub API; `origin/main` and `HEAD` are the same commit |
@@ -100,7 +101,7 @@ for the measured version, which checks the graph rather than the prose:
 | 02 | **Kernel & durability** tab, `tests/test_concurrency.py`, `tests/test_durability.py` | Three memory kinds (episodic / semantic / procedural), a kernel of truth beside the infection record, trust derived rather than stored, 200/200 concurrent sequence allocation, and a rebuild from the write-ahead log proven identical including node ids. |
 | 03 | **Company brain** tab, `src/immunegraph/company.py` | Four synthetic documents become the kernel; a wrong price spreads between departments and is quarantined against the pricing document; a policy change supersedes the old fact and the previously correct answer is re-judged. |
 
-Track 02's memory-taxonomy mapping is spelled out in `../AGENT_BRIEF.md` §2
+Track 02's memory-taxonomy mapping is in `GRAPH_MODEL.md` §1
 (episodic/semantic/procedural memory, persistent history, shared state and handoffs,
 concurrency, per-tenant memory).
 

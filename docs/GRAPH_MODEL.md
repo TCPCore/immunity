@@ -30,6 +30,8 @@ Multi-tenancy is handled by FalkorDB's multi-graph feature, one graph per tenant
 
 ## 2. Nodes
 
+Ten node labels: `Tenant`, `Session`, `Message`, `Agent`, `Claim`, `Source`, `Infection`, `Antibody`, `KernelFact`, `RefutedStatement`. The last is negative memory, added after the self-audit showed that some falsehoods are unreachable by contradiction.
+
 ```cypher
 // --- identity & episode (episodic memory) ---
 (:Tenant   {id, name, created_at})
@@ -324,6 +326,27 @@ ORDER BY outbreaks DESC
 
 ---
 
+## 5d. Negative memory, and the self-audit that fills it
+
+`RefutedStatement` is the third memory beside `Infection` (what was wrong) and `KernelFact` (what is
+true). It holds statements confirmed false that **no fact contradicts**, because nothing they assert
+is denied. "The Starter plan costs 499 USD per seat per year" is refuted by no Halcyon fact; what is
+missing is the knowledge that no Starter plan exists.
+
+The sanitiser consults them before any comparison, subject-bound, and cheapest first.
+
+They are produced by `src/immunegraph/audit.py`, which mutates the kernel's own facts, scores the
+defence on both sides, and writes the uncovered ones back:
+
+| Measure | Meaning |
+| --- | --- |
+| precision / recall / F1 | standard, on a generated labelled set |
+| autoimmunity | true statements wrongly flagged |
+| attribution | caught against the right fact rather than by luck |
+
+Both errors found by running it are pinned in `tests/test_audit.py`: subject-blind conflict matching
+(20% autoimmunity) and the naive vaccination that replaced it (82%).
+
 ## 5c. External contradictions, grounding a visitor's claim
 
 The Mars scenario is scripted; **Check any claim** is not. A visitor submits a statement, it is
@@ -353,6 +376,18 @@ traversal rather than a log line, the same principle as every other verdict here
 
 Because a refutation also registers a `KernelFact`, a second visitor repeating that claim is
 caught by the sanitiser with **no network call at all**.
+
+## 5a. Infection types
+
+Five, from `src/immunegraph/schema.py`:
+
+| type | discovered by | meaning |
+| --- | --- | --- |
+| `unsupported_root` | **Q2** | active claim, no trusted source, no parent |
+| `circular_support` | **Q1** | the support structure contains a cycle |
+| `contradiction` | **Q3** | two asserted claims disagree, within or across agents |
+| `repeat_offender` | **Q6 / Q7** | matches something already neutralised |
+| `external_contradiction` | grounding | a public source refutes it |
 
 ## 5b. The kernel of truth, recognising lies the swarm already knows
 

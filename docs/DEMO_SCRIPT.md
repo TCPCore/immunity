@@ -1,208 +1,74 @@
-# Demo video script
+# Demo video script and shot list
 
-Target: **~3:00**. Rule 10 requires a demo video showing the working project, so this is
-scripted beat by beat.
-
-The goal is that a judge who watches only the video understands that **the graph is the
-immune system**, not a visualisation bolted onto storage.
-
-## Measured timings (dry-run on the real UI)
-
-| Beat | On screen | Scripted slot |
-| --- | --- | --- |
-| App boot | 1.0s |, |
-| "Run Mars mission" cascade + detection + antibody | **3.1s** | 0:35 - 1:15 (40s) |
-| "Re-inject the false claim" recall | **0.2s** | 2:20 - 2:45 (25s) |
-
-**The one pacing trap:** the cascade animation finishes in about three seconds, but Act I is
-scripted as forty seconds of narration. Do not click and then start talking, you will be
-pointing at a static graph for 37 seconds. Either narrate *what is about to happen* before
-clicking, or click first and use the finished graph as the illustration while you explain the
-three hops. Both work; the second looks better on camera.
-
-The recall at the end is effectively instant, which is the point, say so rather than waiting.
-
----
-
-## Pre-flight (do this before you hit record)
+The video is generated, not hand-edited. `scripts/record_demo.py` drives the running app over the
+Chrome DevTools Protocol, burns in a caption bar, outlines the relevant panel on each beat, and
+encodes H.264. `scripts/demo_dry_run.py` asserts that every number a caption quotes is the number
+that actually appears at that beat.
 
 ```bash
 docker compose up -d
-.venv/bin/python -m immunegraph.verify_queries    # must end with "All non-optional queries..."
-.venv/bin/python scripts/demo_dry_run.py          # checks every beat below against the app
-.venv/bin/streamlit run app.py
-
-# Optional: drive the real browser through all three beats and save a storyboard
-python scripts/live_ui_walkthrough.py http://127.0.0.1:8501 /tmp/storyboard
+streamlit run app.py          # in one terminal
+python scripts/record_demo.py # in another, with Chrome on --remote-debugging-port=9222
 ```
 
-`demo_dry_run.py` asserts that the numbers this script quotes are the numbers that actually
-appear at each beat. Run it first; if it passes, the recording should go smoothly.
+## The 25 beats, with real timings
 
-- [ ] FalkorDB healthy: `docker ps` shows `immunegraph-db  Up ... (healthy)`
-- [ ] **Restart Streamlit if you changed any code under `src/`.** It reloads `app.py` on save
-  but keeps already-imported modules cached, so a running app can silently execute the *old*
-  `immunegraph` package. This bit us once: the UI showed new text while the immune-response
-  logic was stale. When in doubt, kill and restart.
-- [ ] App loads at <http://localhost:8501> with an empty graph ("No conversation yet")
-- [ ] Sidebar shows **▶ Run Mars mission**, **💉 Re-inject the false claim**, **🗑 Reset graph**
-- [ ] Browser zoom ~110% so the graph labels are legible at 1080p
-- [ ] Close Slack/mail. Silence notifications.
-- [ ] Have `docs/DEMO_SCRIPT.md` on a second screen, not on the recorded one
+Timings are for the current cut (**4:45**, 1680x1200, 10 fps, silent with burned-in captions).
+Beat boundaries are computed from the recorder's own hold times, scaled to the measured duration.
 
-**If anything breaks mid-take:** stop, click **Reset graph**, re-run. The demo replays
-deterministically from a clean graph, so a second take is cheap. Do not improvise.
+| # | starts | caption and action |
+| --- | --- | --- |
+| 1 | 0:00 | ImmuneGraph, a FalkorDB-backed immune system for AI agent swarms. Every claim, source, agent and derivation is a node  |
+| 2 | 0:08 | Three agents are about to plan a Mars mission. The graph is empty. Everything you are about to see is a real Cypher qu |
+| 3 | 0:14 | The Researcher asserts a claim with no source. The other two reason CORRECTLY from it, that is the failure mode this p `Run Mars mission` |
+| 4 | 0:20 | Q2 finds the unsupported root. Q4 computes SEVERITY FROM GRAPH REACH: 1 root + 2 contaminated claims + 3 exposed agent |
+| 5 | 0:30 | Q4's traversal also gives the blast radius: spread 2. An antibody injects a sourced correction citing NASA and quarant |
+| 6 | 0:38 | The derived claims are downgraded to 'support invalidated', amber, not red. They were never proven false; their justif |
+| 7 | 0:46 | And because the correction cited a source, it became a KERNEL FACT: what the swarm now holds as TRUE, with the antibod |
+| 8 | 0:58 | Trust is DERIVED from the graph, never stored (Q5). All three fall to 0.85, the Planner never touched the lie, it inhe |
+| 9 | 1:06 | Now the Researcher repeats the claim, as a paraphrase, not the same words. `Re-inject the false claim` |
+| 10 | 1:11 | The sanitiser catches it against the kernel in about five milliseconds, no extraction, no cascade scan. Compare that w |
+| 11 | 1:25 | Every claim so far was scripted. This one is not, anyone can submit a claim the swarm has never seen. switch to the tab |
+| 12 | 1:34 | A false statement a judge can type themselves. It goes through exactly the same machinery as the Mars cascade. `Venus has a breathable atmosphere` |
+| 13 | 1:40 | GROUNDED AGAINST WIKIPEDIA, free, public and citable, so no API key and no private data. Watch the infection spread: t `Check this claim` |
+| 14 | 1:57 | Refuted, quarantined, and the correcting fact enters the KERNEL, so a repeat of this claim is caught with no network c |
+| 15 | 2:08 | TRACK 03, a company brain. Four synthetic documents load as Source nodes; the facts they establish become the kernel o switch to the tab |
+| 16 | 2:22 | A department agent invents a price. Support repeats it, with a real DERIVED_FROM edge back to Sales, so this is a casc `Ask the company brain` |
+| 17 | 2:39 | Then the price actually changes. The old fact is SUPERSEDED, not deleted, and the answer that was correct last week is |
+| 18 | 2:52 | Every system in this space reports what it CATCHES. That number is gameable: a detector that flags everything scores 1 switch to the tab |
+| 19 | 3:07 | Five numbers, never one. Precision and recall on a labelled set, F1, autoimmunity (the rate at which it wrongly flags  `Run self-audit` |
+| 20 | 3:23 | The audit finds five falsehoods that NO fact contradicts, 'a Starter plan at the Enterprise price'. Comparison can nev `Vaccinate blind spots` |
+| 21 | 3:41 | That pair earned its place on our own code. With the whole suite green it measured 20% autoimmunity, we fixed it to ze |
+| 22 | 3:57 | The kernel of truth: what the swarm holds as TRUE, with the antibody that established each fact and the source behind  switch to the tab |
+| 23 | 4:10 | FalkorDB Cloud's free tier has no persistence or backups, so every write is logged BEFORE it is applied. Now wipe the  `Rebuild from log` |
+| 24 | 4:20 | 73 writes replayed, 0 failures, and the result is identical, including node ids. That is why the log stores whole stat |
+| 25 | 4:33 | Q8: both outbreak types contained, none recurred, and one fast-path recognition recorded. Detection finds lies the swa |
 
----
+## What each act is for
 
-## 0:00 - 0:15 · Hook
+- **1 to 10, the scripted cascade.** Detection, severity from reach, the antibody, the kernel, and
+  derived trust. This is the mechanism, complete.
+- **11 to 14, a claim the video did not choose.** A visitor's statement is grounded against
+  Wikipedia and arrested by the same machinery. This exists because a scripted demo only proves
+  the mechanism works on inputs the author selected.
+- **15 to 17, a company brain.** Documents become the kernel; a wrong price spreads between
+  departments and is caught; a policy change supersedes the old fact.
+- **18 to 21, the self-audit.** The one number every system reports is gameable, so this measures
+  the other side. Precision, recall, F1, autoimmunity and attribution on a labelled set, then the
+  vaccination loop that closes the blind spots it finds.
+- **22 to 24, durability.** The graph is a projection rebuilt from a write-ahead log, and the
+  rebuild is proven identical including node ids.
+- **25, the payoff.** Q8: detection finds new lies, the kernel recognises known ones.
 
-**On screen:** the app, empty graph, title visible.
+## Reproducing it
 
-> "Multi-agent AI systems have a failure mode that ordinary memory can't see. One agent
-> invents a claim. A second derives a plan from it. A third builds on that plan. Nothing was
-> stored incorrectly, every agent faithfully recorded what it was told, and yet the swarm
-> is now acting on a lie."
+The recorder resets the graph first so the cold open is genuinely empty. Two things have broken
+this in practice and are worth knowing:
 
-## 0:15 - 0:35 · What this is
+- **Idle headless Chrome exits by itself.** The recorder polls for the app rather than sleeping a
+  fixed time, and `wait_for_app()` fails loudly rather than recording a black screen.
+- **A busy machine starves the screencast.** One take captured 143 frames over 201 seconds, which
+  makes the cascade animation a slideshow. Check the frame count in the output; it should be above
+  roughly 500 for a take of this length.
 
-**On screen:** hover the sidebar **Graph data model** and **The queries doing the work**
-expanders so the node/edge names are visible. Do not expand them fully.
-
-> "ImmuneGraph treats belief as a graph. Every claim, source, agent and derivation is a node
-> in FalkorDB. Then the pathologies of collective belief become *traversals*, a cycle in the
-> support edges is a self-justifying belief, and reachability along derivation edges is a
-> cascade. This is Cypher doing the detection, not Python drawing a picture."
-
-## 0:35 - 1:15 · Act I, the cascade
-
-**Do:** click **▶ Run Mars mission**. Let it play out.
-
-**On screen:** the three messages appear one at a time; the graph fills in; an infection
-node appears in red.
-
-> "Three agents plan a Mars mission. The Researcher says Mars has breathable oxygen at night -
-> with no source. The Analyst says: if that's true, we don't need helmets. The Planner says:
-> then we can skip life support. Neither the Analyst nor the Planner is lying. Each reasoned
-> correctly from the premise it was handed."
-
-*Beat. Let the audience watch the graph build, but note it finishes in about three seconds,
-so this is where the pacing trap lives. See "Measured timings" at the top.*
-
-## 1:15 - 1:40 · Act II, what the graph found
-
-**On screen:** the **Immune dashboard**, right column. Point at the infection row.
-
-> "Query two found the unsupported root: no trusted source, no parent. And look at the
-> severity, six point zero. That number isn't an LLM's opinion. Query four walks the
-> derivation edges backwards and counts two contaminated claims and three exposed agents.
-> Remove the database and that number stops having a definition."
-
-**Point at** `spread 2` in the infection expander.
-
-## 1:40 - 2:05 · Act III, the immune response
-
-**On screen:** expand the infection to show the root claim; the antibody node appears in gold.
-
-> "An antibody is dispatched. It has to cite a source, so it pulls NASA's actual figure -
-> ninety-five percent CO-two, and the correction enters the graph as a first-class claim
-> with its own support edge. The false claim is quarantined, and the correction is recorded as
-> contradicting it. Notice the antibody cannot just assert a fact: if it had no source, it
-> would say so instead of inventing one."
-
-**Then point at the conversation panel, which is the part judges remember.**
-
-> "And look at what happened to the other two. The Analyst's and the Planner's claims are now
-> amber, *support invalidated*. They were never proven false, but their only justification
-> was the claim we just refuted, so they stop being trustworthy. Quarantining the root isn't
-> enough; the whole cascade has to be contained."
-
-## 2:05 - 2:35 · Act III.b, the kernel of truth
-
-**On screen:** scroll the dashboard to the **Kernel of truth** panel. This is the beat that
-distinguishes the project from a detector.
-
-> "Now the part I care most about. Everything up to here recorded what was *wrong*, an
-> infection, a quarantined claim, a trust score that dropped. But a swarm that only remembers
-> its mistakes learns nothing it can reuse.
->
-> The correction cited NASA, so it became a **fact**. Not a note, not a log line, a node in
-> the graph, linked to the source that backs it, and to the antibody that established it.
-> That's the purple node: *Mars has no breathable oxygen*, citing NASA.
->
-> And notice what did **not** become a fact. If the antibody had found no source, it would
-> have said so and established nothing. Inventing certainty would just be a new infection."
-
-**Point at** the `Facts held` metric and the fact table.
-
-## 2:35 - 2:50 · Act IV, trust, derived
-
-**On screen:** the **Trust** table.
-
-> "All three agents drop to zero point eight five. No counter is decremented anywhere -
-> query five recomputes trust from exposure every time. The Planner never touched the false
-> claim directly; it inherited the infection through the derivation chain, and the graph knows
-> that."
-
-*Optional extra, only if you have room:* point out the **Immunity memory (Q8)** table now
-reads `contained: 0` for the unsupported root. That is deliberate, the antibody is not
-credited with working until the swarm proves it by not being fooled again. The recall in the
-next beat is what flips that number to 1.
-
-## 2:20 - 2:45 · Act V, immunity (the payoff)
-
-**Do:** click **💉 Re-inject the false claim**. The recall is effectively instant (0.2s), so
-click and keep talking, do not wait for something to happen.
-
-> "Now the Researcher tries again, with a *paraphrase*: Mars has oxygen at night. Watch."
-
-*The green banner is already there.*
-
-> "Recognised instantly, and look at *why*. The sanitiser matched this claim against the
-> kernel fact in about five milliseconds. No extraction call, no cascade scan. Compare that
-> with the three seconds the original detection needed.
->
-> That's the difference between the two halves of the immune system. Detection finds lies the
-> swarm has never seen, by walking the support structure, thorough, and it gets more
-> expensive as the graph grows. The kernel recognises lies it already knows, by comparison,
-> and it doesn't. The swarm is measurably harder to fool than it was ninety seconds ago.
->
-> Click it again and it matches on the fingerprint hash instead, and the answer is immediate.
-> The swarm does not get fooled twice."
-
-**Point at the trust table again, this is a strong beat.**
-
-> "And the Researcher drops further, to zero point seven, because it asserted the lie twice.
-> The other two stay at zero point eight five. Trust is being derived from the graph, so
-> re-offending costs you."
-
-**Optional:** click **Re-inject** a second time to show the "exact match" path.
-
-## 2:45 - 3:00 · Close, did it actually work?
-
-**On screen:** the **Immunity memory (Q8)** table.
-
-> "And query eight makes 'the swarm develops immunity' measurable: one outbreak of each type,
-> both contained, zero recurred. That number was zero a moment ago, the recall is what proved
-> the antibody worked.
->
-> Every query here has been executed against a live instance, `verify_queries` runs all
-> thirteen, and the test suite has one hundred and one tests. FalkorDB wasn't a place to store the
-> answer. It was the thing that worked out the answer."
-
----
-
-## If you want a shorter cut (60-75s)
-
-Keep: 0:00 hook → Act I cascade → the severity number → the antibody correction → **the
-re-inject payoff** → the Q8 table. Drop Act IV and the architecture narration. The re-inject
-beat is the one thing that must survive any edit.
-
-## Recording tips
-
-- Record the **window**, not the whole desktop, at 1080p.
-- `--pause` is not needed for the UI (the sidebar buttons already pace themselves); use
-  `python -m immunegraph.demo --pause 1.5` only if you are filming the terminal instead.
-- Say the query numbers out loud. It signals that the queries are the product, which is
-  exactly what rules 2 and 3 are testing.
-- Do not read the script on camera. Know the six beats and speak them.
+`scripts/screenshot_app.py` takes a single still if you want a thumbnail without a full take.

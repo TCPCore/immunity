@@ -20,6 +20,20 @@ Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB, Oct 15
 
 ---
 
+## What you can click
+
+The app has five tabs. Each maps to one claim.
+
+| Tab | What it shows |
+| --- | --- |
+| **Live demo** | the scripted Mars cascade: detection, severity from graph reach, the antibody, derived trust |
+| **Check any claim** | a statement the author did not choose, grounded against Wikipedia and arrested by the same machinery |
+| **Company brain** | four documents become the kernel; a wrong price spreads between departments and is caught; a policy change supersedes the old fact |
+| **Self-audit** | precision, recall, F1, autoimmunity and attribution, then the vaccination loop that closes what it finds |
+| **Kernel & durability** | the facts in force with provenance, the write-ahead log, and a rebuild proven identical |
+
+---
+
 ## Where the graph does the work
 
 FalkorDB is not a store behind this product, it is the thing the product reasons with. Every
@@ -303,6 +317,43 @@ The corpus is synthetic, so rule 6 is satisfied by construction and nothing priv
 
 ---
 
+## Self-audit, measuring the other side of the detector
+
+Every system in this space reports **recall**: how much it catches. That number is gameable. A
+detector that flags every statement scores 100% and is worthless.
+
+`src/immunegraph/audit.py` generates adversarial probes from the swarm's own kernel, perturbed
+numbers, transplanted numbers, substituted entities, plus truth-preserving paraphrases and
+hand-written true restatements that must **not** fire, and scores the defence both ways:
+
+| Metric | Question it answers |
+| --- | --- |
+| **Precision** | of the flags raised, how many were genuinely false |
+| **Recall** | of the generated falsehoods, how many were caught |
+| **F1** | harmonic mean of the two |
+| **Autoimmunity** | what fraction of *true* statements are wrongly flagged |
+| **Attribution** | did it fire at the right fact, or merely at one |
+
+On the bundled corpus it reports **precision 1.00, recall 1.00, F1 1.00, autoimmunity 0%**, including
+after a policy revision supersedes a price.
+
+The audit also reports the **uncovered** surface, falsehoods that no fact contradicts and which
+comparison can therefore never catch. **Vaccinate blind spots** records those as
+`RefutedStatement` nodes, negative memory written through the same append-only log as everything
+else, and re-measures to prove the holes closed without poisoning the kernel.
+
+```bash
+python -m immunegraph.audit        # not a CLI; the audit runs from the Self-audit tab
+python scripts/bench_scale.py      # the two speeds at 100 to 10,000 claims
+```
+
+It found two real defects in this codebase, both pinned in `tests/test_audit.py`: a 20% autoimmunity
+rate from subject-blind conflict matching, and an 82% autoimmunity rate introduced by the obvious
+repair for the next gap. [`docs/NOVELTY.md`](docs/NOVELTY.md) states what is new here against the
+prior art, and `docs/BLOG_POST.md` tells the story.
+
+---
+
 ## Durability, the graph is a projection
 
 **FalkorDB Cloud's free tier has no persistence and no backups.** Instances are stopped after
@@ -359,7 +410,7 @@ the seed is what makes a cold start deterministic.
 
 ## Graph model
 
-Nodes: `Tenant` · `Session` · `Message` · `Agent` · `Claim` · `Source` · `Infection` · `Antibody` · `KernelFact`
+Nodes: `Tenant` · `Session` · `Message` · `Agent` · `Claim` · `Source` · `Infection` · `Antibody` · `KernelFact` · `RefutedStatement`
 
 | Memory type | Nodes | Role |
 | --- | --- | --- |

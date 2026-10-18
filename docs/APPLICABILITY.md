@@ -204,6 +204,9 @@ code it found a failure, then caught the fix making it three times worse.
 
 ---
 
+The self-audit in `src/immunegraph/audit.py` produces both numbers, and `scripts/bench_scale.py`
+produces the latency curve. Both run against a live graph with no labelled dataset to maintain.
+
 ## 4. How to apply it, four integration patterns
 
 You do not rewrite your agents. You add a **write path** and choose where to check.

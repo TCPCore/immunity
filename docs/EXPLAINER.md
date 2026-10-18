@@ -7,6 +7,18 @@ you need to be able to reproduce unaided.
 
 ---
 
+## 0. The five surfaces, and what each proves
+
+The app has five tabs. If someone asks "show me", each maps to one claim.
+
+| Tab | What it demonstrates | Track |
+| --- | --- | --- |
+| **Live demo** | the scripted cascade: detection, severity from reach, the antibody, derived trust | 01, 02 |
+| **Check any claim** | a claim the author did not choose, grounded in public knowledge and arrested | 01 |
+| **Company brain** | documents become the kernel; a wrong price spreads and is caught; a policy change supersedes | 03 |
+| **Self-audit** | precision, recall, autoimmunity, attribution, and the vaccination loop | 01, 02 |
+| **Kernel & durability** | facts in force with provenance, and a rebuild from the log proven identical | 02 |
+
 ## 1. The sixty-second version
 
 Multi-agent systems fail in a way ordinary memory layers cannot see. One agent invents a
@@ -138,6 +150,55 @@ being sorted last. This is the concrete example to use when asked how you verifi
    *Benefit:* physical isolation, which is what track 02 asks for.
 
 ---
+
+## 5b. The self-audit, and why it is the part I would defend
+
+Everything above detects. None of it tells you whether the detector is any good. Every system in
+this space reports recall, how much it catches, and recall is gameable: flag everything and it is
+100%.
+
+`src/immunegraph/audit.py` generates probes from the swarm's own kernel and scores both sides:
+
+| Measure | What it means |
+| --- | --- |
+| precision | of the flags raised, how many were false |
+| recall | of the generated falsehoods, how many were caught |
+| F1 | harmonic mean |
+| autoimmunity | true statements wrongly flagged |
+| attribution | caught against the *right* fact, not merely at one |
+
+**Two defects it found, both now pinned in `tests/test_audit.py`:**
+
+1. **Subject-blind matching, 20% autoimmunity.** "Enterprise costs 499 USD per seat per year" is
+   true, and was judged *conflicting* because it numerically mismatches the Team plan's fact. The
+   rule compared prices without checking which entity the claim was about. Binding a conflict to a
+   shared subject took autoimmunity to 0% with recall unchanged.
+
+2. **The repair that made it worse, 82% autoimmunity.** With subject binding in place, the audit
+   found five falsehoods no fact contradicts. Recording them as known-false closed every hole and
+   drove autoimmunity to 81.8%, because the vaccine then fuzzily matched the *true* fact it was
+   derived from. Recall stayed at 100% throughout, which is exactly why one number cannot be
+   trusted. Subject-binding the vaccine too closed the holes with autoimmunity at zero.
+
+**If a judge asks why you did not just use an LLM to judge conflicts:** because a demo whose
+decisions depend on a non-deterministic model is a demo that can fail in front of them. The model
+parses language. The graph decides.
+
+## 5c. What is deliberately not built
+
+State these before a judge finds them:
+
+- **Matching is lexical.** A contradiction phrased in entirely different vocabulary is missed. The
+  system answers "inconclusive" rather than guessing. Embedding-based matching would close it and
+  needs a model this deployment does not carry.
+- **Precision and recall are measured on a generated labelled set**, not human-labelled production
+  traffic. The negatives include hand-written true restatements, which is what makes the precision
+  figure mean something, but it is a proxy.
+- **Scale is measured to 1,000 claims**, where a worst-case sweep takes 14.9 s because every claim
+  is a finding and each writes. The fast path stays at 1.31 ms throughout, which is why it is the
+  one in the request path.
+- **The antibody is a model and can be wrong.** It is constrained to cite a source and record its
+  outcome. This is a containment system, not a truth oracle.
 
 ## 6. Questions you should expect
 
