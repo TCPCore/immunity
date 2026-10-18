@@ -69,6 +69,29 @@ def test_report_metrics_are_safe_when_empty():
     assert report.attribution == 0.0
 
 
+def test_precision_and_recall_are_derived_not_stored():
+    """Standard metrics, computed from the probe outcomes."""
+    report = Report(probes=10, contradictions=4, controls=6, caught=3, false_alarms=1)
+    assert report.recall == 0.75          # 3 of 4 falsehoods caught
+    assert report.precision == 0.75       # of 4 flags, 3 were false
+    assert report.f1 == 0.75
+
+
+def test_precision_punishes_a_trigger_happy_detector():
+    """Flag everything and recall is perfect while precision collapses."""
+    report = Report(probes=10, contradictions=4, controls=6, caught=4, false_alarms=6)
+    assert report.recall == 1.0
+    assert report.precision == 0.4
+    assert report.f1 < 0.6
+
+
+def test_metrics_are_safe_when_nothing_flagged():
+    report = Report(probes=5, contradictions=2, controls=3, caught=0, false_alarms=0)
+    assert report.precision == 0.0
+    assert report.recall == 0.0
+    assert report.f1 == 0.0
+
+
 def test_a_perfect_detector_still_reports_both_numbers():
     report = Report(probes=10, contradictions=4, controls=6, caught=4, false_alarms=0)
     assert report.coverage == 1.0
@@ -132,6 +155,20 @@ def test_a_genuine_number_conflict_is_still_caught(swarm):
     )
     assert verdict.conflicts
     assert any(c["fact_id"] for c in verdict.conflicts)
+
+
+def test_the_audit_scores_perfectly_on_the_labelled_set(swarm):
+    """Precision and recall against generated falsehoods and hand-written truths.
+
+    The negatives include hard ones: true restatements phrased the way a person
+    would say them rather than the way the document does. Flagging those is what
+    autoimmunity means in practice.
+    """
+    report = KernelAuditor(swarm).audit()
+    assert report.recall == 1.0, "every generated contradiction should be caught"
+    assert report.precision == 1.0, "and nothing true should be flagged"
+    assert report.f1 == 1.0
+    assert report.controls >= 3
 
 
 def test_the_audit_produces_all_three_measures(swarm):

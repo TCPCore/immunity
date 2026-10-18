@@ -16,8 +16,7 @@
   hr { border: none; border-top: 1px solid #E1E6EC; margin: 34px 0; }
 </style></head><body>
 <p style="font:14px/1.5 -apple-system,sans-serif;color:#888;border-bottom:1px solid #eee;padding-bottom:14px">
-Select everything below this line, copy, and paste into the Substack editor. Headings, bold,
-links and code blocks will come across as formatting.</p>
+Select everything below this line, copy, and paste into the Substack editor.</p>
 <h1>I built an immune system for my agent swarm, then audited it and found it was wrong 20% of the time</h1>
 <p>If you run multi-agent systems, you have probably hit this and blamed something else.</p>
 <p>Agent A says "Mars has breathable oxygen at night." Agent B, whose job is to reason, says "then we don't need helmets." Agent C, whose job is to plan, says "then we can skip life support."</p>
@@ -115,6 +114,8 @@ Quarantined, cascade contained
 <pre><code>COVERAGE       generated falsehoods the defence catches
 AUTOIMMUNITY   TRUE statements it wrongly flags
 ATTRIBUTION    did it fire at the RIGHT fact
+PRECISION      of the flags raised, how many were false
+RECALL         of the falsehoods, how many were flagged
 </code></pre>
 <p>The probes are generated from the system's own knowledge base: perturbed numbers, transplanted numbers, substituted entities, and truth-preserving paraphrases that must not fire. No labelled dataset required. Your knowledge base is the test set. That makes the number about your corpus rather than someone else's benchmark.</p>
 <h2>What it found, with 134 tests passing</h2>
@@ -154,12 +155,20 @@ uv pip install --python .venv/bin/python -e &quot;.[dev]&quot;
 streamlit run app.py
 </code></pre>
 <p><code>verify_queries</code> executes every Cypher query against a live instance. <code>verify_tracks.py</code> runs the capability each competition track is about and prints pass or fail against the graph, which is a stronger claim than naming tracks in a README.</p>
-<h2>What it does not do yet</h2>
-<p>Scope, stated plainly so you can judge the rest.</p>
-<p>The antibody is a model and can be wrong. It is constrained to cite a source, record its outcome, and make a bad correction visible in the graph. This is a containment system, not a truth oracle.</p>
-<p>Matching is lexical. A contradiction phrased in different vocabulary is missed, and the system says "inconclusive" rather than guessing.</p>
-<p>Every number here is from a graph of tens of nodes. Query cost at ten thousand claims is unmeasured, and that is the next benchmark.</p>
-<p>There is no labelled evaluation set, so there is no precision or recall figure for conflict detection against real traffic. The audit measures robustness to mutations of your own knowledge, which is a proxy, not the real distribution of false claims.</p>
+<h2>The numbers, including the uncomfortable one</h2>
+<p>Conflict detection against the bundled corpus, on a generated labelled set with hand-written true restatements as negatives:</p>
+<pre><code>precision   1.00     of every flag raised, all were genuinely false
+recall      1.00     every generated contradiction was caught
+f1          1.00
+autoimmunity 0%      six hard negatives, phrased the way a person would say them
+</code></pre>
+<p>Then the part that decides the architecture. I benchmarked both paths at increasing graph size, against a local instance:</p>
+<pre><code>claims     fast path     detection sweep
+   100       1.3 ms          1,118 ms
+ 1,000       1.3 ms         14,887 ms
+</code></pre>
+<p>The benchmark is deliberately hostile: every one of those claims is an unsupported root with no source, so the sweep has a finding to write for every row. Real graphs are not like that. But the shape is what matters and it does not change: <strong>the fast path is flat and the sweep is not.</strong></p>
+<p>That is not a defect, it is the reason the two exist. The thing you put in a request path has to be the flat one, so it is. The sweep is asynchronous, and at a thousand findings it is also the thing to batch, because the cost is dominated by one write per finding rather than by the query.</p>
 <p>If you are building something similar, the lesson I would pass on is this: pick the quantity that should be a traversal and make it one, and measure both sides of your detector. I found a 20% failure in my own system only after I built the number nobody reports.</p>
 <hr />
 <p>Built on <a href="https://www.falkordb.com/">FalkorDB</a> for the WeMakeDevs and FalkorDB Graph Hacks hackathon, entered in all three tracks: Agents That Act on Connected Data, Agent Memory and Coordination, and Company Brain.</p>

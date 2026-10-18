@@ -43,6 +43,20 @@ _ARTICLE = re.compile(r"^(the|a|an)\s+", re.IGNORECASE)
 # statement that is plausible, unpriced by any source, and true of nothing.
 UNKNOWN_ENTITIES = ("Starter", "Basic", "Legacy", "Partner", "Trial")
 
+# Hand-labelled TRUE statements about the bundled corpus, phrased the way a
+# person would phrase them rather than the way the document does. These are the
+# negatives that make precision mean something: a detector that flags "customers
+# can request a refund within 30 days of buying" against "Refunds are available
+# within 30 days of purchase" is too blunt to put in front of a customer.
+HARD_NEGATIVES: tuple[str, ...] = (
+    "Enterprise seats are billed at 499 USD per seat each year",
+    "The Enterprise tier costs 499 USD per seat per year",
+    "Customers can request a refund within 30 days of buying",
+    "Critical incidents are picked up within 15 minutes",
+    "EU customer telemetry stays in the EU",
+    "A Team seat is 99 USD for the year",
+)
+
 
 @dataclass(frozen=True)
 class Probe:
@@ -80,6 +94,22 @@ class Report:
         return self.false_alarms / self.controls if self.controls else 0.0
 
     @property
+    def precision(self) -> float:
+        """Of everything flagged, how much was actually false."""
+        flagged = self.caught + self.false_alarms
+        return self.caught / flagged if flagged else 0.0
+
+    @property
+    def recall(self) -> float:
+        """Of everything false, how much was flagged."""
+        return self.coverage
+
+    @property
+    def f1(self) -> float:
+        p, r = self.precision, self.recall
+        return 2 * p * r / (p + r) if (p + r) else 0.0
+
+    @property
     def attribution(self) -> float:
         if not self.caught:
             return 0.0
@@ -89,6 +119,9 @@ class Report:
         return {
             "probes": self.probes,
             "coverage": round(self.coverage, 3),
+            "precision": round(self.precision, 3),
+            "recall": round(self.recall, 3),
+            "f1": round(self.f1, 3),
             "autoimmunity": round(self.autoimmunity, 3),
             "attribution": round(self.attribution, 3),
             "caught": self.caught,
@@ -165,6 +198,10 @@ class KernelAuditor:
                     )
                 )
 
+        # Hand-labelled negatives, included once rather than per fact.
+        for statement in HARD_NEGATIVES:
+            probes.append(Probe("hard_negative", statement, None, should_conflict=False))
+
         return probes
 
     @staticmethod
@@ -203,7 +240,10 @@ class KernelAuditor:
         report = Report(
             probes=len(probes),
             contradictions=sum(1 for p in probes if p.should_conflict),
-            controls=sum(1 for p in probes if p.kind in {"control", "paraphrase", "reference"}),
+            controls=sum(
+               1 for p in probes
+               if p.kind in {"control", "paraphrase", "reference", "hard_negative"}
+            ),
             caught=0,
             false_alarms=0,
         )
@@ -244,7 +284,7 @@ class KernelAuditor:
                         {"kind": probe.kind, "text": probe.text, "fact_id": probe.fact_id}
                     )
             else:
-                if flagged and probe.kind in {"control", "paraphrase", "reference"}:
+                if flagged and probe.kind in {"control", "paraphrase", "reference", "hard_negative"}:
                     report.false_alarms += 1
                 elif not flagged and probe.kind == "subject":
                     # Unreachable by contradiction: a genuine coverage hole.

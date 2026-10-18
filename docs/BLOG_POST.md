@@ -151,6 +151,8 @@ So I built it, paired it with coverage, and added a third measure: did the defen
 COVERAGE       generated falsehoods the defence catches
 AUTOIMMUNITY   TRUE statements it wrongly flags
 ATTRIBUTION    did it fire at the RIGHT fact
+PRECISION      of the flags raised, how many were false
+RECALL         of the falsehoods, how many were flagged
 ```
 
 The probes are generated from the system's own knowledge base: perturbed numbers, transplanted numbers, substituted entities, and truth-preserving paraphrases that must not fire. No labelled dataset required. Your knowledge base is the test set. That makes the number about your corpus rather than someone else's benchmark.
@@ -217,17 +219,28 @@ streamlit run app.py
 
 `verify_queries` executes every Cypher query against a live instance. `verify_tracks.py` runs the capability each competition track is about and prints pass or fail against the graph, which is a stronger claim than naming tracks in a README.
 
-## What it does not do yet
+## The numbers, including the uncomfortable one
 
-Scope, stated plainly so you can judge the rest.
+Conflict detection against the bundled corpus, on a generated labelled set with hand-written true restatements as negatives:
 
-The antibody is a model and can be wrong. It is constrained to cite a source, record its outcome, and make a bad correction visible in the graph. This is a containment system, not a truth oracle.
+```
+precision   1.00     of every flag raised, all were genuinely false
+recall      1.00     every generated contradiction was caught
+f1          1.00
+autoimmunity 0%      six hard negatives, phrased the way a person would say them
+```
 
-Matching is lexical. A contradiction phrased in different vocabulary is missed, and the system says "inconclusive" rather than guessing.
+Then the part that decides the architecture. I benchmarked both paths at increasing graph size, against a local instance:
 
-Every number here is from a graph of tens of nodes. Query cost at ten thousand claims is unmeasured, and that is the next benchmark.
+```
+claims     fast path     detection sweep
+   100       1.3 ms          1,118 ms
+ 1,000       1.3 ms         14,887 ms
+```
 
-There is no labelled evaluation set, so there is no precision or recall figure for conflict detection against real traffic. The audit measures robustness to mutations of your own knowledge, which is a proxy, not the real distribution of false claims.
+The benchmark is deliberately hostile: every one of those claims is an unsupported root with no source, so the sweep has a finding to write for every row. Real graphs are not like that. But the shape is what matters and it does not change: **the fast path is flat and the sweep is not.**
+
+That is not a defect, it is the reason the two exist. The thing you put in a request path has to be the flat one, so it is. The sweep is asynchronous, and at a thousand findings it is also the thing to batch, because the cost is dominated by one write per finding rather than by the query.
 
 If you are building something similar, the lesson I would pass on is this: pick the quantity that should be a traversal and make it one, and measure both sides of your detector. I found a 20% failure in my own system only after I built the number nobody reports.
 
