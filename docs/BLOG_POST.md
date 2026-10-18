@@ -30,7 +30,7 @@ cascade                reachability along DERIVED_FROM back to a bad root
 
 That is the whole idea. Everything else in this post is consequence.
 
-The implementation is FalkorDB, a graph database that speaks Redis and a subset of openCypher. Seven node types, eleven relationships. The important edge points backwards:
+The implementation is FalkorDB, a graph database that speaks Redis and a subset of openCypher. Nine node labels, eighteen relationships. The important edge points backwards:
 
 ```
 (Claim)-[:DERIVED_FROM]->(Claim)     child -> parent

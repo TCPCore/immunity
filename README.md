@@ -343,9 +343,15 @@ comparison can therefore never catch. **Vaccinate blind spots** records those as
 else, and re-measures to prove the holes closed without poisoning the kernel.
 
 ```bash
-python -m immunegraph.audit        # not a CLI; the audit runs from the Self-audit tab
-python scripts/bench_scale.py      # the two speeds at 100 to 10,000 claims
+python -m immunegraph.audit          # report; exits non-zero if autoimmunity is above the limit
+python -m immunegraph.audit --vaccinate
+python -m immunegraph.audit --max-autoimmunity 0.05
+python scripts/bench_scale.py        # the two speeds at 100 to 10,000 claims
 ```
+
+The exit code is the point. A number nobody acts on is a report, not a gate, so this can sit in
+front of a deploy. It refuses to run on a kernel with fewer than three facts rather than reporting
+a vacuous pass on nothing it actually tested.
 
 It found two real defects in this codebase, both pinned in `tests/test_audit.py`: a 20% autoimmunity
 rate from subject-blind conflict matching, and an 82% autoimmunity rate introduced by the obvious
@@ -410,7 +416,9 @@ the seed is what makes a cold start deterministic.
 
 ## Graph model
 
-Nodes: `Tenant` · `Session` · `Message` · `Agent` · `Claim` · `Source` · `Infection` · `Antibody` · `KernelFact` · `RefutedStatement`
+Nodes, nine of them: `Session` · `Message` · `Agent` · `Claim` · `Source` · `Infection` · `Antibody` · `KernelFact` · `RefutedStatement`
+
+Tenancy is a `tenant_id` property on `Agent`, not a node. `Tenant` is declared in `schema.py` for validation and is deliberately never instantiated.
 
 | Memory type | Nodes | Role |
 | --- | --- | --- |
@@ -592,7 +600,7 @@ A Cypher query that has never been executed is not a feature. Three layers of pr
 
 ```bash
 .venv/bin/python -m immunegraph.verify_queries   # every query, against a live instance
-.venv/bin/python -m pytest                       # 160 tests
+.venv/bin/python -m pytest                       # 162 tests
 .venv/bin/python -m immunegraph.demo             # the full arc; exits non-zero on failure
 ```
 

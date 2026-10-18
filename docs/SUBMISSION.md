@@ -87,7 +87,7 @@ Rebuild from the write-ahead log                    73 writes, 0 failed, identic
 Concurrent sequence allocation, 8 writers           200 / 200 unique
 Conflict detection precision / recall / F1          1.00 / 1.00 / 1.00  (including after a policy revision)
 Autoimmunity rate (true statements wrongly flagged) 0%
-Regression suite                                    160 tests
+Regression suite                                    162 tests
 Track qualification                                 21 / 21 checks across 3 tracks
 ```
 
@@ -123,7 +123,7 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -e ".[dev]"   # installs the package itself
 cp .env.example .env                                   # optional: add OPENAI_API_KEY
 .venv/bin/python -m immunegraph.verify_queries          # executes all 18 queries
-.venv/bin/python -m pytest                              # 160 tests
+.venv/bin/python -m pytest                              # 162 tests
 .venv/bin/streamlit run app.py
 ```
 
@@ -180,7 +180,7 @@ the written form of that explanation.
 - [ ] **Rule 12/13 review complete**, see `COMPLIANCE.md` for the five concrete steps
 - [x] MIT licence present
 - [x] `python -m immunegraph.verify_queries` passes
-- [x] `python -m pytest` passes (160 tests)
+- [x] `python -m pytest` passes (162 tests)
 
 **Final five minutes**
 

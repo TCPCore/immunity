@@ -32,7 +32,7 @@ render from the remote.
 | --- | --- |
 | FalkorDB is the only datastore and does the detection | 18 Cypher queries, all executed against a live instance |
 | Every query actually runs | `python -m immunegraph.verify_queries` → "All non-optional queries executed and returned expected shapes" |
-| The product works end to end | `python -m immunegraph.demo` exits 0; 160 tests pass, twice consecutively |
+| The product works end to end | `python -m immunegraph.demo` exits 0; 162 tests pass, twice consecutively |
 | The documented quickstart works for a judge | verified by exporting a fresh clone with `git archive` and following the README verbatim against a recreated database |
 | Opening the app before Docker is running | shows "Cannot reach FalkorDB … start it with docker compose up -d", not a traceback |
 | Measurable detection quality (Tracks 01, 02) | Self-audit: precision 1.00, recall 1.00, F1 1.00, autoimmunity 0%, attribution 1.00 on a generated labelled set. `scripts/verify_tracks.py` proves all three tracks qualify against the live graph. |

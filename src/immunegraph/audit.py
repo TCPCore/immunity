@@ -338,3 +338,84 @@ class KernelAuditor:
                 )
             )
         return created
+
+
+# ------------------------------------------------------------------------ cli
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the audit headlessly, so it can gate a deploy.
+
+        python -m immunegraph.audit                 # report, exit 1 on autoimmunity
+        python -m immunegraph.audit --vaccinate     # close the blind spots too
+        python -m immunegraph.audit --max-autoimmunity 0.05
+
+    Exit code is non-zero when the defence is unsafe, which is the point: a
+    number nobody acts on is a report, not a gate.
+    """
+    import argparse
+
+    from .config import Settings
+    from .db import GraphStore
+    from .swarm import Swarm
+
+    parser = argparse.ArgumentParser(prog="python -m immunegraph.audit")
+    parser.add_argument("--vaccinate", action="store_true",
+                        help="record uncovered falsehoods as known-false, then re-audit")
+    parser.add_argument("--max-autoimmunity", type=float, default=0.0,
+                        help="fail if the share of true statements wrongly flagged exceeds this")
+    args = parser.parse_args(argv)
+
+    store = GraphStore(Settings.from_env())
+    if not store.ping():
+        print(f"cannot reach FalkorDB at {store.settings.host}:{store.settings.port}")
+        return 2
+
+    swarm = Swarm(store)
+    if swarm.session_id is None:
+        swarm.start("audit", "session_audit_cli")
+
+    # A gate that passes on an empty kernel is worse than no gate: it reports
+    # safety it never tested. Refuse to judge until there is something to judge.
+    facts = swarm.kernel.facts()
+    if len(facts) < 3:
+        print(f"kernel holds {len(facts)} fact(s); too few to audit meaningfully.")
+        print("Load a corpus first, for example: python -m immunegraph.demo")
+        return 2
+
+    auditor = KernelAuditor(swarm)
+    report = auditor.audit()
+    shown = report
+
+    print("=" * 68)
+    print("SELF-AUDIT")
+    print("=" * 68)
+    for label, value in (
+        ("probes", report.probes),
+        ("contradictions", report.contradictions),
+        ("controls", report.controls),
+        ("precision", f"{report.precision:.2%}"),
+        ("recall", f"{report.recall:.2%}"),
+        ("f1", f"{report.f1:.2f}"),
+        ("autoimmunity", f"{report.autoimmunity:.2%}"),
+        ("attribution", f"{report.attribution:.2%}"),
+        ("uncovered", len(report.uncovered)),
+        ("elapsed", f"{report.elapsed_ms:.0f} ms"),
+    ):
+        print(f"  {label:<16} {value}")
+
+    if args.vaccinate and report.uncovered:
+        created = auditor.vaccinate(report)
+        shown = auditor.audit()
+        print(f"\n  vaccinated {len(created)} blind spots")
+        print(f"  uncovered now    {len(shown.uncovered)}")
+        print(f"  autoimmunity now {shown.autoimmunity:.2%}")
+
+    print("=" * 68)
+    unsafe = shown.autoimmunity > args.max_autoimmunity
+    print(f"  {'FAIL' if unsafe else 'PASS'}: autoimmunity {shown.autoimmunity:.2%} "
+          f"(limit {args.max_autoimmunity:.0%})")
+    return 1 if unsafe else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

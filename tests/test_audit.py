@@ -230,3 +230,37 @@ def test_negative_memory_is_recorded_as_a_logged_write(swarm):
     before = swarm.log_count()
     swarm.kernel.register_refuted("Some statement", reason="audit")
     assert swarm.log_count() > before
+
+
+# ------------------------------------------------------------------- the CLI
+
+
+def test_the_cli_refuses_to_audit_a_kernel_it_cannot_judge():
+    """A gate that passes on nothing tested is worse than no gate."""
+    from immunegraph.audit import main as audit_main
+
+    store = _store("_test_audit_cli_empty")
+    store.reset()
+    store.create_indexes()
+    try:
+        # 0 facts, so it must refuse rather than report a vacuous pass
+        assert audit_main([]) == 2
+    finally:
+        store.graph.delete()
+
+
+def test_the_cli_reports_and_passes_on_a_seeded_kernel(monkeypatch):
+    from immunegraph.audit import main as audit_main
+
+    store = _store("_test_audit_cli")
+    store.reset()
+    store.create_indexes()
+    try:
+        swarm = Swarm(store, log=WriteLog(":memory:"))
+        swarm.start("cli", "s_cli")
+        for fact in FACTS:
+            swarm.kernel.register_fact(fact, trust_level="primary")
+        monkeypatch.setenv("FALKORDB_GRAPH", store.settings.graph)
+        assert audit_main([]) == 0
+    finally:
+        store.graph.delete()

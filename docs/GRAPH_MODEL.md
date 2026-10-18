@@ -30,7 +30,9 @@ Multi-tenancy is handled by FalkorDB's multi-graph feature, one graph per tenant
 
 ## 2. Nodes
 
-Ten node labels: `Tenant`, `Session`, `Message`, `Agent`, `Claim`, `Source`, `Infection`, `Antibody`, `KernelFact`, `RefutedStatement`. The last is negative memory, added after the self-audit showed that some falsehoods are unreachable by contradiction.
+Nine node labels in use: `Session`, `Message`, `Agent`, `Claim`, `Source`, `Infection`, `Antibody`, `KernelFact`, `RefutedStatement`.
+
+`RefutedStatement` is negative memory, added after the self-audit showed that some falsehoods are unreachable by contradiction. `Tenant` is declared in `schema.py` for validation but is never instantiated: tenancy is the `tenant_id` property on `Agent`.
 
 ```cypher
 // --- identity & episode (episodic memory) ---
