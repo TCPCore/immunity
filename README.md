@@ -407,6 +407,10 @@ antibody responds — so it doubles as a CI check and as the script for the demo
 
 ### Demo video
 
+> **Demo video:** <!-- PASTE THE HOSTED LINK HERE before submitting -->
+>
+> `python scripts/record_demo.py` rebuilds it in about six minutes.
+
 [`scripts/record_demo.py`](scripts/record_demo.py) produces the demo video from the running
 app: it drives the UI over the Chrome DevTools Protocol, burns in a caption bar, outlines the
 relevant panel on each beat, and encodes H.264. The result is deliberately not committed
@@ -518,7 +522,9 @@ material for that rather than asserting it:
 | [`docs/APPLICABILITY.md`](docs/APPLICABILITY.md) | What this is good for in production, measured latency, and what is not proven |
 | [`docs/DEPLOY.md`](docs/DEPLOY.md) | Getting a clickable live link: FalkorDB Cloud + Streamlit |
 | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Shot-by-shot script for the demo video |
-| [`docs/BLOG_POST.md`](docs/BLOG_POST.md) | Draft write-up for the best-blog-post side prize |
+| [`docs/BLOG_POST.md`](docs/BLOG_POST.md) | Long-form write-up — the clearest explanation of the work |
+
+---
 
 ## Data
 

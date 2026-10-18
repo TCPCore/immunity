@@ -146,8 +146,14 @@ written for exactly this, but reading it is not the same as understanding it. Ru
 ⚠️ **Highest-risk rule for this project.** See "Honest assessment" below.
 
 ### Rule 14 — Prize pool and awards
-✅ Noted. One prize per track, plus two side prizes; every member of a winning team
-receives the prize. Track 01: iPhone 18 Pro. Track 02: PS5 with GTA VI.
+✅ Noted. $20,000 total, **one prize per track**, and every member of a winning
+team receives it. Track 01: iPhone 18 Pro. Track 02: PS5 with GTA VI.
+Track 03: M6 Mac Mini.
+
+The published rules list **no side prize for blogging**. The blog post is written
+because it is the clearest explanation of the work and judges read it — not
+because there is a prize attached. (An earlier draft of these notes claimed two
+side prizes; that is not in the current rules and has been removed.)
 
 ### Rule 15 — IP belongs to the participant
 ✅ `LICENSE` (MIT) is present.
