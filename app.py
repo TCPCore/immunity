@@ -577,7 +577,7 @@ def render_audit(swarm: Swarm) -> None:
         f"that must not fire — in {shown.elapsed_ms:.0f} ms."
     )
 
-    if after is not None and before is not before:
+    if after is not None:
         st.success(
             f"Vaccinated {st.session_state.get('audit_vaccinated', 0)} blind spots. "
             f"Uncovered {len(before.uncovered)} → {len(after.uncovered)}, "

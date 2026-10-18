@@ -119,6 +119,91 @@ assumption is usually caught by a test. The value is real but less differentiate
 
 ---
 
+## 3b. What the audit is worth
+
+A medical test that never misses but always cries wolf is useless — and until now nobody in this
+field published the false-positive rate.
+
+The audit's value is **meta**: it does not make detection better, it makes detection *deployable*.
+Every claim in this space is about what a guardrail catches. Nobody prices what it *wrongly*
+catches, and a false positive in an agent system does concrete damage:
+
+| False positive | Real consequence |
+| --- | --- |
+| Correct price flagged as conflicting | A customer is told the wrong price by a system "protecting" them from a true sentence |
+| Correct claim quarantined | Knowledge is silently lost; the swarm gets less capable, not safer |
+| Agent wrongly penalised | Trust scores corrupt, and the graph now holds a false accusation |
+| Correct answer blocked inline | The product feels broken to the user |
+| Alerts reviewed by humans | Alert fatigue — people stop trusting it and switch it off |
+
+That last row is the reason this matters commercially: **an untrustworthy guardrail gets disabled**,
+and then it protects nothing. The false-positive rate is not a quality metric, it is a survival
+metric.
+
+We measured our own: **20% autoimmunity with 134 tests passing.** The fix took it to zero. The
+obvious repair for the next gap drove it to **82.8% while coverage still read 100%**.
+
+### What the number unlocks
+
+Four decisions that cannot be made without it:
+
+1. **Inline or async.** Our kernel check is 1.31 ms locally, 21 ms over a network. At low
+   autoimmunity you can put it in the request path and block. At high autoimmunity you must not,
+   because you would block correct answers. The audit tells you which system you have.
+2. **Ship or hold.** A pre-deployment gate: autoimmunity above a threshold (say 2%) fails the
+   build. A CI step, not a judgement call.
+3. **Which guardrail.** Run the same audit against two vendors on *your* corpus. Today "99%
+   detection" is unfalsifiable; with a pair it is comparable.
+4. **Did the fix help?** Knowledge bases change constantly. Re-run the audit; autoimmunity drift
+   tells you a policy edit broke the checker.
+
+### Verticals, ranked by the cost of a false positive
+
+**Tier 1 — high cost, written-down ground truth (best fit):**
+
+- **Customer support and sales agent fleets.** A blocked valid quote is lost revenue, and the
+  corpus is policies and price lists, which the audit handles well. This is the demo, running.
+- **Financial services compliance.** A false positive blocks a transaction or fires a report; heavy
+  audit requirements map onto provenance.
+- **Legal and contract review.** Cost per false positive is a lawyer's hour, and the corpus is
+  documents — what a kernel is good at.
+
+**Tier 2 — high stakes, harder corpus:**
+
+- **Healthcare documentation.** Flagging a correct clinical statement causes alert fatigue and can
+  suppress valid notes. *Caveat: clinical facts are less "written down" than prices, so probe
+  quality would be lower.*
+- **Insurance claims triage.** Flagging valid claims delays payouts and creates regulatory exposure.
+
+**Tier 3 — lower cost, high volume:**
+
+- **Engineering agents.** Blocking a correct suggestion is annoying rather than expensive, but the
+  audit is nearly free, so the ratio still works.
+- **Any RAG system with citations.** The "answer contradicts its own source" checker is this exact
+  problem.
+
+**Horizontal — platform vendors.** Whoever sells agent memory or guardrails can publish an
+autoimmunity rate as a differentiator. Largest value if it lands, because it turns a feature into a
+standard.
+
+### What the value is not
+
+- **It does not make detection better.** It makes it measurable. Value accrues only if someone acts
+  on the number.
+- **Coverage here is synthetic.** The probes are mutations of your own facts — a proxy for realistic
+  errors, **not** the real distribution of false claims in your traffic. High synthetic coverage does
+  not prove production coverage.
+- **One corpus, five facts, ~24 probes.** The 20% → 0% → 82% → 0% sequence demonstrates that the
+  *loop* works; it is not a validated benchmark.
+- **The heuristic is crude.** Subject binding is a leading-token match and will fail on sentences
+  whose subject is not the first content word.
+
+The honest commercial statement: **this is the instrument, not the cure.** Its value is turning
+"we believe our guardrail is safe" into a number that can go in a deployment review — and on our own
+code it found a failure, then caught the fix making it three times worse.
+
+---
+
 ## 4. How to apply it — four integration patterns
 
 You do not rewrite your agents. You add a **write path** and choose where to check.

@@ -171,6 +171,31 @@ BEATS: list[Beat] = [
         hold=11.0,
     ),
     Beat(
+        "Every system in this space reports what it CATCHES. That number is gameable: a detector "
+        "that flags everything scores 100%. So we measure the other side too.",
+        hold=10.0,
+        tab="Self-audit",
+    ),
+    Beat(
+        "Three numbers, never one. Coverage, autoimmunity — the rate at which it wrongly flags "
+        "TRUE statements — and attribution: did it fire at the right fact, or just at one?",
+        hold=13.0,
+        button="Run self-audit",
+    ),
+    Beat(
+        "The audit finds five falsehoods that NO fact contradicts — 'a Starter plan at the "
+        "Enterprise price'. Comparison can never catch those. So we record them as known-false "
+        "and re-measure: holes closed, autoimmunity still zero.",
+        hold=15.0,
+        button="Vaccinate blind spots",
+    ),
+    Beat(
+        "That pair earned its place on our own code. With 134 tests green it measured 20% "
+        "autoimmunity, we fixed it to zero — and the obvious repair drove it to 82% while "
+        "coverage still read 100%. One number would have shipped that as a success.",
+        hold=13.0,
+    ),
+    Beat(
         "The kernel of truth: what the swarm holds as TRUE, with the antibody that established "
         "each fact and the source behind it. Opposite in kind to Infection, which records "
         "what was wrong.",
