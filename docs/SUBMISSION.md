@@ -188,7 +188,7 @@ the written form of that explanation.
 - [x] Synthetic / public data only (rule 6)
 - [x] All work began after the hackathon opened (rule 8), first commit 12:36 IST vs 00:01 IST open
 - [x] AI assistant use disclosed (rule 11)
-- [ ] **Rule 12/13 review complete**, see `COMPLIANCE.md` for the five concrete steps
+- [ ] **Rule 12/13 review complete**. See the rule 12 and 13 entries in `COMPLIANCE.md` and the defence material in `docs/EXPLAINER.md`. This is the one item only a human can tick.
 - [x] MIT licence present
 - [x] `python -m immunegraph.verify_queries` passes
 - [x] `python -m pytest` passes (162 tests)
@@ -197,6 +197,6 @@ the written form of that explanation.
 
 - [x] `git push`, `origin/main` in sync with local `HEAD` (same SHA), verified with `git fetch`
 - [x] README renders from the remote, fetched raw and confirmed, screenshot returns 200
-- [ ] Confirm the demo video is public or unlisted-but-linkable, not private
+- [x] Demo video confirmed publicly playable, verified through the YouTube oEmbed endpoint rather than the watch page, which returns 200 for private videos too
 - [ ] Re-read the AI disclosure with a critical eye
-- [ ] Submit with both track names spelled exactly as published
+- [ ] Submit with all three track names spelled exactly as published in rule 5
