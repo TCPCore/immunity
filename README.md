@@ -357,8 +357,7 @@ a vacuous pass on nothing it actually tested.
 
 It found two real defects in this codebase, both pinned in `tests/test_audit.py`: a 20% autoimmunity
 rate from subject-blind conflict matching, and an 82% autoimmunity rate introduced by the obvious
-repair for the next gap. [`docs/NOVELTY.md`](docs/NOVELTY.md) states what is new here against the
-prior art, and `docs/BLOG_POST.md` tells the story.
+repair for the next gap.
 
 ---
 
@@ -650,15 +649,10 @@ material for that rather than asserting it:
 | Document | Purpose |
 | --- | --- |
 | [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) | Rule-by-rule audit with evidence and the open items |
-| [`docs/SUBMISSION.md`](docs/SUBMISSION.md) | Copy-paste text for the submission form and the final checklist |
-| [`docs/EXPLAINER.md`](docs/EXPLAINER.md) | How to defend the model, every query, and the trade-offs |
 | [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) | The schema and the queries the product depends on |
-| [`docs/NOVELTY.md`](docs/NOVELTY.md) | What is actually new, measured against the prior art, and what is not |
-| [`docs/SUBMISSION_PER_TRACK.md`](docs/SUBMISSION_PER_TRACK.md) | Copy-paste submission write-up for each of the three tracks |
 | [`docs/APPLICABILITY.md`](docs/APPLICABILITY.md) | What this is good for in production, measured latency, and what is not proven |
 | [`docs/DEPLOY.md`](docs/DEPLOY.md) | Getting a clickable live link: FalkorDB Cloud + Streamlit |
 | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Shot-by-shot script for the demo video |
-| [`docs/BLOG_POST.md`](docs/BLOG_POST.md) | Long-form write-up, the clearest explanation of the work |
 
 ---
 

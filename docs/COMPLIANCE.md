@@ -21,9 +21,9 @@ render from the remote.
 | # | Item | Owner | Why it blocks |
 | --- | --- | --- | --- |
 | 1 | **Confirm registration** | human | Rule 1. The schedule says registration is the one checkpoint you must act on. An unregistered team cannot submit. |
-| 2 | **Host the demo video** and link it | human | Rule 10 requires "a demo video showing the working project". It is recorded and verified (90.5s, captioned, reproducible via `scripts/record_demo.py`); it now needs uploading to YouTube/Loom and linking from `SUBMISSION.md`. Consider re-recording with narration, a silent captioned cut satisfies the rule but a narrated one argues rules 12/13 better. |
-| 3 | **Complete the rule 12/13 review** | human | Rules 12 and 13. You must be able to explain the model and every query, and demonstrate meaningful contribution. See `EXPLAINER.md`. |
-| 4 | **Finalise the AI disclosure** | human | Rule 11. The wording in `SUBMISSION.md` must be true when you submit it. It is deliberately not in the README. |
+| 2 | **Host the demo video** and link it | done | Rule 10 requires "a demo video showing the working project". Published at <https://www.youtube.com/watch?v=kX1Jscw91so>, 4:17, captioned, with a visible cursor and address bar. Verified publicly playable via the YouTube oEmbed endpoint. Linked from the README. |
+| 3 | **Complete the rule 12/13 review** | human | Rules 12 and 13. You must be able to explain the model and every query, and demonstrate meaningful contribution. `GRAPH_MODEL.md` and the README carry the material. |
+| 4 | **Finalise the AI disclosure** | human | Rule 11. A single line near the top of the README, and repeated in the submission form. Confirm it reads true. |
 | 5 | **Name both tracks at submission** | human | Rule 5: enter 01 and 02, and name *every* track you are entering. |
 
 ## What is already done and verified
@@ -141,12 +141,12 @@ pre-hackathon code exists, as the workspace was empty at session start.
 | README with setup instructions | ✅ | `../README.md` |
 | README with graph data model | ✅ | `../README.md` summary + `GRAPH_MODEL.md` |
 | The Cypher queries the product depends on | ✅ | `GRAPH_MODEL.md` §5 and `src/immunegraph/queries.py` |
-| Demo video | ✅ recorded, ⚠️ needs hosting | **90.5s at 1680×1200.** Silent, with burned-in captions and the relevant panel outlined on each beat, so it explains itself without narration. Produced from the live UI by the committed `scripts/record_demo.py`. Deliberately not tracked in git (`*.mp4` is ignored), host it and link it from `SUBMISSION.md`. |
+| Demo video | ✅ published | **4:17 at 1680×1200.** Silent with burned-in captions, a visible cursor that pulses where it clicks, and an address bar. Produced from the live UI by the committed `scripts/record_demo.py`; `DEMO_SCRIPT.md` is the shot list. Published at <https://www.youtube.com/watch?v=kX1Jscw91so> and linked from the README. Not tracked in git (`*.mp4` is ignored). |
 | Live deployment, or complete local setup | ✅ | `../README.md` Option A (Docker) and Option B (Cloud) |
 | The track being entered | ✅ | `../README.md`, tracks 01, 02 and 03 |
 
 ### Rule 11, Disclose AI coding assistant use
-✅ Disclosed as a single line, in both the README (near the top) and `SUBMISSION.md`: AI was used
+✅ Disclosed as a single line, near the top of the README and repeated on the submission form: AI was used
 for code generation and editing; the design, iterations, testing and decisions were human.
 Enforced by `tests/test_docs.py`, which fails if the two copies ever disagree.
 
@@ -155,7 +155,7 @@ confirm the split is stated correctly.
 
 ### Rule 12, Participants must understand the code and be able to explain it
 ⚠️ **Action required by the human.** For every query you must be able to answer: what
-does it find, why is it written this way, what breaks without it. `EXPLAINER.md` is
+does it find, why is it written this way, what breaks without it. `GRAPH_MODEL.md` is
 written for exactly this, but reading it is not the same as understanding it. Run
 `python -m immunegraph.verify_queries`, change a query, break it, watch it fail.
 
@@ -196,7 +196,7 @@ actual verification.
 
 Concrete, non-negotiable steps before submitting:
 
-1. Read `EXPLAINER.md` end to end and be able to reproduce its arguments unaided.
+1. Read `GRAPH_MODEL.md` and the README end to end and be able to reproduce its arguments unaided.
 2. Run `python -m immunegraph.verify_queries` yourself and read the output for every
    query, not just the pass/fail summary.
 3. Deliberately break a query (flip `ORDER BY score ASC` to `DESC` in `Q7`) and explain
@@ -205,5 +205,5 @@ Concrete, non-negotiable steps before submitting:
    The contribution should be visible in the history, not just asserted in a document.
 5. On camera, explain the graph model and one query without notes.
 
-The disclosure in `SUBMISSION.md` is drafted but deliberately left marked as needing your
+The disclosure in the README is drafted but deliberately left marked as needing your
 confirmation, because only you can make its claims true.

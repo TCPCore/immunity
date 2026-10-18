@@ -128,5 +128,5 @@ tracked file.
 - [ ] `verify_queries` passes against the **cloud** instance
 - [ ] "Run Mars mission" works on the deployed URL
 - [ ] "Rebuild from log" reports an identical graph
-- [ ] Link added to `README.md` (top, above the fold) and `docs/SUBMISSION.md`
+- [ ] Link added to `README.md` (top, above the fold)
 - [ ] Instance pinged shortly before judging so it is not asleep

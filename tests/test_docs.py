@@ -68,8 +68,6 @@ def test_required_submission_documents_present():
         "LICENSE",
         "docs/GRAPH_MODEL.md",
         "docs/COMPLIANCE.md",
-        "docs/EXPLAINER.md",
-        "docs/SUBMISSION.md",
         "docs/DEMO_SCRIPT.md",
         "docker-compose.yml",
         ".env.example",
@@ -90,22 +88,19 @@ def test_readme_names_all_three_tracks():
         assert track in readme, f"README is missing the track name: {track}"
 
 
-def test_ai_disclosure_is_one_line_and_present_in_both_places():
-    """Rule 11, kept to a single sentence, and identical in the README and the submission.
+def test_ai_disclosure_is_one_line_and_near_the_top_of_the_readme():
+    """Rule 11, kept to a single sentence and stated above the fold.
 
-    Pinned because the wording and the location have both changed several times.
-    If it is edited in one place and not the other, this fails.
+    The submission write-up lives outside the repository, so the README is the
+    only copy that can be checked here. Pinned because the wording and the
+    location have both changed several times.
     """
     line = ("AI was used for code generation and editing. "
             "The design, iterations, testing and decisions were human.")
 
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    submission = (REPO_ROOT / "docs" / "SUBMISSION.md").read_text(encoding="utf-8")
-
     assert line in readme, "README is missing the one-line AI disclosure"
-    assert line in submission, "SUBMISSION is missing the one-line AI disclosure"
-    # Above the fold, not buried.
-    assert readme.index(line) < len(readme) // 4
+    assert readme.index(line) < len(readme) // 4, "disclosure has drifted below the fold"
 
 
 def test_readme_contains_the_cypher_the_product_depends_on():
@@ -131,6 +126,6 @@ def test_readme_documents_the_editable_install():
 
 def test_documented_commands_use_the_installed_package():
     """Commands must not depend on a PYTHONPATH the README never sets."""
-    for path in [REPO_ROOT / "README.md", REPO_ROOT / "docs/SUBMISSION.md"]:
+    for path in [REPO_ROOT / "README.md", *sorted((REPO_ROOT / "docs").glob("*.md"))]:
         text = path.read_text(encoding="utf-8")
         assert "PYTHONPATH" not in text, f"{path.name} relies on an undocumented PYTHONPATH"
