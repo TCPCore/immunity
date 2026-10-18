@@ -14,7 +14,6 @@ Stating this first, because pretending otherwise is the fastest way to lose cred
 | Belief as a justification graph; retract when justification fails | Doyle (1979), de Kleer (1986). Truth maintenance systems. |
 | Belief revision under contradiction | Alchourrón, Gärdenfors, Mackinson (1985). |
 | Multi-agent collaboration as a directed dependency graph; cascades as an intrinsic pathology; a genealogy-graph governance layer that suppresses propagation | [From Spark to Fire](https://arxiv.org/html/2603.04474) (2026). Measured over six frameworks, defence 0.32 → 0.89. |
-| The immune-system metaphor for agents; the vaccine taxonomy; the six-layer Immune Tower | [Agent-Native Immune System](https://arxiv.org/abs/2606.28270) (2026). |
 | Generating mutations of a program to find weak tests | Mutation testing, DeMillo et al. (1978). |
 | Testing without an oracle by transforming inputs | Metamorphic testing, Chen et al. (1998). |
 | Detecting unsupported claims, cycles and contradictions as traversals | Ours, but it is a straightforward application of the above. |
@@ -26,13 +25,9 @@ core of the project and it is not novel.
 
 ## 2. The gap that is actually open
 
-The ANIS paper closes by listing what the field has **not** done, and one item is unusually
-concrete:
-
-> "novel evaluation metrics such as the **Autoimmunity Rate** (false-positive intervention rate)"
-
-They name it. They do not define it, compute it, or use it to judge a system. As of writing, no
-system I can find reports it, every paper and product reports **coverage**: how much was caught.
+The other side has a name, **autoimmunity**, and it is almost never reported. Every paper and
+product I looked at publishes coverage, how much was caught. None publishes what was wrongly
+caught. That is a statement about what I could find, not about anyone's work being incomplete.
 
 That asymmetry is not cosmetic. **Coverage alone is a gameable metric.** A detector that flags
 every statement it sees achieves perfect coverage and is worthless. Any evaluation that reports one

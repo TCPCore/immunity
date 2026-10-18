@@ -183,7 +183,7 @@ that established it. From then on every new claim is judged against the kernel.
 | --- | --- | --- |
 | Finds | lies the swarm has **never seen** | lies it **already knows** |
 | Method | traversal over the support structure | lexical match against facts |
-| Cost | extraction + full scan, **3.1s** for the cascade | **~5ms**, no model call |
+| Cost | extraction over every message plus a full graph scan, **20.3 ms** for a 12-node graph on a local instance | **1.31 ms** median, 2.25 ms p95, no model call |
 
 That contrast is the whole point, and it is measured rather than asserted: every verdict
 carries its own elapsed time, shown in the UI and printed by the demo.
@@ -566,7 +566,7 @@ the number that actually appears at that beat.
    instantly.** The swarm does not get fooled twice.
 9. **Q8** measures whether antibodies actually worked across outbreaks.
 10. The antibody's sourced correction becomes a **`KernelFact`** (K1). A later claim is
-    judged against it (K2) and, if it conflicts, downgraded, **in ~5ms with no model call**.
+    judged against it (K2) and, if it conflicts, downgraded, **in about 1.3 ms with no model call**.
     The swarm is measurably harder to fool than it was at step 1.
 
 ---

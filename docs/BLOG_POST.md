@@ -143,7 +143,8 @@ One mechanism, three domains, no special cases.
 
 Every system in this space reports coverage, meaning how much it catches. That number is gameable. A detector that flags every statement scores 100% and is useless.
 
-The other side has a name. A recent paper on agent immune systems lists the **Autoimmunity Rate**, the false-positive intervention rate, among the field's open challenges. It is not defined, computed, or used there.
+The other side has a name, **autoimmunity**, and it is the number almost nobody reports. Every
+paper and product I looked at publishes what it catches. None publishes what it wrongly catches.
 
 So I built it, paired it with coverage, and added a third measure: did the defence fire at the right fact, or merely at one. Then I pointed all three at my own code.
 
