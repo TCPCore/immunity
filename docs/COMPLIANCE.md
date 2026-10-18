@@ -146,10 +146,9 @@ pre-hackathon code exists, as the workspace was empty at session start.
 | The track being entered | ✅ | `../README.md`, tracks 01, 02 and 03 |
 
 ### Rule 11, Disclose AI coding assistant use
-✅ Disclosed in `SUBMISSION.md` only, deliberately not in the README: the idea, every iteration of
-it, the structure, the decisions and the verification were human; the AI contribution was code
-edits to the implementation, tests and documentation text. Verification is evidenced by
-`verify_queries` and the six defects running it caught.
+✅ Disclosed as a single line, in both the README (near the top) and `SUBMISSION.md`: AI was used
+for code generation and editing; the design, iterations, testing and decisions were human.
+Enforced by `tests/test_docs.py`, which fails if the two copies ever disagree.
 
 ⚠️ Still needs one human read-through before submission, because only the participant can
 confirm the split is stated correctly.

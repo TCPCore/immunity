@@ -90,20 +90,22 @@ def test_readme_names_all_three_tracks():
         assert track in readme, f"README is missing the track name: {track}"
 
 
-def test_ai_disclosure_lives_in_the_submission_not_the_readme():
-    """Rule 11 is satisfied by the submission form, and the README stays product-only.
+def test_ai_disclosure_is_one_line_and_present_in_both_places():
+    """Rule 11, kept to a single sentence, and identical in the README and the submission.
 
-    Pinned because it has already been moved once: a disclosure in the README is
-    out of place for a reader who came for the architecture, and having it in two
-    places means it can disagree with itself.
+    Pinned because the wording and the location have both changed several times.
+    If it is edited in one place and not the other, this fails.
     """
+    line = ("AI was used for code generation and editing. "
+            "The design, iterations, testing and decisions were human.")
+
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     submission = (REPO_ROOT / "docs" / "SUBMISSION.md").read_text(encoding="utf-8")
 
-    assert "AI coding assistant disclosure" not in readme
-    assert "AI assistant disclosure" not in readme
-    assert "AI assistant disclosure (rule 11)" in submission
-    assert "code edits" in submission
+    assert line in readme, "README is missing the one-line AI disclosure"
+    assert line in submission, "SUBMISSION is missing the one-line AI disclosure"
+    # Above the fold, not buried.
+    assert readme.index(line) < len(readme) // 4
 
 
 def test_readme_contains_the_cypher_the_product_depends_on():
