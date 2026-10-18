@@ -202,3 +202,34 @@ def test_app_shows_a_clear_error_when_the_database_is_unreachable(monkeypatch):
         ), [e.value for e in at.error]
     finally:
         st.cache_resource.clear()
+
+
+def test_a_stale_cached_audit_result_is_discarded_not_crashed():
+    """Streamlit keeps session state across a code change, so an object created
+    by an older version of the module can outlive its class. Asking it for an
+    attribute added later raised AttributeError on a page that otherwise worked.
+    """
+    import streamlit as st
+    from streamlit.testing.v1 import AppTest
+
+    class OldReport:
+        """What Report looked like before precision and recall existed."""
+
+        coverage = 1.0
+        autoimmunity = 0.0
+        controls = 3
+        contradictions = 2
+        caught = 2
+        false_alarms = 0
+        elapsed_ms = 1.0
+        uncovered = []
+        misattributed = []
+
+    st.cache_resource.clear()
+    at = AppTest.from_file(str(APP_PATH), default_timeout=120)
+    at.run()
+    at.session_state["audit_before"] = OldReport()
+
+    at.run()  # must not raise
+    assert not at.exception, at.exception
+    assert "audit_before" not in at.session_state

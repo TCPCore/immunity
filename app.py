@@ -529,6 +529,25 @@ def render_audit(swarm: Swarm) -> None:
         "restatements, autoimmunity against the host, and whether it fired at the **right fact**."
     )
 
+    # Streamlit keeps session state across a code change but does not re-import
+    # the modules under src/, so a Report cached before an upgrade can outlive the
+    # class that produced it. Asking a stale object for an attribute added later
+    # raises AttributeError on a page that otherwise works. Validate the cached
+    # object and drop it rather than trusting it.
+    before = st.session_state.get("audit_before")
+    if before is not None and not all(
+        hasattr(before, attr)
+        for attr in ("precision", "recall", "f1", "autoimmunity", "attribution", "outcomes")
+    ):
+        st.session_state.pop("audit_before", None)
+        st.session_state.pop("audit_after", None)
+        st.session_state.pop("audit_vaccinated", None)
+        st.warning(
+            "The cached audit result came from an earlier version of this app, so it has been "
+            "discarded. Run the audit again."
+        )
+        before = None
+
     auditor = KernelAuditor(swarm)
     col_a, col_b = st.columns(2)
     with col_a:
@@ -554,7 +573,6 @@ def render_audit(swarm: Swarm) -> None:
             st.rerun()
         return
 
-    before = st.session_state.get("audit_before")
     if before is None:
         st.info(
             "Nothing audited yet. The audit mutates the kernel's own facts and tests the "
