@@ -37,6 +37,11 @@ URL = "http://127.0.0.1:8501"
 WIDTH, HEIGHT = 1680, 1200
 FPS = 10
 JPEG_QUALITY = 78
+# Polling capture: ~5 frames per second. Fast enough for the cursor and
+# click pulses to read, slow enough that the screenshot round-trip keeps up.
+CAPTURE_INTERVAL = 0.2
+# Trim the pacing. Long holds on a static panel read as a slideshow.
+HOLD_SCALE = 0.72
 
 OUT = Path("/tmp/immunegraph-demo/demo.mp4")
 FRAMES_DIR = Path("/tmp/immunegraph-demo/frames")
@@ -227,23 +232,64 @@ BEATS: list[Beat] = [
 
 
 def click_js(label: str) -> str:
+    """Move a visible cursor to the button, pulse it, then click.
+
+    A screencast of a Streamlit app is mostly a still page, and a still page with
+    changing captions does not read as "an agent running". The cursor is the
+    cheapest fix: it shows what is being pressed and when, so a viewer can
+    follow the interaction instead of inferring it.
+    """
     return """(() => {
+      if (!document.getElementById('__ig_kf')) {
+        const st = document.createElement('style');
+        st.id = '__ig_kf';
+        st.textContent = '@keyframes __igpulse { to { transform: scale(3); opacity: 0; } }';
+        document.head.appendChild(st);
+      }
+      let c = document.getElementById('__ig_cursor');
+      if (!c) {
+        c = document.createElement('div');
+        c.id = '__ig_cursor';
+        c.style.cssText = [
+          'position:fixed','z-index:2147483647','width:16px','height:16px',
+          'border-radius:50%','background:#E8453C','border:2px solid #fff',
+          'box-shadow:0 2px 10px rgba(0,0,0,.45)','pointer-events:none',
+          'transform:translate(-50%,-50%)','transition:left .38s ease,top .38s ease',
+          'left:50%','top:50%'
+        ].join(';');
+        document.body.appendChild(c);
+      }
       const b = [...document.querySelectorAll('button')]
-        .find(x => (x.innerText || '').includes(%s));
+        .find(x => (x.innerText || '').includes(__TOKEN__));
       if (!b) return 'NOT_FOUND';
-      b.click();
+      const r = b.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      c.style.left = cx + 'px';
+      c.style.top = cy + 'px';
+      setTimeout(() => {
+        const p = document.createElement('div');
+        p.style.cssText = [
+          'position:fixed','z-index:2147483646','border-radius:50%',
+          'border:3px solid #E8453C','pointer-events:none',
+          'left:' + (cx - 14) + 'px','top:' + (cy - 14) + 'px',
+          'width:28px','height:28px','animation:__igpulse .65s ease-out forwards'
+        ].join(';');
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 800);
+        b.click();
+      }, 430);
       return 'CLICKED';
-    })()""" % json.dumps(label)
+    })()""".replace("__TOKEN__", json.dumps(label))
 
 
 def tab_js(label: str) -> str:
     return """(() => {
       const t = [...document.querySelectorAll('[role="tab"]')]
-        .find(x => (x.innerText || '').includes(%s));
+        .find(x => (x.innerText || '').includes(__TOKEN__));
       if (!t) return 'NOT_FOUND';
       t.click();
       return 'SWITCHED';
-    })()""" % json.dumps(label)
+    })()""".replace("__TOKEN__", json.dumps(label))
 
 
 def caption_js(text: str) -> str:
@@ -260,9 +306,37 @@ def caption_js(text: str) -> str:
         ].join(';');
         document.body.appendChild(el);
       }
-      el.textContent = %s;
+      el.textContent = __TOKEN__;
       return 'ok';
-    })()""" % json.dumps(text)
+    })()""".replace("__TOKEN__", json.dumps(text))
+
+
+def urlbar_js(url: str) -> str:
+    """A slim address bar, so the video shows *where* it is running.
+
+    Without it the recording is a rectangle of UI with no provenance. With it, a
+    viewer can see this is a served application rather than a local screenshot.
+    """
+    return """(() => {
+      let el = document.getElementById('__ig_urlbar');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = '__ig_urlbar';
+        el.style.cssText = [
+          'position:fixed','left:0','right:0','top:0','z-index:2147483646',
+          'height:34px','display:flex','align-items:center','gap:10px',
+          'padding:0 14px','background:#EDEFF3','border-bottom:1px solid #D6DAE1',
+          'font:13px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+          'color:#3A4658','box-sizing:border-box'
+        ].join(';');
+        document.body.appendChild(el);
+      }
+      el.innerHTML = '<span style="color:#5A6472">&#128274;</span>' +
+        '<span style="flex:1;background:#fff;border:1px solid #D6DAE1;border-radius:14px;' +
+        'padding:4px 12px;color:#2A3547;overflow:hidden;white-space:nowrap;' +
+        'text-overflow:ellipsis">' + __TOKEN__ + '</span>';
+      return 'ok';
+    })()""".replace("__TOKEN__", json.dumps(url))
 
 
 def highlight_js(selector: str | None, index: int | None) -> str:
@@ -406,6 +480,15 @@ async def wait_for_app(cdp: "CDP", timeout: float = 90.0) -> bool:
 
 
 async def record(frames_dir: Path) -> int:
+    """Drive the app and capture it by polling screenshots.
+
+    This used Page.startScreencast originally, which is change-driven and gives a
+    smooth result until it does not: Chrome closes the socket mid-take with an
+    internal error, and the run dies after several minutes of work. Polling
+    captureScreenshot trades that for predictability. It is slowed only by the
+    screenshot round-trip, it never silently stops, and a failed capture raises
+    immediately instead of leaving a truncated video behind.
+    """
     targets = json.load(urllib.request.urlopen("http://127.0.0.1:9222/json"))
     page = next((t for t in targets if t.get("type") == "page"), None)
     if page is None:
@@ -415,33 +498,34 @@ async def record(frames_dir: Path) -> int:
     for stale in frames_dir.glob("src_*.jpg"):
         stale.unlink()
 
-    # Clean cold open. The app renders whatever is already in the graph, so a
-    # previous run would otherwise appear behind the opening caption.
+    # Clean cold open. The app renders whatever is already in the graph.
     from immunegraph.config import Settings
     from immunegraph.db import GraphStore
 
     store = GraphStore(Settings.from_env())
     if not store.ping():
-        raise SystemExit("FalkorDB unreachable, start it with: docker compose up -d")
+        raise SystemExit("FalkorDB unreachable - start it with: docker compose up -d")
     store.reset()
     store.create_indexes()
     print("graph reset for a clean cold open", flush=True)
 
     timestamps: list[float] = []
 
-    async with websockets.connect(page["webSocketDebuggerUrl"], max_size=400 * 1024 * 1024) as ws:
+    async with websockets.connect(
+        page["webSocketDebuggerUrl"], max_size=400 * 1024 * 1024
+    ) as ws:
         cdp = CDP(ws)
         await cdp.start()
 
-        async def on_frame(params: dict) -> None:
-            index = len(timestamps)
-            timestamps.append(params["metadata"]["timestamp"])
-            (frames_dir / f"src_{index:05d}.jpg").write_bytes(
-                base64.b64decode(params["data"])
+        async def capture() -> None:
+            result = await cdp.call(
+                "Page.captureScreenshot", {"format": "jpeg", "quality": JPEG_QUALITY}
             )
-            await cdp.call("Page.screencastFrameAck", {"sessionId": params["sessionId"]})
-
-        cdp.on("Page.screencastFrame", on_frame)
+            index = len(timestamps)
+            timestamps.append(time.time())
+            (frames_dir / f"src_{index:05d}.jpg").write_bytes(
+                base64.b64decode(result["data"])
+            )
 
         await cdp.call("Page.enable")
         await cdp.call("Runtime.enable")
@@ -453,38 +537,34 @@ async def record(frames_dir: Path) -> int:
         print("Waiting for the app to render ...", flush=True)
         if not await wait_for_app(cdp):
             raise RuntimeError("the app never rendered a dashboard within 90s")
-        print("App is up.", flush=True)
 
-        await cdp.call(
-            "Page.startScreencast",
-            {
-                "format": "jpeg",
-                "quality": JPEG_QUALITY,
-                "maxWidth": WIDTH,
-                "maxHeight": HEIGHT,
-                "everyNthFrame": 1,
-            },
-        )
+        await cdp.js(urlbar_js(URL))
+        await asyncio.sleep(1.0)
+        await capture()
         print("Recording ...", flush=True)
 
         for index, beat in enumerate(BEATS, start=1):
             if beat.tab:
                 switched = await cdp.js(tab_js(beat.tab))
                 print(f"  tab -> {beat.tab}: {switched}", flush=True)
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(1.6)
             await cdp.js(caption_js(beat.caption))
             await cdp.js(highlight_js(beat.highlight, beat.highlight_index))
             action = ""
             if beat.button:
                 action = f"  [{beat.button} -> {await cdp.js(click_js(beat.button))}]"
             mark = "  [highlight]" if beat.highlight else ""
-            print(f"  beat {index}/{len(BEATS)}  {beat.hold:4.1f}s{action}{mark}", flush=True)
-            remaining = beat.hold
-            while remaining > 0:
-                await asyncio.sleep(min(0.25, remaining))
-                remaining -= 0.25
+            hold = beat.hold * HOLD_SCALE
+            print(f"  beat {index}/{len(BEATS)}  {hold:4.1f}s{action}{mark}", flush=True)
 
-        await cdp.call("Page.stopScreencast")
+            remaining = hold
+            while remaining > 0:
+                await capture()
+                step = min(CAPTURE_INTERVAL, remaining)
+                await asyncio.sleep(step)
+                remaining -= step
+
+        await capture()
 
     (frames_dir / "timestamps.json").write_text(json.dumps(timestamps), encoding="utf-8")
     return len(timestamps)
