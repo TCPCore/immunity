@@ -6,7 +6,7 @@ Agent A says "Mars has breathable oxygen at night." Agent B, whose job is to rea
 
 Three agents. No exceptions. No errors. Every inference valid. A plan that kills the crew.
 
-The failure is not that an LLM hallucinated. That happens, and we have tools for it. The failure is that **the swarm manufactured consensus**. One agent invented something, two others derived from it correctly, and now three agents agree. And agreement is exactly what we use as a signal of truth.
+The failure is not that an LLM hallucinated. That happens, and we have tools for it. The failure is that **the swarm manufactured consensus**. One agent invented something, two others derived from it correctly, and now three agents agree. Agreement is exactly what we use as a signal of truth.
 
 The standard fix, add a memory layer, does not touch this. Memory layers are very good at answering "what was said". They persist it, embed it, retrieve it. None of them answer "is this swarm getting epistemically sick".
 
@@ -50,7 +50,7 @@ RETURN root.id, size(downs) AS infected_claims, count(DISTINCT a) AS exposed_age
 
 That query is the product. **Severity is defined as its output.** Two contaminated claims and three exposed agents is severity 6.0. Delete the database and "severity" has no meaning, which is the test of whether a graph is doing real work or just being drawn.
 
-Same principle for trust. A naive design decrements a counter when an agent gets blamed. Then it drifts, because you now maintain the same fact in two places. Instead trust is recomputed from exposure, and the second clause below is what matters:
+Same principle for trust. A naive design decrements a counter when an agent gets blamed. Then it drifts, because you maintain the same fact in two places. Instead trust is recomputed from exposure, and the second clause below is what makes it interesting:
 
 ```cypher
 MATCH (a:Agent)
@@ -63,13 +63,13 @@ WITH a, [x IN raw WHERE x IS NOT NULL] AS infs
 RETURN a.name, a.base_trust - (0.15 * size(infs)) AS effective_trust
 ```
 
-You can assert an infected claim, or you can assert something derived from one. In the demo the Planner drops to 0.85 trust despite never touching the false claim, because it inherited the infection through the chain.
+You can assert an infected claim, or you can assert something derived from one. In the demo the Planner drops to 0.85 trust despite never touching the false claim, because it inherited the infection through the chain. Nobody had to write that rule down twice, because there is only one copy of the truth.
 
 ## Two memories, not one
 
-This is the design decision I would defend hardest, and it is where my approach differs from most.
+This is the design decision I would defend hardest, and it is the part most systems skip.
 
-Systems in this space track **one** thing: what went wrong. A blocklist, an alert, a flagged record.
+The usual approach tracks **one** thing: what went wrong. A blocklist, an alert, a flagged record.
 
 That leaves the swarm unable to answer the next question. Fine, you caught the lie. What should it believe instead?
 
@@ -82,15 +82,47 @@ kernel fast path   1.31 ms median, 2.25 ms p95
 detection sweep    20.3 ms
 ```
 
-Roughly 15x, and every correction moves work from the expensive path to the cheap one. Detection is insurance. The kernel is immunity. A system that only detects pays the expensive path forever.
+Roughly 15x, and every correction moves work from the expensive path to the cheap one. That is what immunity should do. A system that only detects pays the expensive path forever, and gets slower as it learns more.
 
-## Making it real: three things a judge can click
+## How this differs from the tooling you already use
+
+Most of the ecosystem around agent memory answers one question: what was said.
+
+```
+SYSTEM                      ANSWERS                          LEAVES OPEN
+vector memory               what was said                    no support structure
+(Mem0, Zep, Letta)                                           contradictions coexist
+
+GraphRAG                    what is related                  the graph is a retrieval
+(Microsoft, Neo4j, FalkorDB)                                 index, not a model of belief
+
+guardrails                   is this output acceptable        one output at a time; no
+(NeMo, Guardrails AI)                                        notion of derivation
+
+hallucination scoring        does this answer match           pointwise; cannot tell "wrong"
+(Galileo, Patronus, Vectara) its context                      from "wrong and contagious"
+
+observability                what happened                    not what was justified
+(LangSmith, Langfuse)
+```
+
+Putting justification in the graph is the difference, and three things follow from it that the above cannot do:
+
+**Severity becomes computable.** Not a model's confidence score, but reach through the derivation graph.
+
+**Trust becomes derivable.** An agent's reliability is a function of what it asserted and what those claims descended from, computed on read.
+
+**Why becomes a query.** "Which source justified this, which antibody established this fact, what did we believe last week" are traversals, not reconstructions from logs.
+
+This builds on published work and I want to be straight about that: dependency-graph cascade modelling for LLM collaboration, and truth maintenance from the 1970s. Knowing the shape of the problem is not the hard part. Making it run, measuring it, and finding where it breaks is.
+
+## Making it real: three things you can click
 
 I did not want a diagram of a concept. Three working paths:
 
 **1. The scripted cascade.** Three agents plan a Mars mission. The first asserts something with no source. The other two reason correctly. The swarm detects the unsupported root, opens an infection, dispatches an antibody citing NASA, quarantines the claim, and invalidates the two derivations. Severity 6.0.
 
-**2. Anyone can submit a claim.** This matters, because a scripted demo only proves the mechanism works on inputs you chose. You type a statement, it is grounded against Wikipedia (free, no API key, public data), and then the same machinery runs. The infection genuinely spreads through the Analyst and Planner, because those agents really do derive claims from yours, with real `DERIVED_FROM` edges. The severity climbs 2.0 to 4.0 to 6.0 because it is recomputed from the graph after each write, not because a script says so.
+**2. Anyone can submit a claim.** This matters, because a scripted demo only proves the mechanism works on inputs you chose. You type a statement, it is grounded against Wikipedia (free, no API key, public data), and then the same machinery runs. The infection genuinely spreads through the Analyst and Planner, because those agents really do derive claims from yours, with real `DERIVED_FROM` edges. Severity climbs 2.0 to 4.0 to 6.0 because it is recomputed from the graph after each write, not because a script says so.
 
 ```
 Visitor asserts: "Venus has a breathable atmosphere"
@@ -103,21 +135,15 @@ Antibody dispatched, citing the public source
 Quarantined, cascade contained
 ```
 
-Getting this honest took two corrections. Wikipedia's search matches individual words, so "Mars is made of cheese" returned articles about cheese, and my first version reported that claim as **supported** by an article about Cheez-Its. Articles are now only considered if the title shares a token with the claim. And agreement requires a single sentence to contain essentially everything the claim asserts, because the overlap coefficient flatters short claims.
-
 **3. A company brain.** Four synthetic documents load as sources, and the facts they establish become kernel facts linked to them. A sales agent invents a price, support repeats it with a real derivation edge, and the infection is contained by an antibody citing the pricing document. Then the price actually changes, the old fact is superseded, and the answer that was correct last week gets flagged.
 
-## The part that is genuinely new, and the part that is not
+One mechanism, three domains, no special cases.
 
-I am not going to claim this idea is unprecedented. It is not.
-
-Truth maintenance and belief revision are from 1979. The insight that multi-agent LLM collaboration should be modelled as a directed dependency graph, with cascades as an intrinsic pathology and a governance layer to suppress them, is published and measured over six frameworks. The immune-system metaphor for agents, including a vaccine taxonomy, is published too.
-
-What I think is actually new is narrower: **how you know your detector is any good.**
+## The part I think is genuinely new: measuring the other side
 
 Every system in this space reports coverage, meaning how much it catches. That number is gameable. A detector that flags every statement scores 100% and is useless.
 
-The other side has a name. One recent paper lists the **Autoimmunity Rate**, the false-positive intervention rate, among the field's open challenges. It does not define, compute, or use it. I could not find anyone who does.
+The other side has a name. A recent paper on agent immune systems lists the **Autoimmunity Rate**, the false-positive intervention rate, among the field's open challenges. It is not defined, computed, or used there.
 
 So I built it, paired it with coverage, and added a third measure: did the defence fire at the right fact, or merely at one. Then I pointed all three at my own code.
 
@@ -127,9 +153,9 @@ AUTOIMMUNITY   TRUE statements it wrongly flags
 ATTRIBUTION    did it fire at the RIGHT fact
 ```
 
-The probes are generated from the system's own knowledge base: perturbed numbers, transplanted numbers, substituted entities, and truth-preserving paraphrases that must not fire. No labelled dataset needed. Your knowledge base is the test set.
+The probes are generated from the system's own knowledge base: perturbed numbers, transplanted numbers, substituted entities, and truth-preserving paraphrases that must not fire. No labelled dataset required. Your knowledge base is the test set. That makes the number about your corpus rather than someone else's benchmark.
 
-## What the audit found, with 134 tests passing
+## What it found, with 134 tests passing
 
 Two things, and the second is the argument for the metric.
 
@@ -151,23 +177,27 @@ autoimmunity 0% -> 81.8%   the vaccine was attacking the host
 
 Recording "Starter plan costs 499" made it fuzzily match the **true** "Enterprise plan costs 499" on every word but one. A system reporting only coverage would have shipped that as a success. Applying subject binding one level deeper, to the vaccine itself, closed the holes with autoimmunity held at zero.
 
-That sequence is the whole argument for measuring both sides. One number would have shown a perfect score twice.
+One number would have shown a perfect score twice.
 
-## What I am not claiming
+## The engineering that made it survive contact
 
-This is the part that matters more than the feature list.
+A Cypher query that has never been executed is not a feature. FalkorDB implements a subset of openCypher, and my assumptions were wrong repeatedly, so the repository ships a verifier that seeds a fixture containing a cascade, a three-hop cycle, a contradiction cluster and embeddings, then executes every query and checks the shape of each result before commit. Eighteen queries, all executed.
 
-The core idea is not mine. The dependency-graph cascade work is published, and truth maintenance is decades old.
+Six bugs only appeared when the code ran. The two I would point at:
 
-The antibody is a model and can be wrong. It is constrained to cite a source, record its outcome, and make a bad correction visible in the graph. This is a containment system, not a truth oracle.
+**A hidden write.** The cascade-containment update returned ids, so it read like a query and had been written with the read helper, which is not logged. It worked. Then a rebuild from the log silently lost it, and two claims reverted from `suspect` to `active`. There is now a structural test that fails if any write hides inside a read helper.
 
-There is no labelled evaluation set, so there is no precision or recall figure for conflict detection. The tests assert behaviour on hand-written cases, not accuracy on a corpus.
+**The concurrency bug I would have shipped.** Reading `max(seq)` and adding one is a read-only query, and concurrent readers legitimately see the same value. With eight writers and two hundred writes the naive version produced 37 distinct sequence numbers. Allocating with a `SET`, so the database serialises it, gives 200 out of 200.
 
-Matching is lexical. A contradiction phrased in different vocabulary is missed, and the system says "inconclusive" rather than guessing.
+The graph is also treated as a projection rather than the source of truth. Every write is appended to a log before it is applied, and the rebuild is verified rather than assumed:
 
-Scale is untested. Every number in this post is from a graph of tens of nodes.
+```
+writes logged : 73
+replayed      : 73 writes, 0 failed
+identical     : True
+```
 
-Durability is within a session. The write-ahead log protects against a graph wipe; true cross-restart durability needs durable storage.
+Identical includes node ids. That is why the log stores whole statements rather than semantic events: replaying a statement reproduces its generated id exactly, whereas regenerating one would produce a different graph with every reference broken.
 
 ## Running it
 
@@ -185,21 +215,21 @@ uv pip install --python .venv/bin/python -e ".[dev]"
 streamlit run app.py
 ```
 
-`verify_queries` executes every Cypher query against a live instance and checks the shape of each result before commit. That exists because a query which has never run is not a feature: six of the bugs I hit were invisible in the source and only appeared when executed.
+`verify_queries` executes every Cypher query against a live instance. `verify_tracks.py` runs the capability each competition track is about and prints pass or fail against the graph, which is a stronger claim than naming tracks in a README.
 
-`verify_tracks.py` runs the capability each competition track is about and prints pass or fail against the graph, which is a stronger claim than naming the tracks in a README.
+## What it does not do yet
 
-## If you are building something similar
+Scope, stated plainly so you can judge the rest.
 
-Pick the quantity that should be a traversal, and make it one. If you can compute your product's core metric without the database, you do not have a graph product.
+The antibody is a model and can be wrong. It is constrained to cite a source, record its outcome, and make a bad correction visible in the graph. This is a containment system, not a truth oracle.
 
-Never let a model decide something your demo depends on. Use the model for language, the graph for belief.
+Matching is lexical. A contradiction phrased in different vocabulary is missed, and the system says "inconclusive" rather than guessing.
 
-Execute every query and assert on the results. Documentation is not verification.
+Every number here is from a graph of tens of nodes. Query cost at ten thousand claims is unmeasured, and that is the next benchmark.
 
-Track what is true, not only what is wrong. Detection tells you the swarm is sick. Only a kernel tells it what to believe instead.
+There is no labelled evaluation set, so there is no precision or recall figure for conflict detection against real traffic. The audit measures robustness to mutations of your own knowledge, which is a proxy, not the real distribution of false claims.
 
-And measure both sides of your detector. I found a 20% failure in my own system only after I built the number nobody reports.
+If you are building something similar, the lesson I would pass on is this: pick the quantity that should be a traversal and make it one, and measure both sides of your detector. I found a 20% failure in my own system only after I built the number nobody reports.
 
 ---
 

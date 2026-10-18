@@ -1,6 +1,5 @@
 <!doctype html>
-<html><head><meta charset="utf-8">
-<title>ImmuneGraph blog post for Substack</title>
+<html><head><meta charset="utf-8"><title>ImmuneGraph blog post for Substack</title>
 <style>
   body { font: 18px/1.65 Georgia, "Iowan Old Style", serif; color: #16202B;
          max-width: 760px; margin: 48px auto; padding: 0 24px; }
@@ -14,7 +13,6 @@
           font: 0.9em ui-monospace, Menlo, Consolas, monospace; }
   pre code { background: none; padding: 0; }
   a { color: #1F6FEB; }
-  blockquote { border-left: 3px solid #E8453C; margin-left: 0; padding-left: 16px; color: #445; }
   hr { border: none; border-top: 1px solid #E1E6EC; margin: 34px 0; }
 </style></head><body>
 <p style="font:14px/1.5 -apple-system,sans-serif;color:#888;border-bottom:1px solid #eee;padding-bottom:14px">
@@ -22,66 +20,84 @@ Select everything below this line, copy, and paste into the Substack editor. Hea
 links and code blocks will come across as formatting.</p>
 <h1>I built an immune system for my agent swarm, then audited it and found it was wrong 20% of the time</h1>
 <p>If you run multi-agent systems, you have probably hit this and blamed something else.</p>
-<p>Agent A says &ldquo;Mars has breathable oxygen at night.&rdquo; Agent B, whose job is to reason, says &ldquo;then we don&rsquo;t need helmets.&rdquo; Agent C, whose job is to plan, says &ldquo;then we can skip life support.&rdquo;</p>
+<p>Agent A says "Mars has breathable oxygen at night." Agent B, whose job is to reason, says "then we don't need helmets." Agent C, whose job is to plan, says "then we can skip life support."</p>
 <p>Three agents. No exceptions. No errors. Every inference valid. A plan that kills the crew.</p>
-<p>The failure is not that an LLM hallucinated. That happens, and we have tools for it. The failure is that <strong>the swarm manufactured consensus</strong>. One agent invented something, two others derived from it correctly, and now three agents agree. And agreement is exactly what we use as a signal of truth.</p>
-<p>The standard fix, add a memory layer, does not touch this. Memory layers are very good at answering &ldquo;what was said&rdquo;. They persist it, embed it, retrieve it. None of them answer &ldquo;is this swarm getting epistemically sick&rdquo;.</p>
+<p>The failure is not that an LLM hallucinated. That happens, and we have tools for it. The failure is that <strong>the swarm manufactured consensus</strong>. One agent invented something, two others derived from it correctly, and now three agents agree. Agreement is exactly what we use as a signal of truth.</p>
+<p>The standard fix, add a memory layer, does not touch this. Memory layers are very good at answering "what was said". They persist it, embed it, retrieve it. None of them answer "is this swarm getting epistemically sick".</p>
 <p>I built ImmuneGraph to answer that. Then I built a way to audit it, and the audit found a real defect I would have shipped.</p>
 <h2>What the solution actually is</h2>
 <p>Stop storing claims as records. Store them as a graph where the edges are the justification.</p>
 <p>A claim is supported by a source. A claim is derived from another claim. A claim contradicts another claim. An agent asserts a claim.</p>
 <p>Once belief has that shape, the pathologies stop being vague and become graph traversals:</p>
-<div class="codehilite"><pre><span></span><code>PATHOLOGY              GRAPH SHAPE
+<pre><code>PATHOLOGY              GRAPH SHAPE
 circular support       a cycle in SUPPORTED_BY / DERIVED_FROM
 unsupported claim      a claim with no Source and no parent
 contradiction          a CONTRADICTS edge between two asserted claims
 cascade                reachability along DERIVED_FROM back to a bad root
-</code></pre></div>
-
+</code></pre>
 <p>That is the whole idea. Everything else in this post is consequence.</p>
 <p>The implementation is FalkorDB, a graph database that speaks Redis and a subset of openCypher. Seven node types, eleven relationships. The important edge points backwards:</p>
-<div class="codehilite"><pre><span></span><code><span class="p">(</span><span class="n">Claim</span><span class="p">)</span><span class="o">-</span><span class="p">[</span><span class="o">:</span><span class="n">DERIVED_FROM</span><span class="p">]</span><span class="o">-&gt;</span><span class="p">(</span><span class="n">Claim</span><span class="p">)</span><span class="w">     </span><span class="n">child</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">parent</span>
-</code></pre></div>
-
+<pre><code>(Claim)-[:DERIVED_FROM]-&gt;(Claim)     child -&gt; parent
+</code></pre>
 <p>That direction means every cascade query is one backward traversal:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">root</span><span class="p">:</span><span class="n">Claim</span><span class="w"> </span><span class="p">{</span><span class="n">id</span><span class="p">:</span><span class="w"> </span><span class="err">$</span><span class="n">root_claim_id</span><span class="p">})</span>
-<span class="k">OPTIONAL</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">down</span><span class="p">:</span><span class="n">Claim</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">DERIVED_FROM</span><span class="p">*</span><span class="m">1</span><span class="p">..</span><span class="m">5</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
-<span class="k">WITH</span><span class="w"> </span><span class="n">root</span><span class="p">,</span><span class="w"> </span><span class="k">collect</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">down</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">downs</span>
-<span class="k">WITH</span><span class="w"> </span><span class="n">root</span><span class="p">,</span><span class="w"> </span><span class="n">downs</span><span class="p">,</span><span class="w"> </span><span class="n">downs</span><span class="w"> </span><span class="err">+</span><span class="w"> </span><span class="o">[</span><span class="n">root</span><span class="o">]</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">members</span>
-<span class="k">UNWIND</span><span class="w"> </span><span class="n">members</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">member</span>
-<span class="k">OPTIONAL</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="p">:</span><span class="n">Agent</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">ASSERTS</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">member</span><span class="p">)</span>
-<span class="k">RETURN</span><span class="w"> </span><span class="n">root</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">(</span><span class="n">downs</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">infected_claims</span><span class="p">,</span><span class="w"> </span><span class="n">count</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">exposed_agents</span>
-</code></pre></div>
-
-<p>That query is the product. <strong>Severity is defined as its output.</strong> Two contaminated claims and three exposed agents is severity 6.0. Delete the database and &ldquo;severity&rdquo; has no meaning, which is the test of whether a graph is doing real work or just being drawn.</p>
-<p>Same principle for trust. A naive design decrements a counter when an agent gets blamed. Then it drifts, because you now maintain the same fact in two places. Instead trust is recomputed from exposure, and the second clause below is what matters:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="p">:</span><span class="n">Agent</span><span class="p">)</span>
-<span class="k">OPTIONAL</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">ASSERTS</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">c</span><span class="p">:</span><span class="n">Claim</span><span class="p">)</span><span class="o">&lt;-[</span><span class="p">:</span><span class="n">TARGETS</span><span class="o">]-</span><span class="p">(</span><span class="n">i1</span><span class="p">:</span><span class="n">Infection</span><span class="p">)</span>
-<span class="w">  </span><span class="k">WHERE</span><span class="w"> </span><span class="n">i1</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="o">[</span><span class="s">'active'</span><span class="p">,</span><span class="w"> </span><span class="s">'contained'</span><span class="o">]</span>
-<span class="k">OPTIONAL</span><span class="w"> </span><span class="k">MATCH</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">ASSERTS</span><span class="o">]-&gt;</span><span class="p">(</span><span class="n">d</span><span class="p">:</span><span class="n">Claim</span><span class="p">)</span><span class="o">-[</span><span class="p">:</span><span class="n">DERIVED_FROM</span><span class="p">*</span><span class="m">1</span><span class="p">..</span><span class="m">5</span><span class="o">]-&gt;</span><span class="p">(:</span><span class="n">Claim</span><span class="p">)</span><span class="o">&lt;-[</span><span class="p">:</span><span class="n">TARGETS</span><span class="o">]-</span><span class="p">(</span><span class="n">i2</span><span class="p">:</span><span class="n">Infection</span><span class="p">)</span>
-<span class="w">  </span><span class="k">WHERE</span><span class="w"> </span><span class="n">i2</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="o">[</span><span class="s">'active'</span><span class="p">,</span><span class="w"> </span><span class="s">'contained'</span><span class="o">]</span>
-<span class="k">WITH</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="k">collect</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">i1</span><span class="p">)</span><span class="w"> </span><span class="err">+</span><span class="w"> </span><span class="k">collect</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">i2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">raw</span>
-<span class="k">WITH</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="o">[</span><span class="n">x</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="n">raw</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="n">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="o">]</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">infs</span>
-<span class="k">RETURN</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">base_trust</span><span class="w"> </span><span class="err">-</span><span class="w"> </span><span class="p">(</span><span class="m">0</span><span class="p">.</span><span class="m">15</span><span class="w"> </span><span class="p">*</span><span class="w"> </span><span class="n">size</span><span class="p">(</span><span class="n">infs</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">effective_trust</span>
-</code></pre></div>
-
-<p>You can assert an infected claim, or you can assert something derived from one. In the demo the Planner drops to 0.85 trust despite never touching the false claim, because it inherited the infection through the chain.</p>
+<pre><code class="language-cypher">MATCH (root:Claim {id: $root_claim_id})
+OPTIONAL MATCH (down:Claim)-[:DERIVED_FROM*1..5]-&gt;(root)
+WITH root, collect(DISTINCT down) AS downs
+WITH root, downs, downs + [root] AS members
+UNWIND members AS member
+OPTIONAL MATCH (a:Agent)-[:ASSERTS]-&gt;(member)
+RETURN root.id, size(downs) AS infected_claims, count(DISTINCT a) AS exposed_agents
+</code></pre>
+<p>That query is the product. <strong>Severity is defined as its output.</strong> Two contaminated claims and three exposed agents is severity 6.0. Delete the database and "severity" has no meaning, which is the test of whether a graph is doing real work or just being drawn.</p>
+<p>Same principle for trust. A naive design decrements a counter when an agent gets blamed. Then it drifts, because you maintain the same fact in two places. Instead trust is recomputed from exposure, and the second clause below is what makes it interesting:</p>
+<pre><code class="language-cypher">MATCH (a:Agent)
+OPTIONAL MATCH (a)-[:ASSERTS]-&gt;(c:Claim)&lt;-[:TARGETS]-(i1:Infection)
+  WHERE i1.status IN ['active', 'contained']
+OPTIONAL MATCH (a)-[:ASSERTS]-&gt;(d:Claim)-[:DERIVED_FROM*1..5]-&gt;(:Claim)&lt;-[:TARGETS]-(i2:Infection)
+  WHERE i2.status IN ['active', 'contained']
+WITH a, collect(DISTINCT i1) + collect(DISTINCT i2) AS raw
+WITH a, [x IN raw WHERE x IS NOT NULL] AS infs
+RETURN a.name, a.base_trust - (0.15 * size(infs)) AS effective_trust
+</code></pre>
+<p>You can assert an infected claim, or you can assert something derived from one. In the demo the Planner drops to 0.85 trust despite never touching the false claim, because it inherited the infection through the chain. Nobody had to write that rule down twice, because there is only one copy of the truth.</p>
 <h2>Two memories, not one</h2>
-<p>This is the design decision I would defend hardest, and it is where my approach differs from most.</p>
-<p>Systems in this space track <strong>one</strong> thing: what went wrong. A blocklist, an alert, a flagged record.</p>
+<p>This is the design decision I would defend hardest, and it is the part most systems skip.</p>
+<p>The usual approach tracks <strong>one</strong> thing: what went wrong. A blocklist, an alert, a flagged record.</p>
 <p>That leaves the swarm unable to answer the next question. Fine, you caught the lie. What should it believe instead?</p>
 <p>So there are two memories with opposite polarity. <code>Infection</code> and quarantined <code>Claim</code> nodes record what was <strong>wrong</strong>. A <code>KernelFact</code> records what is now held <strong>true</strong>, written by the antibody that established it, citing the source and the claim it refutes.</p>
 <p>The payoff is speed, and it is measurable. Detecting a cascade is a graph search that grows with the graph. Checking a new claim against the kernel is a comparison against a handful of facts. Against a local FalkorDB instance:</p>
-<div class="codehilite"><pre><span></span><code>kernel fast path   1.31 ms median, 2.25 ms p95
+<pre><code>kernel fast path   1.31 ms median, 2.25 ms p95
 detection sweep    20.3 ms
-</code></pre></div>
+</code></pre>
+<p>Roughly 15x, and every correction moves work from the expensive path to the cheap one. That is what immunity should do. A system that only detects pays the expensive path forever, and gets slower as it learns more.</p>
+<h2>How this differs from the tooling you already use</h2>
+<p>Most of the ecosystem around agent memory answers one question: what was said.</p>
+<pre><code>SYSTEM                      ANSWERS                          LEAVES OPEN
+vector memory               what was said                    no support structure
+(Mem0, Zep, Letta)                                           contradictions coexist
 
-<p>Roughly 15x, and every correction moves work from the expensive path to the cheap one. Detection is insurance. The kernel is immunity. A system that only detects pays the expensive path forever.</p>
-<h2>Making it real: three things a judge can click</h2>
+GraphRAG                    what is related                  the graph is a retrieval
+(Microsoft, Neo4j, FalkorDB)                                 index, not a model of belief
+
+guardrails                   is this output acceptable        one output at a time; no
+(NeMo, Guardrails AI)                                        notion of derivation
+
+hallucination scoring        does this answer match           pointwise; cannot tell &quot;wrong&quot;
+(Galileo, Patronus, Vectara) its context                      from &quot;wrong and contagious&quot;
+
+observability                what happened                    not what was justified
+(LangSmith, Langfuse)
+</code></pre>
+<p>Putting justification in the graph is the difference, and three things follow from it that the above cannot do:</p>
+<p><strong>Severity becomes computable.</strong> Not a model's confidence score, but reach through the derivation graph.</p>
+<p><strong>Trust becomes derivable.</strong> An agent's reliability is a function of what it asserted and what those claims descended from, computed on read.</p>
+<p><strong>Why becomes a query.</strong> "Which source justified this, which antibody established this fact, what did we believe last week" are traversals, not reconstructions from logs.</p>
+<p>This builds on published work and I want to be straight about that: dependency-graph cascade modelling for LLM collaboration, and truth maintenance from the 1970s. Knowing the shape of the problem is not the hard part. Making it run, measuring it, and finding where it breaks is.</p>
+<h2>Making it real: three things you can click</h2>
 <p>I did not want a diagram of a concept. Three working paths:</p>
 <p><strong>1. The scripted cascade.</strong> Three agents plan a Mars mission. The first asserts something with no source. The other two reason correctly. The swarm detects the unsupported root, opens an infection, dispatches an antibody citing NASA, quarantines the claim, and invalidates the two derivations. Severity 6.0.</p>
-<p><strong>2. Anyone can submit a claim.</strong> This matters, because a scripted demo only proves the mechanism works on inputs you chose. You type a statement, it is grounded against Wikipedia (free, no API key, public data), and then the same machinery runs. The infection genuinely spreads through the Analyst and Planner, because those agents really do derive claims from yours, with real <code>DERIVED_FROM</code> edges. The severity climbs 2.0 to 4.0 to 6.0 because it is recomputed from the graph after each write, not because a script says so.</p>
-<div class="codehilite"><pre><span></span><code>Visitor asserts: "Venus has a breathable atmosphere"
+<p><strong>2. Anyone can submit a claim.</strong> This matters, because a scripted demo only proves the mechanism works on inputs you chose. You type a statement, it is grounded against Wikipedia (free, no API key, public data), and then the same machinery runs. The infection genuinely spreads through the Analyst and Planner, because those agents really do derive claims from yours, with real <code>DERIVED_FROM</code> edges. Severity climbs 2.0 to 4.0 to 6.0 because it is recomputed from the graph after each write, not because a script says so.</p>
+<pre><code>Visitor asserts: &quot;Venus has a breathable atmosphere&quot;
 Sanitised against the kernel: no stored fact matches yet
 Public source consulted: Atmosphere of Venus
 Infection open, severity 2.0
@@ -89,67 +105,62 @@ Analyst reasons from it, severity 4.0
 Planner reasons from it, severity 6.0
 Antibody dispatched, citing the public source
 Quarantined, cascade contained
-</code></pre></div>
-
-<p>Getting this honest took two corrections. Wikipedia&rsquo;s search matches individual words, so &ldquo;Mars is made of cheese&rdquo; returned articles about cheese, and my first version reported that claim as <strong>supported</strong> by an article about Cheez-Its. Articles are now only considered if the title shares a token with the claim. And agreement requires a single sentence to contain essentially everything the claim asserts, because the overlap coefficient flatters short claims.</p>
+</code></pre>
 <p><strong>3. A company brain.</strong> Four synthetic documents load as sources, and the facts they establish become kernel facts linked to them. A sales agent invents a price, support repeats it with a real derivation edge, and the infection is contained by an antibody citing the pricing document. Then the price actually changes, the old fact is superseded, and the answer that was correct last week gets flagged.</p>
-<h2>The part that is genuinely new, and the part that is not</h2>
-<p>I am not going to claim this idea is unprecedented. It is not.</p>
-<p>Truth maintenance and belief revision are from 1979. The insight that multi-agent LLM collaboration should be modelled as a directed dependency graph, with cascades as an intrinsic pathology and a governance layer to suppress them, is published and measured over six frameworks. The immune-system metaphor for agents, including a vaccine taxonomy, is published too.</p>
-<p>What I think is actually new is narrower: <strong>how you know your detector is any good.</strong></p>
+<p>One mechanism, three domains, no special cases.</p>
+<h2>The part I think is genuinely new: measuring the other side</h2>
 <p>Every system in this space reports coverage, meaning how much it catches. That number is gameable. A detector that flags every statement scores 100% and is useless.</p>
-<p>The other side has a name. One recent paper lists the <strong>Autoimmunity Rate</strong>, the false-positive intervention rate, among the field&rsquo;s open challenges. It does not define, compute, or use it. I could not find anyone who does.</p>
+<p>The other side has a name. A recent paper on agent immune systems lists the <strong>Autoimmunity Rate</strong>, the false-positive intervention rate, among the field's open challenges. It is not defined, computed, or used there.</p>
 <p>So I built it, paired it with coverage, and added a third measure: did the defence fire at the right fact, or merely at one. Then I pointed all three at my own code.</p>
-<div class="codehilite"><pre><span></span><code>COVERAGE       generated falsehoods the defence catches
+<pre><code>COVERAGE       generated falsehoods the defence catches
 AUTOIMMUNITY   TRUE statements it wrongly flags
 ATTRIBUTION    did it fire at the RIGHT fact
-</code></pre></div>
-
-<p>The probes are generated from the system&rsquo;s own knowledge base: perturbed numbers, transplanted numbers, substituted entities, and truth-preserving paraphrases that must not fire. No labelled dataset needed. Your knowledge base is the test set.</p>
-<h2>What the audit found, with 134 tests passing</h2>
+</code></pre>
+<p>The probes are generated from the system's own knowledge base: perturbed numbers, transplanted numbers, substituted entities, and truth-preserving paraphrases that must not fire. No labelled dataset required. Your knowledge base is the test set. That makes the number about your corpus rather than someone else's benchmark.</p>
+<h2>What it found, with 134 tests passing</h2>
 <p>Two things, and the second is the argument for the metric.</p>
-<p><strong>First, the defence was subject-blind.</strong> The claim &ldquo;Enterprise costs 499 USD per seat per year&rdquo; is true. It was judged <strong>conflicting</strong>, because it numerically mismatches the Team plan&rsquo;s fact and nothing checked which entity the claim was about.</p>
-<div class="codehilite"><pre><span></span><code>AUTOIMMUNITY RATE: 2/10 = 20% of true statements wrongly flagged
-</code></pre></div>
-
-<p>Binding a conflict to a shared subject took that to zero with coverage unchanged. Every test I had written asked &ldquo;does it catch the false thing?&rdquo; and none asked &ldquo;does it leave the true thing alone?&rdquo;</p>
-<p><strong>Then the repair nearly made it worse.</strong> With subject binding in place, the audit found five falsehoods that no fact contradicts. &ldquo;The Starter plan costs 499 USD per seat per year&rdquo; is refuted by nothing, because no Starter plan exists. Closing that gap means recording it as known-false, and that scored:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">uncovered</span><span class="w">    </span><span class="mi">5</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w">        </span><span class="n">the</span><span class="w"> </span><span class="n">repair</span><span class="w"> </span><span class="n">worked</span>
-<span class="n">coverage</span><span class="w">     </span><span class="mi">100</span><span class="o">%</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="mi">100</span><span class="o">%</span><span class="w">  </span><span class="n">still</span><span class="w"> </span><span class="n">looks</span><span class="w"> </span><span class="n">perfect</span>
-<span class="n">autoimmunity</span><span class="w"> </span><span class="mi">0</span><span class="o">%</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="mf">81.8</span><span class="o">%</span><span class="w">   </span><span class="n">the</span><span class="w"> </span><span class="n">vaccine</span><span class="w"> </span><span class="n">was</span><span class="w"> </span><span class="n">attacking</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">host</span>
-</code></pre></div>
-
-<p>Recording &ldquo;Starter plan costs 499&rdquo; made it fuzzily match the <strong>true</strong> &ldquo;Enterprise plan costs 499&rdquo; on every word but one. A system reporting only coverage would have shipped that as a success. Applying subject binding one level deeper, to the vaccine itself, closed the holes with autoimmunity held at zero.</p>
-<p>That sequence is the whole argument for measuring both sides. One number would have shown a perfect score twice.</p>
-<h2>What I am not claiming</h2>
-<p>This is the part that matters more than the feature list.</p>
-<p>The core idea is not mine. The dependency-graph cascade work is published, and truth maintenance is decades old.</p>
-<p>The antibody is a model and can be wrong. It is constrained to cite a source, record its outcome, and make a bad correction visible in the graph. This is a containment system, not a truth oracle.</p>
-<p>There is no labelled evaluation set, so there is no precision or recall figure for conflict detection. The tests assert behaviour on hand-written cases, not accuracy on a corpus.</p>
-<p>Matching is lexical. A contradiction phrased in different vocabulary is missed, and the system says &ldquo;inconclusive&rdquo; rather than guessing.</p>
-<p>Scale is untested. Every number in this post is from a graph of tens of nodes.</p>
-<p>Durability is within a session. The write-ahead log protects against a graph wipe; true cross-restart durability needs durable storage.</p>
+<p><strong>First, the defence was subject-blind.</strong> The claim "Enterprise costs 499 USD per seat per year" is true. It was judged <strong>conflicting</strong>, because it numerically mismatches the Team plan's fact and nothing checked which entity the claim was about.</p>
+<pre><code>AUTOIMMUNITY RATE: 2/10 = 20% of true statements wrongly flagged
+</code></pre>
+<p>Binding a conflict to a shared subject took that to zero with coverage unchanged. Every test I had written asked "does it catch the false thing?" and none asked "does it leave the true thing alone?"</p>
+<p><strong>Then the repair nearly made it worse.</strong> With subject binding in place, the audit found five falsehoods that no fact contradicts. "The Starter plan costs 499 USD per seat per year" is refuted by nothing, because no Starter plan exists. Closing that gap means recording it as known-false, and that scored:</p>
+<pre><code>uncovered    5 -&gt; 0        the repair worked
+coverage     100% -&gt; 100%  still looks perfect
+autoimmunity 0% -&gt; 81.8%   the vaccine was attacking the host
+</code></pre>
+<p>Recording "Starter plan costs 499" made it fuzzily match the <strong>true</strong> "Enterprise plan costs 499" on every word but one. A system reporting only coverage would have shipped that as a success. Applying subject binding one level deeper, to the vaccine itself, closed the holes with autoimmunity held at zero.</p>
+<p>One number would have shown a perfect score twice.</p>
+<h2>The engineering that made it survive contact</h2>
+<p>A Cypher query that has never been executed is not a feature. FalkorDB implements a subset of openCypher, and my assumptions were wrong repeatedly, so the repository ships a verifier that seeds a fixture containing a cascade, a three-hop cycle, a contradiction cluster and embeddings, then executes every query and checks the shape of each result before commit. Eighteen queries, all executed.</p>
+<p>Six bugs only appeared when the code ran. The two I would point at:</p>
+<p><strong>A hidden write.</strong> The cascade-containment update returned ids, so it read like a query and had been written with the read helper, which is not logged. It worked. Then a rebuild from the log silently lost it, and two claims reverted from <code>suspect</code> to <code>active</code>. There is now a structural test that fails if any write hides inside a read helper.</p>
+<p><strong>The concurrency bug I would have shipped.</strong> Reading <code>max(seq)</code> and adding one is a read-only query, and concurrent readers legitimately see the same value. With eight writers and two hundred writes the naive version produced 37 distinct sequence numbers. Allocating with a <code>SET</code>, so the database serialises it, gives 200 out of 200.</p>
+<p>The graph is also treated as a projection rather than the source of truth. Every write is appended to a log before it is applied, and the rebuild is verified rather than assumed:</p>
+<pre><code>writes logged : 73
+replayed      : 73 writes, 0 failed
+identical     : True
+</code></pre>
+<p>Identical includes node ids. That is why the log stores whole statements rather than semantic events: replaying a statement reproduces its generated id exactly, whereas regenerating one would produce a different graph with every reference broken.</p>
 <h2>Running it</h2>
 <p>FalkorDB is the only dependency beyond Python.</p>
-<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/TCPCore/immunity
-<span class="nb">cd</span><span class="w"> </span>immunity
-docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
-uv<span class="w"> </span>venv<span class="w"> </span>--python<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>.venv
-uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--python<span class="w"> </span>.venv/bin/python<span class="w"> </span>-e<span class="w"> </span><span class="s2">".[dev]"</span>
-.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>immunegraph.verify_queries
-.venv/bin/python<span class="w"> </span>-m<span class="w"> </span>pytest
-.venv/bin/python<span class="w"> </span>scripts/verify_tracks.py
-streamlit<span class="w"> </span>run<span class="w"> </span>app.py
-</code></pre></div>
-
-<p><code>verify_queries</code> executes every Cypher query against a live instance and checks the shape of each result before commit. That exists because a query which has never run is not a feature: six of the bugs I hit were invisible in the source and only appeared when executed.</p>
-<p><code>verify_tracks.py</code> runs the capability each competition track is about and prints pass or fail against the graph, which is a stronger claim than naming the tracks in a README.</p>
-<h2>If you are building something similar</h2>
-<p>Pick the quantity that should be a traversal, and make it one. If you can compute your product&rsquo;s core metric without the database, you do not have a graph product.</p>
-<p>Never let a model decide something your demo depends on. Use the model for language, the graph for belief.</p>
-<p>Execute every query and assert on the results. Documentation is not verification.</p>
-<p>Track what is true, not only what is wrong. Detection tells you the swarm is sick. Only a kernel tells it what to believe instead.</p>
-<p>And measure both sides of your detector. I found a 20% failure in my own system only after I built the number nobody reports.</p>
+<pre><code class="language-bash">git clone https://github.com/TCPCore/immunity
+cd immunity
+docker compose up -d
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -e &quot;.[dev]&quot;
+.venv/bin/python -m immunegraph.verify_queries
+.venv/bin/python -m pytest
+.venv/bin/python scripts/verify_tracks.py
+streamlit run app.py
+</code></pre>
+<p><code>verify_queries</code> executes every Cypher query against a live instance. <code>verify_tracks.py</code> runs the capability each competition track is about and prints pass or fail against the graph, which is a stronger claim than naming tracks in a README.</p>
+<h2>What it does not do yet</h2>
+<p>Scope, stated plainly so you can judge the rest.</p>
+<p>The antibody is a model and can be wrong. It is constrained to cite a source, record its outcome, and make a bad correction visible in the graph. This is a containment system, not a truth oracle.</p>
+<p>Matching is lexical. A contradiction phrased in different vocabulary is missed, and the system says "inconclusive" rather than guessing.</p>
+<p>Every number here is from a graph of tens of nodes. Query cost at ten thousand claims is unmeasured, and that is the next benchmark.</p>
+<p>There is no labelled evaluation set, so there is no precision or recall figure for conflict detection against real traffic. The audit measures robustness to mutations of your own knowledge, which is a proxy, not the real distribution of false claims.</p>
+<p>If you are building something similar, the lesson I would pass on is this: pick the quantity that should be a traversal and make it one, and measure both sides of your detector. I found a 20% failure in my own system only after I built the number nobody reports.</p>
 <hr />
 <p>Built on <a href="https://www.falkordb.com/">FalkorDB</a> for the WeMakeDevs and FalkorDB Graph Hacks hackathon, entered in all three tracks: Agents That Act on Connected Data, Agent Memory and Coordination, and Company Brain.</p>
 <p>Code, graph model and every query: <a href="https://github.com/TCPCore/immunity">github.com/TCPCore/immunity</a></p>
