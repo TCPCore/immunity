@@ -3,17 +3,6 @@
 **A FalkorDB-backed immune system that catches hallucination cascades in multi-agent
 systems, corrects them, and remembers them so the swarm develops immunity.**
 
-Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB, Oct 15-18 2026).
-
-> **Tracks entered:**
->
-> - **Track 01, Agents That Act on Connected Data**
-> - **Track 02, Agent Memory and Coordination**
-> - **Track 03, Company Brain**
->
-> Each track name is kept unbroken on its own line so an automated submission
-> checker can match it exactly.
-
 **AI disclosure:** AI was used for code generation and editing. The design, iterations, testing and decisions were human.
 
 **Watch the demo:** [youtube.com/watch?v=kX1Jscw91so](https://www.youtube.com/watch?v=kX1Jscw91so) *(4:17, captioned)*
@@ -572,29 +561,6 @@ the number that actually appears at that beat.
 
 ---
 
-## Verification
-
-### Prove the track claims
-
-Naming a track is a claim. This runs the capability each track is actually about and prints a
-pass or fail per check:
-
-```bash
-python scripts/verify_tracks.py
-```
-
-```
-Track 01: QUALIFIES (6/6 checks)
-Track 02: QUALIFIES (7/7 checks)
-Track 03: QUALIFIES (8/8 checks)
-21/21 checks passed
-```
-
-It checks the graph itself, not the docs: severity computed from reach, an antibody injecting a
-correction, derived claims invalidated by `contain_cascade`, three memory kinds present, no agent
-storing its trust, a rebuild from the log proven identical, documents becoming kernel facts with
-provenance, and a superseded price being re-judged.
-
 ### Everything else
 
 A Cypher query that has never been executed is not a feature. Three layers of proof:
@@ -641,18 +607,6 @@ comprehensions, `LIMIT` not constraining eager writes, are documented in
 
 ---
 
-## Submission compliance
-
-Rules 12 and 13 turn on the participant understanding the work, so this repo ships the
-material for that rather than asserting it:
-
-| Document | Purpose |
-| --- | --- |
-| [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) | Rule-by-rule audit with evidence and the open items |
-| [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) | The schema and the queries the product depends on |
-| [`docs/APPLICABILITY.md`](docs/APPLICABILITY.md) | What this is good for in production, measured latency, and what is not proven |
-| [`docs/DEPLOY.md`](docs/DEPLOY.md) | Getting a clickable live link: FalkorDB Cloud + Streamlit |
-| [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Shot-by-shot script for the demo video |
 
 ---
 
