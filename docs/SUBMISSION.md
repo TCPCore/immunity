@@ -110,7 +110,7 @@ Both are reproducible: `python scripts/verify_tracks.py`, `python scripts/bench_
 | Item | Value |
 | --- | --- |
 | Repository | <https://github.com/TCPCore/immunity>, public, default branch `main`, actively maintained |
-| Demo video | **Recorded and verified**, 4:17, 1680×1200, silent with burned-in captions, a visible cursor and click pulses on each action, and an address bar. Upload it (YouTube/Loom, public or unlisted) and paste the URL here. Reproducible with `python scripts/record_demo.py`; `docs/DEMO_SCRIPT.md` is the shot list. |
+| Demo video | <https://www.youtube.com/watch?v=kX1Jscw91so>, 4:17, 1680x1200, silent with burned-in captions, a visible cursor and click pulses on each action, and an address bar. Verified publicly reachable via the YouTube oEmbed endpoint. Reproducible with `python scripts/record_demo.py`; `docs/DEMO_SCRIPT.md` is the shot list. |
 | Live deployment | <https://immunity-jcssfw2knj85bkdtut3rie.streamlit.app> (see note), or local Docker / FalkorDB Cloud; see below |
 
 > **Deployment note.** The Streamlit app is deployed from this repository. As of the last check from
@@ -178,7 +178,7 @@ the written form of that explanation.
 - [x] README with setup instructions
 - [x] README with the graph data model
 - [x] The Cypher queries the product depends on, `docs/GRAPH_MODEL.md` §5, `src/immunegraph/queries.py`, and the four headline queries inlined in the README
-- [ ] **Demo video** recorded (4:17, captioned, cursor and address bar), **still needs uploading and a link here**
+- [x] **Demo video** recorded (4:17, captioned, cursor and address bar) and published at <https://www.youtube.com/watch?v=kX1Jscw91so>, linked from the README
 - [x] Complete local setup instructions (Docker) and a Cloud path
 - [x] Tracks named, 01, 02 and 03
 

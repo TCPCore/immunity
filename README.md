@@ -14,7 +14,7 @@ Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB, Oct 15
 > Each track name is kept unbroken on its own line so an automated submission
 > checker can match it exactly.
 
-**See it run:** <!-- PASTE THE HOSTED VIDEO LINK HERE -->
+**Watch the demo:** [youtube.com/watch?v=kX1Jscw91so](https://www.youtube.com/watch?v=kX1Jscw91so) *(4:17, captioned)*
 &nbsp;·&nbsp; **Live app:** [immunity-jcssfw2knj85bkdtut3rie.streamlit.app](https://immunity-jcssfw2knj85bkdtut3rie.streamlit.app) *(cold start can take 30 to 60 seconds on first load)*
 &nbsp;·&nbsp; **Run it locally:** `docker compose up -d && streamlit run app.py` ([setup](#setup))
 

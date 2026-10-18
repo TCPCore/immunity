@@ -11,6 +11,8 @@ streamlit run app.py          # in one terminal
 python scripts/record_demo.py # in another, with Chrome on --remote-debugging-port=9222
 ```
 
+The current cut is published at <https://www.youtube.com/watch?v=kX1Jscw91so>.
+
 ## The 25 beats, with real timings
 
 Timings are for the current cut (**4:17**, 1680x1200, 10 fps, silent with burned-in captions).
