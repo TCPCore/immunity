@@ -1,4 +1,4 @@
-# Applicability — what this is actually good for
+# Applicability, what this is actually good for
 
 Written against measured results, not intentions. Every number below was produced by running the
 code; where something is unproven it says so.
@@ -23,7 +23,7 @@ code; where something is unproven it says so.
 **Two things to read carefully.**
 
 The gap between local and cloud is **pure network round-trips**. The same query is 16x slower over
-the network. So the compute is cheap and the *topology* is what you optimise — deploy the graph
+the network. So the compute is cheap and the *topology* is what you optimise, deploy the graph
 near the agents, and the fast path is genuinely sub-millisecond.
 
 The graph here is **12 nodes**. Nothing in the table says how detection behaves at ten thousand
@@ -33,7 +33,7 @@ claims. See §5.
 
 ## 2. The problem it solves, stated precisely
 
-> An agent asserts something unsupported. Other agents derive from it — correctly. The swarm now
+> An agent asserts something unsupported. Other agents derive from it, correctly. The swarm now
 > believes something false, and **every individual step was valid.**
 
 This is not a hallucination-detection problem. A single LLM hallucinating is well understood and
@@ -43,14 +43,14 @@ perfectly reasoned.
 
 The thing that makes it expensive is that **the errors are correlated**. If three agents
 independently hallucinate, you get three bad outputs. If one hallucinates and two derive from it,
-you get one bad output that three agents agree on — and agreement is what humans use as a signal of
+you get one bad output that three agents agree on, and agreement is what humans use as a signal of
 truth.
 
 Three mechanisms address it, and they are separable:
 
-1. **Detect** — find unsupported roots, cycles and contradictions as graph traversals.
-2. **Contain** — quarantine the root, invalidate the derivations, record what went wrong.
-3. **Remember** — keep the corrected fact in a kernel so the same lie is caught in milliseconds
+1. **Detect**, find unsupported roots, cycles and contradictions as graph traversals.
+2. **Contain**, quarantine the root, invalidate the derivations, record what went wrong.
+3. **Remember**, keep the corrected fact in a kernel so the same lie is caught in milliseconds
    instead of seconds.
 
 ---
@@ -60,32 +60,32 @@ Three mechanisms address it, and they are separable:
 The pattern is worth money wherever **agent output is acted on and the cost of a wrong answer
 exceeds the cost of checking it.** Ordered by how directly the existing demo supports them.
 
-### 3.1 Customer-facing agent fleets — support, sales, quoting
+### 3.1 Customer-facing agent fleets, support, sales, quoting
 
 *Failure mode:* an agent states a wrong price, refund window or SLA. Another agent repeats it to a
 customer. It is now a commitment the company may have to honour.
 
 *What this gives you:* policy documents become the kernel; every outbound answer is checked in
-**1–2 ms** against them; a conflict blocks or escalates before a human sees it. This is the
+**1-2 ms** against them; a conflict blocks or escalates before a human sees it. This is the
 company-brain scenario in this repo, running end to end.
 
 *Why it is the best first target:* the facts are few, stable and written down. Prices, SLAs and
 policy dates are exactly the kind of thing a kernel holds well, and the cost of a wrong answer is
 immediate and measurable.
 
-### 3.2 Multi-agent analysis pipelines — research, due diligence, risk
+### 3.2 Multi-agent analysis pipelines, research, due diligence, risk
 
 *Failure mode:* a research agent misreads a filing; an analyst agent builds a model on it; a
 writing agent produces a confident report. Nobody is lying and nothing looks wrong.
 
 *What this gives you:* after a pipeline run, a sweep finds the unsupported root and reports
-**severity** — which is defined as reach through the derivation graph, not as a confidence score.
+**severity**, which is defined as reach through the derivation graph, not as a confidence score.
 Severity becomes a **triage queue**: review the top three cascades, not all ninety outputs.
 
 *The value here is prioritisation, not automation.* You are not replacing the human review; you are
 telling the reviewer where to look first.
 
-### 3.3 Regulated domains — finance, insurance, healthcare documentation
+### 3.3 Regulated domains, finance, insurance, healthcare documentation
 
 *Failure mode:* a decision was made by agents and, six months later, someone asks **why**.
 
@@ -103,8 +103,8 @@ is a compliance requirement in more jurisdictions every year, and most agent sta
 *Failure mode:* retrieval was correct, and the answer drifted from the retrieved document anyway.
 
 *What this gives you:* the document is already what you retrieved; check the *answer* against it
-before it ships. This catches the dominant practical RAG failure — the answer that cites a source
-and contradicts it — which retrieval quality metrics never see.
+before it ships. This catches the dominant practical RAG failure, the answer that cites a source
+and contradicts it, which retrieval quality metrics never see.
 
 ### 3.5 Coding and engineering agents
 
@@ -121,7 +121,7 @@ assumption is usually caught by a test. The value is real but less differentiate
 
 ## 3b. What the audit is worth
 
-A medical test that never misses but always cries wolf is useless — and until now nobody in this
+A medical test that never misses but always cries wolf is useless, and until now nobody in this
 field published the false-positive rate.
 
 The audit's value is **meta**: it does not make detection better, it makes detection *deployable*.
@@ -134,7 +134,7 @@ catches, and a false positive in an agent system does concrete damage:
 | Correct claim quarantined | Knowledge is silently lost; the swarm gets less capable, not safer |
 | Agent wrongly penalised | Trust scores corrupt, and the graph now holds a false accusation |
 | Correct answer blocked inline | The product feels broken to the user |
-| Alerts reviewed by humans | Alert fatigue — people stop trusting it and switch it off |
+| Alerts reviewed by humans | Alert fatigue, people stop trusting it and switch it off |
 
 That last row is the reason this matters commercially: **an untrustworthy guardrail gets disabled**,
 and then it protects nothing. The false-positive rate is not a quality metric, it is a survival
@@ -159,30 +159,30 @@ Four decisions that cannot be made without it:
 
 ### Verticals, ranked by the cost of a false positive
 
-**Tier 1 — high cost, written-down ground truth (best fit):**
+**Tier 1, high cost, written-down ground truth (best fit):**
 
 - **Customer support and sales agent fleets.** A blocked valid quote is lost revenue, and the
   corpus is policies and price lists, which the audit handles well. This is the demo, running.
 - **Financial services compliance.** A false positive blocks a transaction or fires a report; heavy
   audit requirements map onto provenance.
 - **Legal and contract review.** Cost per false positive is a lawyer's hour, and the corpus is
-  documents — what a kernel is good at.
+  documents, what a kernel is good at.
 
-**Tier 2 — high stakes, harder corpus:**
+**Tier 2, high stakes, harder corpus:**
 
 - **Healthcare documentation.** Flagging a correct clinical statement causes alert fatigue and can
   suppress valid notes. *Caveat: clinical facts are less "written down" than prices, so probe
   quality would be lower.*
 - **Insurance claims triage.** Flagging valid claims delays payouts and creates regulatory exposure.
 
-**Tier 3 — lower cost, high volume:**
+**Tier 3, lower cost, high volume:**
 
 - **Engineering agents.** Blocking a correct suggestion is annoying rather than expensive, but the
   audit is nearly free, so the ratio still works.
 - **Any RAG system with citations.** The "answer contradicts its own source" checker is this exact
   problem.
 
-**Horizontal — platform vendors.** Whoever sells agent memory or guardrails can publish an
+**Horizontal, platform vendors.** Whoever sells agent memory or guardrails can publish an
 autoimmunity rate as a differentiator. Largest value if it lands, because it turns a feature into a
 standard.
 
@@ -190,7 +190,7 @@ standard.
 
 - **It does not make detection better.** It makes it measurable. Value accrues only if someone acts
   on the number.
-- **Coverage here is synthetic.** The probes are mutations of your own facts — a proxy for realistic
+- **Coverage here is synthetic.** The probes are mutations of your own facts, a proxy for realistic
   errors, **not** the real distribution of false claims in your traffic. High synthetic coverage does
   not prove production coverage.
 - **One corpus, five facts, ~24 probes.** The 20% → 0% → 82% → 0% sequence demonstrates that the
@@ -199,22 +199,22 @@ standard.
   whose subject is not the first content word.
 
 The honest commercial statement: **this is the instrument, not the cure.** Its value is turning
-"we believe our guardrail is safe" into a number that can go in a deployment review — and on our own
+"we believe our guardrail is safe" into a number that can go in a deployment review, and on our own
 code it found a failure, then caught the fix making it three times worse.
 
 ---
 
-## 4. How to apply it — four integration patterns
+## 4. How to apply it, four integration patterns
 
 You do not rewrite your agents. You add a **write path** and choose where to check.
 
-### Pattern A — inline guardrail (highest value, lowest risk)
+### Pattern A, inline guardrail (highest value, lowest risk)
 
 ```
 agent produces an answer
         │
         ├─ record_claim(...)              # one write
-        ├─ sanitizer.judge(...)           # 1–2 ms local
+        ├─ sanitizer.judge(...)           # 1-2 ms local
         │
         ├─ clean    ──► send to customer
         └─ conflicts ─► block / escalate / append correction
@@ -223,30 +223,30 @@ agent produces an answer
 Put it on the **outbound** boundary, not inside the agent. You get protection without changing
 prompt engineering, and you can enable it for one agent at a time.
 
-### Pattern B — asynchronous cascade detector
+### Pattern B, asynchronous cascade detector
 
 Run the sweep on a schedule or at the end of a pipeline run. Do not put it in the request path:
 it is 15x more expensive than the fast path and grows with the graph.
 
 Use it to produce a **severity-ranked review queue**, not to block anything.
 
-### Pattern C — trust and audit layer
+### Pattern C, trust and audit layer
 
 Write every claim with its `ASSERTS` / `SUPPORTED_BY` / `DERIVED_FROM` edges as they happen, and
 do the analysis later. Reading the graph answers "why", "on what authority", and "what changed".
 
 This is the cheapest to adopt because it never blocks a request.
 
-### Pattern D — document ingestion
+### Pattern D, document ingestion
 
-Seed a kernel from a document store — policies, specs, contracts, a handbook. Every fact carries a
+Seed a kernel from a document store, policies, specs, contracts, a handbook. Every fact carries a
 `SUPPORTED_BY` edge to the document and the quote. Then Pattern A becomes possible for that corpus.
 
 **Mechanics that matter in practice**
 
 - **Wrap, don't intrude.** Every agent framework has a per-message hook (a LangGraph node, a CrewAI
   task callback, an AutoGen event). Emit a claim there.
-- **Derivation edges come free** if your orchestrator already knows parent/child turns — that is
+- **Derivation edges come free** if your orchestrator already knows parent/child turns, that is
   the edge that makes cascades visible. Without it you only have a list of claims.
 - **Deploy the graph near the agents.** The 16x local-vs-cloud gap is network, not compute.
 - **Start with facts you would bet money on.** Prices, SLAs, dates, limits. These are where a
@@ -278,8 +278,8 @@ This matters more than the list above, because the honest boundary is what makes
 
 ## 6. What to build next, in order
 
-1. **A labelled corpus.** 200–500 real claims, marked conflicting / aligned / unrelated, with
-   precision and recall published. Nothing else matters until this exists — without it the system
+1. **A labelled corpus.** 200-500 real claims, marked conflicting / aligned / unrelated, with
+   precision and recall published. Nothing else matters until this exists, without it the system
    is demo-grade.
 2. **Semantic conflict detection.** Embeddings, then an LLM judge for the ambiguous band, with the
    graph still recording *why* the decision was made. Keep the deterministic path as the fast lane.
@@ -295,7 +295,7 @@ This matters more than the list above, because the honest boundary is what makes
 ## 7. The commercial argument in one paragraph
 
 A wrong price in a quote, a wrong clause in a contract summary, a wrong figure in a due-diligence
-report — each is discoverable, expensive, and currently caught by luck or by a human reading
+report, each is discoverable, expensive, and currently caught by luck or by a human reading
 everything. The check costs **one to two milliseconds** against a local graph. So the trade is:
 pay a rounding error of latency on every answer, and in exchange get a blocking check against
 written policy, a severity-ranked triage queue for the rest, and a provenance graph that answers

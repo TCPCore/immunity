@@ -1,4 +1,4 @@
-"""Concurrency tests — Track 02 asks for "high-concurrency reads and writes".
+"""Concurrency tests, Track 02 asks for "high-concurrency reads and writes".
 
 These tests exist because the obvious implementation is wrong. Reading
 ``max(seq)`` and adding one is a read-only query, and concurrent readers are
@@ -46,7 +46,7 @@ def _db_available() -> bool:
 
 pytestmark = pytest.mark.skipif(
     not _db_available(),
-    reason="FalkorDB not reachable — start it with: docker compose up -d",
+    reason="FalkorDB not reachable, start it with: docker compose up -d",
 )
 
 

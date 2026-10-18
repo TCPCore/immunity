@@ -1,23 +1,23 @@
 # Per-track submission write-ups
 
 Rule 5 requires naming **every** track entered. This project enters all three, so there are three
-write-ups below. Each is self-contained — the short and long descriptions are written to be pasted
+write-ups below. Each is self-contained, the short and long descriptions are written to be pasted
 into a form field without editing.
 
 **Shared links**
 
 - Repository: https://github.com/TCPCore/immunity
-- Demo video: *(host it and paste the link here — not committed to the repo)*
-- Live deployment: *(Streamlit Cloud link — verify in an incognito window first)*
+- Demo video: *(host it and paste the link here, not committed to the repo)*
+- Live deployment: *(Streamlit Cloud link, verify in an incognito window first)*
 - Blog post: [`docs/BLOG_POST.md`](BLOG_POST.md) *(publish, then link)*
 
 ---
 
-# Track 01 — Agents That Act on Connected Data
+# Track 01, Agents That Act on Connected Data
 
 ## One-line pitch
 
-Agents that read a belief graph, decide an outbreak is real, and act on it — dispatching a sourced
+Agents that read a belief graph, decide an outbreak is real, and act on it, dispatching a sourced
 correction, quarantining the claim, and containing every downstream derivation.
 
 ## Short description (53 words)
@@ -34,7 +34,7 @@ perfectly internally consistent and still act on a lie: one agent invents a clai
 correctly from it, and the conclusion is false.
 
 ImmuneGraph models every claim, source, agent and derivation as a node in FalkorDB, which turns the
-pathologies of collective belief into Cypher traversals — cycles in the support structure, active
+pathologies of collective belief into Cypher traversals, cycles in the support structure, active
 claims with no source and no parent, contradiction clusters, and cascade reach. **Severity is not a
 judgement call**: it is `1 + claims descending from the root + agents exposed to them`, computed by
 traversing `DERIVED_FROM` edges. Remove the database and the concept ceases to exist, which is the
@@ -64,21 +64,21 @@ through the same machinery, with the infection spreading through real agents bef
 
 ## Why it fits this track
 
-The agents do not merely visualise a graph — they *decide and act* on it. The action is the removal
+The agents do not merely visualise a graph, they *decide and act* on it. The action is the removal
 of a belief from circulation, and the justification for that action is itself a graph traversal.
 
 ---
 
-# Track 02 — Agent Memory and Coordination
+# Track 02, Agent Memory and Coordination
 
 ## One-line pitch
 
 A swarm memory that stores what was said, what is believed on what authority, and what to do when
-it happens again — durable enough to rebuild itself from a log, proven identical.
+it happens again, durable enough to rebuild itself from a log, proven identical.
 
 ## Short description (55 words)
 
-ImmuneGraph keeps three kinds of memory — episodic conversation, semantic belief with provenance,
+ImmuneGraph keeps three kinds of memory, episodic conversation, semantic belief with provenance,
 and procedural immunity that records which correction worked. Its kernel of truth means a repeated
 lie is caught in 1.3 ms instead of a 20 ms graph search. Every write is logged first, so the graph
 is a projection that can be rebuilt and verified identical.
@@ -89,19 +89,19 @@ Memory layers answer "what was said". A swarm also needs to know what it *believ
 authority, and what to do the next time the same thing happens.
 
 ImmuneGraph keeps all three. **Episodic** memory is `Message` and `Session`. **Semantic** memory is
-`Claim`, `Source` and `KernelFact` — with provenance as a traversal, so "which source justified
+`Claim`, `Source` and `KernelFact`, with provenance as a traversal, so "which source justified
 this" is a query rather than a citation a model wrote from memory. **Procedural** memory is
 `Antibody` and `Infection`: not what happened, but what to do when it happens again, including the
 recorded outcome, so effectiveness is measured rather than assumed.
 
 The distinction that matters is two memories of opposite polarity. `Infection` records what was
-**wrong**; `KernelFact` records what is now held **true**. That is what makes immunity cheap — a
+**wrong**; `KernelFact` records what is now held **true**. That is what makes immunity cheap, a
 repeat is recognised against a handful of facts in **1.3 ms median** instead of a **20.3 ms** graph
 sweep, and every correction moves work from the expensive path to the cheap one.
 
 Coordination is derived, not stored: trust is recomputed from each agent's exposure, so it cannot
 drift out of sync with the belief graph. And because FalkorDB Cloud's free tier has no persistence,
-every write is appended to a log before it is applied — 73 writes, 0 failures, rebuilt identical
+every write is appended to a log before it is applied, 73 writes, 0 failures, rebuilt identical
 including node ids.
 
 ## What to look at
@@ -113,9 +113,9 @@ including node ids.
 
 ## Evidence
 
-- Kernel fast path **1.31 ms median / 2.25 ms p95** (local); detection sweep **20.3 ms** — a ~15x
+- Kernel fast path **1.31 ms median / 2.25 ms p95** (local); detection sweep **20.3 ms**, a ~15x
   difference, and the reason the two are used differently.
-- Rebuild: **73 writes, 0 failed, identical** — including node ids, which is why the log stores
+- Rebuild: **73 writes, 0 failed, identical**, including node ids, which is why the log stores
   statements rather than semantic events.
 - Concurrency: naive `max(seq)+1` produced **37 distinct sequence numbers** across 200 concurrent
   writes; allocating with a `SET` gives **200/200**.
@@ -129,7 +129,7 @@ proven rather than asserted. The concurrency fix is the part most likely to matt
 
 ---
 
-# Track 03 — Company Brain
+# Track 03, Company Brain
 
 ## One-line pitch
 
@@ -146,17 +146,17 @@ superseded.
 ## Long description (203 words)
 
 The characteristic failure of a company brain is not retrieval failure. It is that one agent's
-confident wrong **price** gets repeated by another department until it becomes doctrine — and a wrong
+confident wrong **price** gets repeated by another department until it becomes doctrine, and a wrong
 price is a million-dollar hallucination, not an embarrassing paragraph.
 
 ImmuneGraph loads the company's documents as `Source` nodes and the facts they establish as
 `KernelFact`s linked to them, so provenance is a traversal rather than a citation a model wrote from
 memory. Department agents answer from that shared brain. When Sales invents a price, Support repeats
-it with a real `DERIVED_FROM` edge back to Sales — a cascade, not two coincidences — and the
+it with a real `DERIVED_FROM` edge back to Sales, a cascade, not two coincidences, and the
 infection is contained by an antibody that cites the actual pricing document.
 
 Two things a company brain needs beyond a generic agent memory. **Quantity conflicts:** everything a
-company states as fact is a number, and "399 per seat" does not negate "499 per seat" — the two agree
+company states as fact is a number, and "399 per seat" does not negate "499 per seat", the two agree
 on every word except the one that matters. Negation-based detection scored the wrong price as
 *aligned* with policy; a dedicated numeric check now catches it. **Policy drift:** when the price
 changes, the old fact is superseded rather than deleted and every active claim is re-judged, so the
@@ -170,7 +170,7 @@ The corpus is synthetic, so no private information is involved.
    price spreads and is contained.
 2. Watch the **revision** step: the old fact is superseded, and the previously-correct price is
    immediately flagged.
-3. **Facts in force** — each fact shown with its trust level and the document it came from.
+3. **Facts in force**, each fact shown with its trust level and the document it came from.
 
 ## Evidence
 
@@ -178,7 +178,7 @@ The corpus is synthetic, so no private information is involved.
 - Wrong price caught in **7.2 ms** local / 97 ms cloud against the pricing policy.
 - Numeric conflict detection verified to fire on `399 vs 499` and **not** fire between a refund
   window and an incident SLA, which share digits but no subject.
-- After the revision, the previously-correct 499 claim is `suspect` — nothing stale stays blessed.
+- After the revision, the previously-correct 499 claim is `suspect`, nothing stale stays blessed.
 - Superseded facts are retained, so history stays answerable.
 
 ## Why it fits this track
@@ -191,13 +191,13 @@ between teams, and last quarter's answer still being served.
 
 # Submission checklist (rule 10)
 
-- [x] Public source-code repository — https://github.com/TCPCore/immunity
+- [x] Public source-code repository, https://github.com/TCPCore/immunity
 - [x] README with setup instructions and the graph data model
-- [x] The Cypher queries the product depends on — `src/immunegraph/queries.py`, all executed by
+- [x] The Cypher queries the product depends on, `src/immunegraph/queries.py`, all executed by
       `python -m immunegraph.verify_queries`
-- [ ] Demo video — recorded, **needs hosting**; paste the link above
-- [ ] Live deployment — Streamlit Cloud app exists but currently **requires login**; set
+- [ ] Demo video, recorded, **needs hosting**; paste the link above
+- [ ] Live deployment, Streamlit Cloud app exists but currently **requires login**; set
       *Settings → Sharing → anyone with the link* and verify in an incognito window. If it cannot be
       made public, the README's Docker instructions satisfy the "complete local setup" alternative.
-- [x] The tracks entered — all three, named above
+- [x] The tracks entered, all three, named above
 - [x] AI assistant use disclosed (see README)

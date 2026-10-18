@@ -1,4 +1,4 @@
-# Halcyon Robotics — Pricing (2026)
+# Halcyon Robotics, Pricing (2026)
 
 Halcyon Robotics sells fleet software for warehouse robotics. Two plans are
 offered on annual terms.

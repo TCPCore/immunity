@@ -165,7 +165,7 @@ def conflicts_on_numbers(claim: str, fact: str) -> float | None:
     Negation cannot catch the failure mode a company brain actually has. "The
     Enterprise plan is 399 USD per seat" and "The Enterprise plan costs 499 USD
     per seat" agree on every word and disagree on the only part that matters.
-    Without this check the claim scored as *aligned* with the pricing policy —
+    Without this check the claim scored as *aligned* with the pricing policy -
     the sanitiser would have blessed a wrong price as doctrine.
 
     Requires both sides to state a number, the numbers to differ, and the
@@ -186,7 +186,7 @@ def conflicts_on_numbers(claim: str, fact: str) -> float | None:
 
 
 def subject_head(text: str) -> str | None:
-    """The leading content token — the entity a statement is about.
+    """The leading content token, the entity a statement is about.
 
     Crude on purpose. "Enterprise plan costs 499" and "Team plan costs 99" are
     about different things, and every token after the head is shared between
@@ -202,7 +202,7 @@ def subject_head(text: str) -> str | None:
 def same_subject(left: str, right: str) -> bool:
     """Do these two statements concern the same entity?
 
-    If either side has no identifiable subject, assume yes — better to check
+    If either side has no identifiable subject, assume yes, better to check
     than to silently skip a contradiction.
     """
     left_head = subject_head(left)
@@ -287,7 +287,7 @@ class Source:
 class RefutedStatement:
     """A statement the swarm has confirmed to be false, kept as negative memory.
 
-    The kernel holds what is *true*. This holds what is *known false* — the
+    The kernel holds what is *true*. This holds what is *known false*, the
     things an audit proved cannot be caught by comparison, because they are not
     contradictions of a fact but plausible mutations of one. A company saying
     "we do not offer a Starter plan" is knowledge, and it is not derivable from

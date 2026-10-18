@@ -322,7 +322,7 @@ class Swarm:
     def _susceptible_agents(self, limit: int = 2) -> list[tuple[str, str]]:
         # An explicit allowlist, not a blocklist. The Antibody System's role is
         # 'immune', so excluding 'antibody' let the immune system itself catch
-        # the infection — which is nonsense, and it showed up in the animation.
+        # the infection, which is nonsense, and it showed up in the animation.
         rows = self.store.rows(
             "MATCH (a:Agent) "
             "WHERE a.role IN ['researcher', 'analyst', 'planner'] "
@@ -570,7 +570,7 @@ class Swarm:
         """Wipe the graph and rebuild it from the write-ahead log.
 
         Returns the replay result, including whether the rebuilt graph is
-        identical to the one that was there before — the claim worth making is
+        identical to the one that was there before, the claim worth making is
         "provably the same", not "still seems to work".
         """
         if self.log is None:
@@ -579,7 +579,7 @@ class Swarm:
         return rebuild_and_verify(self.store, self.log)
 
     def reset_all(self) -> None:
-        """Wipe the graph *and* the log — start the scenario over.
+        """Wipe the graph *and* the log, start the scenario over.
 
         Resetting only the graph leaves the log holding writes for data that no
         longer exists. The next rebuild would then replay both runs, and because

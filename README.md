@@ -1,14 +1,15 @@
-# ImmuneGraph — a self-healing memory for AI agent swarms
+# ImmuneGraph, a self-healing memory for AI agent swarms
 
 **A FalkorDB-backed immune system that catches hallucination cascades in multi-agent
 systems, corrects them, and remembers them so the swarm develops immunity.**
 
-Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB, Oct 15–18 2026).
+Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB, Oct 15-18 2026).
 
 > **Tracks entered:**
 >
-> - **Track 01 — Agents That Act on Connected Data**
-> - **Track 02 — Agent Memory and Coordination**
+> - **Track 01, Agents That Act on Connected Data**
+> - **Track 02, Agent Memory and Coordination**
+> - **Track 03, Company Brain**
 >
 > Each track name is kept unbroken on its own line so an automated submission
 > checker can match it exactly.
@@ -17,13 +18,13 @@ Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs × FalkorDB, Oct 15
 
 ## The 30-second version
 
-Agent memory layers store **what was said**. ImmuneGraph stores **what supports what** — so
+Agent memory layers store **what was said**. ImmuneGraph stores **what supports what**, so
 the pathologies of collective belief become graph traversals a Cypher query can detect.
 
 Three agents plan a Mars mission. One asserts something with no source. The other two reason
 *correctly* from it. Nothing was stored incorrectly, and the swarm is now acting on a lie.
 
-ImmuneGraph catches it, corrects it, and then catches it again instantly when it comes back —
+ImmuneGraph catches it, corrects it, and then catches it again instantly when it comes back -
 as a *paraphrase*. In one verified run from a clean graph:
 
 | Beat | Result | Produced by |
@@ -40,11 +41,11 @@ trust *is* derived from association (Q5); the immune memory *is* the
 `Infection`→`TARGETS`→`Claim` subgraph. Nothing here is a visualisation drawn over ordinary
 storage.
 
-![ImmuneGraph — conversation, live belief graph and immune dashboard](docs/images/immunegraph-ui.png)
+![ImmuneGraph, conversation, live belief graph and immune dashboard](docs/images/immunegraph-ui.png)
 
 *After the Mars run and the immunity-recall test. The original claim and its later paraphrase
-are both quarantined (dark red). The Analyst's and Planner's claims are amber — **support
-invalidated** — because their only justification was the claim just refuted; they are not
+are both quarantined (dark red). The Analyst's and Planner's claims are amber, **support
+invalidated**, because their only justification was the claim just refuted; they are not
 proven false, but they are no longer trustworthy. Peak severity is 6.0, both outbreaks are
 contained, and trust has decayed to **0.70** for the Researcher (who asserted the falsehood
 *and* its repeat) and **0.85** for the Analyst and Planner, who each only inherited it.*
@@ -52,7 +53,7 @@ contained, and trust has decayed to **0.70** for the Researcher (who asserted th
 ## The problem
 
 Multi-agent AI systems have a failure mode that ordinary memory layers do not address.
-One agent invents a claim, a second derives a plan from it, a third builds on that plan —
+One agent invents a claim, a second derives a plan from it, a third builds on that plan -
 and the swarm calmly acts on a lie. Existing memory stores *what was said*. None of them
 notice that the swarm is getting **epistemically sick**.
 
@@ -70,7 +71,7 @@ become traversals:
 | Failed memory | association with an unresolved `Infection` node |
 
 When a query finds an infection, ImmuneGraph creates an `Infection` node whose **severity
-is computed from graph reachability** — not from an LLM's opinion — then dispatches an
+is computed from graph reachability**, not from an LLM's opinion, then dispatches an
 **antibody agent** that injects a sourced correction, quarantines the claim, and records the
 episode. When a similar claim appears later, immunity recall fires **instantly**, without
 re-running cascade detection.
@@ -81,28 +82,28 @@ severity, trust and recall are all Cypher queries. See
 
 ---
 
-## The kernel of truth — memory of what is *right*
+## The kernel of truth, memory of what is *right*
 
 Everything above records what was **wrong**: an `Infection`, a quarantined `Claim`, a trust
 score that dropped. Useful, but incomplete. A swarm that only remembers its mistakes learns
-nothing it can reuse — every outbreak leaves a scar and the next one is caught the same
+nothing it can reuse, every outbreak leaves a scar and the next one is caught the same
 expensive way.
 
 So when an antibody produces a correction that **cites a source**, the canonical form of that
 correction becomes a `KernelFact`: linked to the source that backs it, and to the antibody
 that established it. From then on every new claim is judged against the kernel.
 
-| | Detection (Q1–Q8) | Sanitisation (K1–K5) |
+| | Detection (Q1-Q8) | Sanitisation (K1-K5) |
 | --- | --- | --- |
 | Finds | lies the swarm has **never seen** | lies it **already knows** |
 | Method | traversal over the support structure | lexical match against facts |
-| Cost | extraction + full scan — **3.1s** for the cascade | **~5ms**, no model call |
+| Cost | extraction + full scan, **3.1s** for the cascade | **~5ms**, no model call |
 
 That contrast is the whole point, and it is measured rather than asserted: every verdict
 carries its own elapsed time, shown in the UI and printed by the demo.
 
 **Only sourced corrections become facts.** If the antibody cannot cite anything, it says so
-and establishes nothing — "no source supports this" is a meta-statement, not a truth worth
+and establishes nothing, "no source supports this" is a meta-statement, not a truth worth
 remembering, and inventing certainty would just be a new infection.
 
 Provenance is why this lives in the graph rather than a side table. *Which antibody* taught
@@ -117,41 +118,41 @@ RETURN k.text, ab.id AS established_by, s.name AS source, s.url AS source_url
 ```
 
 > **A bug worth mentioning.** The first version of the kernel-health query counted with
-> `count(*)`, which under `OPTIONAL MATCH` counts *rows* rather than *edges* — so an empty
+> `count(*)`, which under `OPTIONAL MATCH` counts *rows* rather than *edges*, so an empty
 > kernel reported one conflict that did not exist, in exactly the direction that flattered
 > the project. Named-relationship counts ignore nulls; `count(*)` does not. See
 > [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) §5b.
 
 ---
 
-## Check any claim — grounding in public knowledge
+## Check any claim, grounding in public knowledge
 
 The Mars scenario is scripted. **Check any claim** is not: type a statement and the swarm
-grounds it against **Wikipedia** — free, no API key, and a citable public source — then runs it
+grounds it against **Wikipedia**, free, no API key, and a citable public source, then runs it
 through the *same* immune machinery. If a public source refutes it, the claim is quarantined, an
 antibody cites that source, and the fact enters the kernel:
 
 ```
 Claim: Venus has a breathable atmosphere
-Refuted by Atmosphere of Venus — the claim is false.
+Refuted by Atmosphere of Venus, the claim is false.
   "Venus's atmosphere is composed of 96.5% carbon dioxide and 3.5% nitrogen,
    with other chemical compounds present only in trace amounts."
   Source: Atmosphere of Venus
-🛡️ Arrested by the same mechanism — Infection contained · Antibody external citation · Kernel fact added
+🛡️ Arrested by the same mechanism, Infection contained · Antibody external citation · Kernel fact added
 ```
 
-You can watch it happen. The cascade is not an animation over a fixed script — each step is a
+You can watch it happen. The cascade is not an animation over a fixed script, each step is a
 real write, and the severity shown is read back from **Q4** at that moment:
 
 ```
 🗣️  Visitor asserts: "Venus has a breathable atmosphere"
-🔎  Sanitised against the kernel — no stored fact matches yet.
+🔎  Sanitised against the kernel, no stored fact matches yet.
 🌐  Public source consulted: Atmosphere of Venus.
-🦠  Infection open on the claim — severity 2.0.
-↗️  Analyst reasons from it — severity 4.0.
-↗️  Planner reasons from it — severity 6.0.
+🦠  Infection open on the claim, severity 2.0.
+↗️  Analyst reasons from it, severity 4.0.
+↗️  Planner reasons from it, severity 6.0.
 🛡️  Antibody dispatched, citing the public source.
-✅  Quarantined — the cascade is contained.
+✅  Quarantined, the cascade is contained.
 ```
 
 The Analyst and Planner genuinely derive from the visitor's claim, which is why severity climbs:
@@ -160,19 +161,19 @@ is then contained, not just the claim that started it.
 
 Nothing about the mechanism changes. Only where the evidence comes from. A refuted claim becomes
 a new `Infection` class (`external_contradiction`), it appears in the same dashboard, the same
-trust table, the same Q8 panel — and because the fact lands in the kernel, **a repeat of that
+trust table, the same Q8 panel, and because the fact lands in the kernel, **a repeat of that
 claim is caught with no network call at all**.
 
 ### Two design decisions that keep it honest
 
 **The subject check.** Wikipedia's search matches individual *words*. Asking about "Mars is made
 of cheese" returns articles about cheese, and an early version duly reported that claim as
-**supported** — by an article about Cheez-Its. An article is now only considered if its *title*
+**supported**, by an article about Cheez-Its. An article is now only considered if its *title*
 shares a token with the claim. No article called anything with "Mars" in it exists among cheese
 results, so that claim comes back **inconclusive** instead.
 
 **Sentence-level, coverage-scored agreement.** Judging a whole article at once fires on unrelated
-text, and the overlap coefficient flatters short claims — two shared words out of three reads as
+text, and the overlap coefficient flatters short claims, two shared words out of three reads as
 0.67. Agreement now requires one sentence to contain essentially everything the claim asserts.
 "only" was also removed from the limiting-word list after it refuted the *true* claim that the
 Moon orbits the Earth.
@@ -191,30 +192,30 @@ corroborate a claim.
 
 ---
 
-## Company brain — Track 03
+## Company brain, Track 03
 
 A company's characteristic failure is not retrieval failure. It is that **one agent's confident
 wrong price gets repeated by another department until it becomes doctrine.** That is the same
 pathology, with the company's own documents as the kernel of truth.
 
 Four synthetic documents ([`data/company/`](data/company/)) are loaded as `Source` nodes, and the
-facts they establish become `KernelFact`s linked to them — so provenance is a traversal, not a
+facts they establish become `KernelFact`s linked to them, so provenance is a traversal, not a
 citation a model wrote from memory. Then:
 
 ```
 📚  Loaded 4 company documents into the kernel as 5 facts.
 ⚖️  Sales answers 'What does the Enterprise plan cost?' with
-    'The Enterprise plan is 399 USD per seat per year.' — conflict found in 66.6ms.
-↗️  Support repeats it to a customer — the wrong price is now spreading.
-🦠  Infection opened across two departments — severity 4.0.
+    'The Enterprise plan is 399 USD per seat per year.', conflict found in 66.6ms.
+↗️  Support repeats it to a customer, the wrong price is now spreading.
+🦠  Infection opened across two departments, severity 4.0.
 🛡️  Quarantined both. The antibody cites Enterprise and Team pricing (2026).
 📝  Finance raises the price to 549 USD. The old fact is SUPERSEDED, not deleted.
-⏳  Sales quotes the old 499 price — correct last week, wrong now. Caught in 89.7ms.
+⏳  Sales quotes the old 499 price, correct last week, wrong now. Caught in 89.7ms.
 ```
 
 ### Two things a company brain needs that Mars did not
 
-**Quantity conflicts.** Everything a company states as fact is a number — price, SLA, retention
+**Quantity conflicts.** Everything a company states as fact is a number, price, SLA, retention
 window, seat count. `conflicts_with_fact` is negation-based, and "399 per seat" does not negate
 "499 per seat"; the two agree on every word except the one that matters. Without
 `conflicts_on_numbers` the sanitiser scored a wrong price as **aligned** with the pricing policy
@@ -222,7 +223,7 @@ and blessed it as doctrine. It now requires both sides to state a number, the nu
 and the non-numeric context to be the same subject.
 
 **Policy drift.** Facts are versioned. When the price changes, the old fact is `superseded` and
-kept rather than deleted, so "when did we stop believing this" stays answerable — and every claim
+kept rather than deleted, so "when did we stop believing this" stays answerable, and every claim
 still active is re-judged against the new truth. An agent quoting last quarter's price is caught.
 A brain that cannot forget is as dangerous as one that cannot learn.
 
@@ -230,7 +231,7 @@ The corpus is synthetic, so rule 6 is satisfied by construction and nothing priv
 
 ---
 
-## Durability — the graph is a projection
+## Durability, the graph is a projection
 
 **FalkorDB Cloud's free tier has no persistence and no backups.** Instances are stopped after
 a day idle and deleted after seven. A kernel of truth that evaporates is not much of a truth,
@@ -244,14 +245,14 @@ Press **♻️ Rebuild from log** and it wipes the graph and reconstructs it, th
 the result is *identical* rather than merely plausible:
 
 ```
-Rebuilt 73 writes from the log — the graph is identical to the one before
+Rebuilt 73 writes from the log, the graph is identical to the one before
 the wipe (20 nodes).
 ```
 
 **Why the log stores statements rather than semantic events.** Events such as
 `ClaimAsserted {text: ...}` read better, but replay then has to reconstruct *which* write that
 implied, and any divergence between the event vocabulary and the writer's behaviour shows up
-as a graph that quietly differs from the original. Statements cannot diverge — replaying them
+as a graph that quietly differs from the original. Statements cannot diverge, replaying them
 *is* the original write.
 
 That matters most for ids. Infection and antibody ids are `uuid4`, so a replay that regenerated
@@ -260,25 +261,25 @@ fully-substituted statement, the generated id is captured with it.
 
 Replay is *proven*, not assumed: `graph_fingerprint()` compares node ids, relationship counts
 and claim statuses before and after, and [`tests/test_durability.py`](tests/test_durability.py)
-asserts they match — over the whole Mars arc, twice in a row, and from an exported seed.
+asserts they match, over the whole Mars arc, twice in a row, and from an exported seed.
 
 > **The fingerprint earned its place immediately.** The first rebuild looked fine by every
 > superficial measure, but two claims silently reverted from `suspect` to `active`. The cause:
 > the cascade-containment update returns ids, so it *read* like a query and had been written
-> with `rows()` — which is **not logged**. It worked, and a rebuild lost it. There is now a
+> with `rows()`, which is **not logged**. It worked, and a rebuild lost it. There is now a
 > structural test that fails if any write hides inside a read helper.
 
 ### Cold starts
 
 [`data/seed_writes.jsonl`](data/seed_writes.jsonl) is a committed 73-write log of the Mars run.
-Point `SEED_LOG` at it and a freshly deployed app rebuilds the whole story on first load — no
+Point `SEED_LOG` at it and a freshly deployed app rebuilds the whole story on first load, no
 clicking, nothing to go stale:
 
 ```bash
 SEED_LOG=data/seed_writes.jsonl
 ```
 
-For genuine cross-restart durability the log needs durable storage — a mounted volume, object
+For genuine cross-restart durability the log needs durable storage, a mounted volume, object
 storage, or a paid FalkorDB tier. On Streamlit Community Cloud the filesystem is ephemeral, so
 the seed is what makes a cold start deterministic.
 
@@ -302,14 +303,14 @@ The full schema, indexes, and all eighteen load-bearing Cypher queries are in
 **[`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md)**. Those queries are the product; this
 README repeats the four headline ones so a reviewer can see them without leaving the page.
 
-**Q1 — self-justifying belief (a cycle in the support structure)**
+**Q1, self-justifying belief (a cycle in the support structure)**
 
 ```cypher
 MATCH path = (c:Claim)-[:SUPPORTED_BY|DERIVED_FROM*2..5]->(c)
 RETURN c.id, c.text, [n IN nodes(path) | n.text] AS cycle_path, length(path)
 ```
 
-**Q2 — an unsupported root (no trusted source, no parent)**
+**Q2, an unsupported root (no trusted source, no parent)**
 
 ```cypher
 MATCH (c:Claim {status: 'active'})
@@ -321,7 +322,7 @@ WHERE source_count = 0 AND parent_count = 0
 RETURN c.id, c.text, c.fingerprint
 ```
 
-**Q4 — cascade reach. Severity is defined as this traversal, not as an LLM's opinion**
+**Q4, cascade reach. Severity is defined as this traversal, not as an LLM's opinion**
 
 ```cypher
 MATCH (root:Claim {id: $root_claim_id})
@@ -333,7 +334,7 @@ OPTIONAL MATCH (a:Agent)-[:ASSERTS]->(member)
 RETURN root.id, size(downs) AS infected_claims, count(DISTINCT a) AS exposed_agents
 ```
 
-**Q6 — immunity recall. An indexed equality match, so it is instant, not a model judgement**
+**Q6, immunity recall. An indexed equality match, so it is instant, not a model judgement**
 
 ```cypher
 MATCH (past:Claim {fingerprint: $fingerprint})<-[:TARGETS]-(i:Infection)
@@ -348,7 +349,7 @@ Q8 (antibody effectiveness) are in [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) 
 
 ## Setup
 
-### Option A — Docker (recommended)
+### Option A, Docker (recommended)
 
 ```bash
 git clone https://github.com/TCPCore/immunity.git && cd immunity
@@ -374,11 +375,11 @@ falls back to rules otherwise.
 falling through to `auto`, and `EXTRACTOR=llm` without a key fails immediately with an
 explanation instead of raising a provider error mid-conversation.
 
-### Option B — FalkorDB Cloud
+### Option B, FalkorDB Cloud
 
 Create a free instance at [app.falkordb.cloud](https://app.falkordb.cloud), then set
 `FALKORDB_HOST`, `FALKORDB_PORT`, `FALKORDB_USER`, `FALKORDB_PASSWORD` in `.env`.
-No other change is needed — the connection layer is environment-driven.
+No other change is needed, the connection layer is environment-driven.
 
 > **Platform note.** `falkordblite` (embedded) is *not* used. Its published macOS wheels are
 > tagged universal2 but contain **arm64-only** `redis-server` and `falkordb.so`, so it fails
@@ -403,7 +404,7 @@ radius of an outbreak is visible at a glance.
 ```
 
 `demo.py` exits non-zero if immunity recall does not fire, no infection is detected, or no
-antibody responds — so it doubles as a CI check and as the script for the demo video.
+antibody responds, so it doubles as a CI check and as the script for the demo video.
 
 ### Demo video
 
@@ -414,7 +415,7 @@ antibody responds — so it doubles as a CI check and as the script for the demo
 [`scripts/record_demo.py`](scripts/record_demo.py) produces the demo video from the running
 app: it drives the UI over the Chrome DevTools Protocol, burns in a caption bar, outlines the
 relevant panel on each beat, and encodes H.264. The result is deliberately not committed
-(`*.mp4` is gitignored) — host it and link it here. [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+(`*.mp4` is gitignored), host it and link it here. [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 is the shot list, and `scripts/demo_dry_run.py` asserts that every number the script quotes is
 the number that actually appears at that beat.
 
@@ -434,12 +435,35 @@ the number that actually appears at that beat.
    instantly.** The swarm does not get fooled twice.
 9. **Q8** measures whether antibodies actually worked across outbreaks.
 10. The antibody's sourced correction becomes a **`KernelFact`** (K1). A later claim is
-    judged against it (K2) and, if it conflicts, downgraded — **in ~5ms with no model call**.
+    judged against it (K2) and, if it conflicts, downgraded, **in ~5ms with no model call**.
     The swarm is measurably harder to fool than it was at step 1.
 
 ---
 
 ## Verification
+
+### Prove the track claims
+
+Naming a track is a claim. This runs the capability each track is actually about and prints a
+pass or fail per check:
+
+```bash
+python scripts/verify_tracks.py
+```
+
+```
+Track 01: QUALIFIES (6/6 checks)
+Track 02: QUALIFIES (7/7 checks)
+Track 03: QUALIFIES (8/8 checks)
+21/21 checks passed
+```
+
+It checks the graph itself, not the docs: severity computed from reach, an antibody injecting a
+correction, derived claims invalidated by `contain_cascade`, three memory kinds present, no agent
+storing its trust, a rebuild from the log proven identical, documents becoming kernel facts with
+provenance, and a superseded price being re-judged.
+
+### Everything else
 
 A Cypher query that has never been executed is not a feature. Three layers of proof:
 
@@ -474,8 +498,8 @@ own premise, a case-sensitive source pattern that dropped citations, and the con
 collision above.
 
 FalkorDB implements a **subset** of openCypher v9. The dialect constraints that shaped this
-model — no regex operator, no label expressions, no aggregation inside pattern
-comprehensions, `LIMIT` not constraining eager writes — are documented in
+model, no regex operator, no label expressions, no aggregation inside pattern
+comprehensions, `LIMIT` not constraining eager writes, are documented in
 `docs/GRAPH_MODEL.md` §6.
 
 ---
@@ -488,9 +512,9 @@ Required by hackathon rule 11. Being specific rather than vague about it:
   docstrings, the live query verifier, the extraction module, documentation drafting, and
   research into FalkorDB's openCypher subset and vector-index API.
 - **Human-authored:** the project concept and the immune-system framing, the choice of
-  Tracks 01 and 02, the Mars mission scenario and its beats, the memory taxonomy mapping onto
+  Tracks 01, 02 and 03, the Mars mission scenario and its beats, the memory taxonomy mapping onto
   the Track 02 rubric, and the decision to run FalkorDB in Docker.
-- **Verification — the part that matters most:** every Cypher query in this repository was
+- **Verification, the part that matters most:** every Cypher query in this repository was
   executed against a live FalkorDB instance before being committed, via
   `python -m immunegraph.verify_queries`. Two non-obvious behaviours were discovered by
   *running* the queries rather than assuming them; one of them (the vector recall ordering
@@ -517,12 +541,12 @@ material for that rather than asserting it:
 | [`docs/SUBMISSION.md`](docs/SUBMISSION.md) | Copy-paste text for the submission form and the final checklist |
 | [`docs/EXPLAINER.md`](docs/EXPLAINER.md) | How to defend the model, every query, and the trade-offs |
 | [`docs/GRAPH_MODEL.md`](docs/GRAPH_MODEL.md) | The schema and the queries the product depends on |
-| [`docs/NOVELTY.md`](docs/NOVELTY.md) | What is actually new, measured against the prior art — and what is not |
+| [`docs/NOVELTY.md`](docs/NOVELTY.md) | What is actually new, measured against the prior art, and what is not |
 | [`docs/SUBMISSION_PER_TRACK.md`](docs/SUBMISSION_PER_TRACK.md) | Copy-paste submission write-up for each of the three tracks |
 | [`docs/APPLICABILITY.md`](docs/APPLICABILITY.md) | What this is good for in production, measured latency, and what is not proven |
 | [`docs/DEPLOY.md`](docs/DEPLOY.md) | Getting a clickable live link: FalkorDB Cloud + Streamlit |
 | [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Shot-by-shot script for the demo video |
-| [`docs/BLOG_POST.md`](docs/BLOG_POST.md) | Long-form write-up — the clearest explanation of the work |
+| [`docs/BLOG_POST.md`](docs/BLOG_POST.md) | Long-form write-up, the clearest explanation of the work |
 
 ---
 

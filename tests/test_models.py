@@ -99,7 +99,7 @@ def test_overlap_saves_the_case_jaccard_misses():
     """The honest version of this regression guard.
 
     Against a *canonical* short fact, Jaccard already suffices. The overlap
-    coefficient earns its place against a prose-length fact — which is exactly
+    coefficient earns its place against a prose-length fact, which is exactly
     what the LLM path produces, since it has no hand-written short form to
     compare against. There, Jaccard dilutes below threshold and misses a real
     contradiction.

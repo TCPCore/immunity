@@ -6,7 +6,7 @@ is made of cheese" as SUPPORTED by an article about Cheez-Its: the overlap
 coefficient flatters short claims, and Wikipedia's search matches individual
 words rather than meaning. Both failure modes are pinned here.
 
-The end-to-end test stubs the network out entirely — a test that depends on
+The end-to-end test stubs the network out entirely, a test that depends on
 Wikipedia being up would be a flaky test, and the arrest mechanics are what
 matter.
 """

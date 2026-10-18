@@ -1,4 +1,4 @@
-"""Append-only write-ahead log — the durable half of the truth.
+"""Append-only write-ahead log, the durable half of the truth.
 
 FalkorDB is an in-memory graph database. Locally it persists through a Docker
 volume, but **FalkorDB Cloud's free tier explicitly has no persistence and no
@@ -7,7 +7,7 @@ kernel of truth that evaporates is not much of a truth.
 
 So the graph is treated as a *projection*: every write is appended here first,
 and the graph can be rebuilt from the log at any time. This is the pattern
-FalkorDB's own reference architecture recommends for agent memory — an event
+FalkorDB's own reference architecture recommends for agent memory, an event
 store for durability, a graph for the live queryable view.
 
 Why the log stores statements rather than semantic events:
@@ -19,7 +19,7 @@ Why the log stores statements rather than semantic events:
     them *is* the original write.
 
 Ids are the reason this matters. Infection and antibody ids are `uuid4`, so a
-replay that regenerated them would produce a different graph — every reference
+replay that regenerated them would produce a different graph, every reference
 broken. Because the log stores the fully-substituted statement, the generated id
 is captured with it and replay is exact. Semantic labels are kept alongside for
 the UI, so the log stays readable without becoming the source of truth.

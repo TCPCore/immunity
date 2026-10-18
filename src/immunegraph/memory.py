@@ -77,7 +77,7 @@ class MemoryWriter:
         """Atomically allocate the next value of a per-session counter.
 
         Deliberately implemented as a *write* (``SET``) so FalkorDB serialises
-        it. The obvious implementation — read ``max(seq)`` and add one — is a
+        it. The obvious implementation, read ``max(seq)`` and add one, is a
         read-only query, and concurrent readers are free to observe the same
         value, which produces duplicate sequence numbers and colliding ids.
 
@@ -534,7 +534,7 @@ class MemoryWriter:
         """Downgrade claims whose only support descends from a quarantined root.
 
         Issued through the write path deliberately. The natural implementation
-        returns ids, so it reads as a query and gets written with ``rows()`` —
+        returns ids, so it reads as a query and gets written with ``rows()`` -
         which is not logged, so a rebuild would silently lose the cascade
         containment. That is precisely what the graph fingerprint caught.
         """

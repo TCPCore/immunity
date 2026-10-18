@@ -11,7 +11,7 @@ The division of labour is the point of the whole design:
                        call, no cascade scan.
 
 That second path is what "the swarm develops immunity" means in practice, and it
-is measurable — every verdict carries its own elapsed time so the fast path can
+is measurable, every verdict carries its own elapsed time so the fast path can
 be compared against the slow one instead of merely asserted.
 """
 
@@ -40,7 +40,7 @@ from .schema import (
 
 
 # A refuted statement is a known falsehood, so recognition only needs to be
-# close — there is no risk of a false positive from being lenient here.
+# close, there is no risk of a false positive from being lenient here.
 REFUTED_OVERLAP = 0.80
 
 
@@ -86,7 +86,7 @@ class Sanitizer:
 
         A claim that contradicts the kernel is downgraded to 'suspect' straight
         away. We already hold a sourced fact that says otherwise, so the claim
-        does not need a cascade scan to be judged — that is the entire saving.
+        does not need a cascade scan to be judged, that is the entire saving.
         """
         started = time.perf_counter()
         facts = self.kernel.facts() if facts is None else facts
@@ -95,7 +95,7 @@ class Sanitizer:
         aligned: list[dict] = []
 
         # Negative memory first, and cheapest. Some falsehoods are not
-        # contradictions of anything the swarm holds — they are plausible
+        # contradictions of anything the swarm holds, they are plausible
         # mutations of it ("a Starter plan at the Enterprise price"). No amount
         # of comparison against true facts will catch those, because nothing
         # they say is contradicted; what is missing is the knowledge that the
@@ -105,7 +105,7 @@ class Sanitizer:
             # Subject binding applies here too, and the audit is the reason we
             # know. A refuted "Starter plan costs 499" matches the *true*
             # "Enterprise plan costs 499" on every word but one, so a fuzzy
-            # blocklist without subject binding scored 82% autoimmunity — the
+            # blocklist without subject binding scored 82% autoimmunity, the
             # vaccine attacking the host. Without this measurement that would
             # have shipped, because coverage looked perfect.
             if not same_subject(text, statement.text):
@@ -132,7 +132,7 @@ class Sanitizer:
 
             # Subject binding. A claim can only contradict a fact about the same
             # entity. Without this, "Enterprise costs 499" was judged to conflict
-            # with the *Team* fact — which is priced 99 — because the two share
+            # with the *Team* fact, which is priced 99, because the two share
             # every word except the entity and the number. That is the immune
             # system attacking the host, and the self-audit measured it at 20%.
             conflict_score = None
@@ -190,7 +190,7 @@ class Sanitizer:
     def sanitize_pending(self, limit: int = 100) -> list[Verdict]:
         """Judge every active claim the kernel has not yet ruled on.
 
-        The fact list is fetched once for the whole pass — that is what keeps the
+        The fact list is fetched once for the whole pass, that is what keeps the
         fast path cheap.
         """
         facts = self.kernel.facts()
@@ -204,7 +204,7 @@ class Sanitizer:
 
         Called after an antibody teaches, because a fact that arrives now can
         condemn a claim that was merely unsupported before. Claims already
-        quarantined or marked suspect are skipped — their state is stronger.
+        quarantined or marked suspect are skipped, their state is stronger.
         """
         facts = self.kernel.facts()
         if not facts:

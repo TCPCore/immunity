@@ -2,7 +2,7 @@
 
 The unit tests cover the quantity-conflict rule with no database at all, because
 that rule is where a company brain actually fails. Everything a company states
-as fact is a number — price, SLA, retention window, seat count — and negation
+as fact is a number, price, SLA, retention window, seat count, and negation
 cannot see "399" disagreeing with "499".
 
 The scenario tests assert the whole story: documents become truth, a wrong price

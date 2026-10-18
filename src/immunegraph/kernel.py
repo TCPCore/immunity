@@ -12,8 +12,8 @@ dropped, but the swarm learned nothing it could reuse. With the kernel, the
 antibody's correction becomes a fact that every future claim is judged against,
 so each outbreak makes the swarm permanently harder to fool.
 
-Deliberately graph-native. A fact's provenance — which antibody established it,
-citing which source — and its conflicts are edges, and sanitisation is a
+Deliberately graph-native. A fact's provenance, which antibody established it,
+citing which source, and its conflicts are edges, and sanitisation is a
 traversal. Extracting the kernel into a side table would leave those queries
 with nowhere to run, which is precisely what hackathon rule 3 forbids.
 """
@@ -87,7 +87,7 @@ class Kernel:
     # ------------------------------------------------------------------- read
 
     def facts(self) -> list[Fact]:
-        """Every active fact. One query — sanitisation reuses this list."""
+        """Every active fact. One query, sanitisation reuses this list."""
         return [
             Fact(
                 id=row[0],

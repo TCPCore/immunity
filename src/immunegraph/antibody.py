@@ -7,8 +7,8 @@ re-diagnosed.
 
 Two correction strategies:
 
-  * ``source_citation`` — we have a trusted counter-fact, so cite it.
-  * ``contradiction_surface`` — we have none, so state plainly that the claim
+  * ``source_citation``, we have a trusted counter-fact, so cite it.
+  * ``contradiction_surface``, we have none, so state plainly that the claim
     is unsupported and how much depends on it, rather than inventing a fact.
 
 The second strategy is the honest fallback. An antibody that fabricates a
@@ -110,11 +110,11 @@ class AntibodyResult:
             )
         if self.fact_id:
             out.append(
-                f"  taught      : kernel fact {self.fact_id} registered — future claims "
+                f"  taught      : kernel fact {self.fact_id} registered, future claims "
                 "are sanitised against it without a model call"
             )
         else:
-            out.append("  taught      : nothing — no source, so no kernel fact")
+            out.append("  taught      : nothing, no source, so no kernel fact")
         return out
 
 
@@ -233,7 +233,7 @@ class AntibodyAgent:
 
         Returns ``{"correction", "source", "strategy", "fact"}``. ``fact`` is the
         canonical claim-shaped statement for the kernel, or None when nothing was
-        established — an unsourced correction is a meta-statement, not a truth.
+        established, an unsourced correction is a meta-statement, not a truth.
         """
         kb = self._kb_lookup(claim_text)
         if kb:
@@ -261,7 +261,7 @@ class AntibodyAgent:
             }
 
         # Honest fallback: no trusted counter-fact is available, so do not
-        # fabricate one — and do not pretend to have established a fact either.
+        # fabricate one, and do not pretend to have established a fact either.
         return {
             "correction": (
                 f"No trusted source supports the claim {claim_text!r}. It is quarantined "
@@ -280,7 +280,7 @@ class AntibodyAgent:
         Quarantining the root alone leaves the Analyst's and Planner's claims
         reading as 'believed', which is actively misleading: their entire
         justification was the claim we just refuted. They are downgraded to
-        'suspect' — not proven false, but no longer trustworthy — unless they
+        'suspect', not proven false, but no longer trustworthy, unless they
         carry their own independent trusted source, in which case they stand on
         their own.
 

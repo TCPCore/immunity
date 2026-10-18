@@ -2,13 +2,13 @@
 
 Two implementations behind one interface:
 
-  * ``RuleExtractor``  — deterministic, dependency-free, cannot fail.
-  * ``LLMExtractor``   — strict JSON schema, temperature 0.
+  * ``RuleExtractor`` , deterministic, dependency-free, cannot fail.
+  * ``LLMExtractor``  , strict JSON schema, temperature 0.
 
 ``get_extractor()`` selects between them via ``EXTRACTOR=llm|rule|auto``. ``auto``
 tries the LLM and silently falls back to rules on any error or schema
-violation. The graph queries are identical in every mode — only the
-natural-language parsing changes — which is what keeps the live demo safe
+violation. The graph queries are identical in every mode, only the
+natural-language parsing changes, which is what keeps the live demo safe
 without faking the graph work.
 """
 
@@ -228,7 +228,7 @@ class RuleExtractor:
         # like "If Mars has breathable oxygen, we don't need helmets" negates
         # something *downstream* of the premise. It is inferred from X, not
         # opposed to X, and lexical negation detection cannot tell the
-        # difference — treating it as a contradiction produces a false outbreak
+        # difference, treating it as a contradiction produces a false outbreak
         # rooted at the wrong claim. Derivation and contradiction are mutually
         # exclusive for the same pair of claims.
         if not derivation_cue:
@@ -373,7 +373,7 @@ def get_extractor(mode: str | None = None):
 
     Validates rather than guessing. A typo used to fall through to ``auto``, and
     ``llm`` with no API key used to build fine and then fail mid-conversation
-    with a raw provider 401 — both are confusing when you are trying to work out
+    with a raw provider 401, both are confusing when you are trying to work out
     why the demo will not start.
     """
     mode = (mode or os.getenv("EXTRACTOR") or "auto").strip().lower()

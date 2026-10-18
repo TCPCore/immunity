@@ -3,7 +3,7 @@
 Track 03 asks for a shared brain over a company's connected knowledge, with
 reasoning a person can trace. The characteristic failure there is not retrieval
 failure. It is that one agent's confident wrong answer gets repeated by three
-other agents until it becomes company doctrine — and a wrong *price* is a
+other agents until it becomes company doctrine, and a wrong *price* is a
 million-dollar hallucination, not an embarrassing paragraph.
 
 That is the same pathology ImmuneGraph already models, with the company's own
@@ -16,7 +16,7 @@ anywhere near it.
 
 Two things this adds beyond the Mars scenario:
 
-*Quantity conflicts.* A company brain is mostly numbers — prices, SLAs, limits,
+*Quantity conflicts.* A company brain is mostly numbers, prices, SLAs, limits,
 retention windows. "Enterprise is 399 USD per seat" and "Enterprise costs 499
 USD per seat" agree on every word except the one that matters, so negation-based
 conflict detection scores them as *aligned*. ``conflicts_on_numbers`` closes
@@ -122,7 +122,7 @@ class CompanyBrain:
     def seeded(self) -> bool:
         """Are the company's documents loaded?
 
-        Deliberately not "is the kernel empty" — the kernel may already hold
+        Deliberately not "is the kernel empty", the kernel may already hold
         facts from another domain, and testing emptiness meant the documents were
         never seeded in a graph that also ran the Mars scenario.
         """
@@ -249,7 +249,7 @@ class CompanyBrain:
             "phase": "conflict",
             "claim_id": wrong_id,
             "message": (
-                f"Sales answers {PRICE_QUESTION!r} with {WRONG_PRICE!r} — the sanitiser "
+                f"Sales answers {PRICE_QUESTION!r} with {WRONG_PRICE!r}, the sanitiser "
                 + (
                     f"finds a policy conflict in {verdict.elapsed_ms:.1f}ms."
                     if verdict.conflicts
@@ -261,7 +261,7 @@ class CompanyBrain:
 
         # 2. Support repeats it. This is how a wrong price becomes doctrine.
         repeat_id = self._say("ag_support", WRONG_PRICE_REPEAT)
-        # Support is not independently wrong — it is repeating a colleague. That
+        # Support is not independently wrong, it is repeating a colleague. That
         # edge is what makes the spread a cascade rather than two coincidences.
         self.writer.link_derivation(repeat_id, wrong_id)
         repeat_verdict = self.sanitizer.judge(repeat_id, WRONG_PRICE_REPEAT, facts)
@@ -269,7 +269,7 @@ class CompanyBrain:
             "phase": "spread",
             "claim_id": repeat_id,
             "message": (
-                "Support repeats it to a customer — the wrong price is now spreading."
+                "Support repeats it to a customer, the wrong price is now spreading."
                 if repeat_verdict.conflicts
                 else "Support repeats it, but the sanitiser did not flag the restatement."
             ),
@@ -290,7 +290,7 @@ class CompanyBrain:
         self.writer.link_infection_target(infection.id, repeat_id)
         yield {
             "phase": "infected",
-            "message": f"Infection opened across two departments — severity {severity:.1f}.",
+            "message": f"Infection opened across two departments, severity {severity:.1f}.",
             "severity": severity,
         }
 
@@ -338,7 +338,7 @@ class CompanyBrain:
             "phase": "revised",
             "message": (
                 "Finance raises the price to 549 USD. The old fact is SUPERSEDED, "
-                "not deleted — so history stays answerable."
+                "not deleted, so history stays answerable."
             ),
             "revision": revised,
         }
@@ -350,7 +350,7 @@ class CompanyBrain:
             "phase": "stale",
             "claim_id": stale_id,
             "message": (
-                "Sales quotes the old 499 price — correct last week, wrong now. "
+                "Sales quotes the old 499 price, correct last week, wrong now. "
                 f"The sanitiser catches it against the new fact in "
                 f"{stale_verdict.elapsed_ms:.1f}ms."
             ),

@@ -1,8 +1,8 @@
-# Explainer — how to defend this project
+# Explainer, how to defend this project
 
 Written for **rule 12** ("participants must understand the submitted code and be able to
 explain the graph model, the queries, the project architecture, and the technical
-decisions"). Reading this is not the same as understanding it — but this is the material
+decisions"). Reading this is not the same as understanding it, but this is the material
 you need to be able to reproduce unaided.
 
 ---
@@ -11,7 +11,7 @@ you need to be able to reproduce unaided.
 
 Multi-agent systems fail in a way ordinary memory layers cannot see. One agent invents a
 claim. A second derives a plan from it. A third derives a plan from *that*. Nothing is
-stored incorrectly — every agent faithfully recorded what it was told — and yet the swarm
+stored incorrectly, every agent faithfully recorded what it was told, and yet the swarm
 is now acting on a fabrication. Existing memory answers *"what was said?"*; none of them
 answer *"is this swarm getting epistemically sick?"*
 
@@ -24,14 +24,14 @@ the *next* occurrence is caught instantly. The swarm develops immunity.
 
 ---
 
-## 2. Why a graph at all — and why FalkorDB is load-bearing
+## 2. Why a graph at all, and why FalkorDB is load-bearing
 
 The honest test a judge will apply is rule 3: *if FalkorDB were removed, would the product
 still work?* Here is the answer, and you should be able to give it cold.
 
 **Severity is defined as graph reach.** Query Q4 walks `[:DERIVED_FROM*1..5]` backwards from
 a root claim to count how many downstream claims and exposed agents it contaminated, and
-`severity = 1 + infected_claims + exposed_agents`. That number is not stored analysis — it
+`severity = 1 + infected_claims + exposed_agents`. That number is not stored analysis, it
 *is* a traversal. Delete the graph and "how bad is this outbreak" stops having a definition.
 
 **Trust is derived, not stored.** Q5 recomputes every agent's trust from their association
@@ -43,7 +43,7 @@ that silently goes stale.
 `Claim.fingerprint` restricted to claims that carry an `Infection`. The immune memory is not
 a side-table; it is the `Infection`→`TARGETS`→`Claim` subgraph.
 
-**The cascade is a path, not a score.** Q1 finds *cycles* — a property of graph topology
+**The cascade is a path, not a score.** Q1 finds *cycles*, a property of graph topology
 that has no meaningful analogue in a vector store or a relational table without recursive
 CTEs.
 
@@ -81,16 +81,16 @@ All eight live in `src/immunegraph/queries.py` and are proved by
 
 | Query | Finds | The trap |
 | --- | --- | --- |
-| **Q1** | cycles in `SUPPORTED_BY`/`DERIVED_FROM` | alternation inside a variable-length pattern works on this build, but a 3-cycle is reported from **all three** starting nodes — dedupe before counting outbreaks |
+| **Q1** | cycles in `SUPPORTED_BY`/`DERIVED_FROM` | alternation inside a variable-length pattern works on this build, but a 3-cycle is reported from **all three** starting nodes, dedupe before counting outbreaks |
 | **Q2** | active claims with no trusted source and no parent | written with `OPTIONAL MATCH` + `count()`, **not** a negated pattern predicate, to stay inside FalkorDB's openCypher subset |
 | **Q3** | contradictions between two asserting agents | the `CONTRADICTS` edge is written at extraction time; this query only surfaces it |
 | **Q4** | cascade reach and exposed agents | this is where severity comes from. `collect(DISTINCT down)` then `downs + [root]` avoids `UNWIND` on an empty list |
 | **Q5** | trust derived from two kinds of exposure | see below |
 | **Q6** | exact repeat of an infected claim | indexed on `fingerprint`; O(1)-ish, which is why recall feels instant |
-| **Q7** | paraphrase of an infected claim | see below — two non-obvious behaviours |
+| **Q7** | paraphrase of an infected claim | see below, two non-obvious behaviours |
 | **Q8** | antibody effectiveness per infection type | turns "the swarm develops immunity" into a measurement |
 
-### Q5 — why it counts *two* kinds of exposure
+### Q5, why it counts *two* kinds of exposure
 
 The obvious version counts only agents who directly asserted an infected claim. That is
 wrong for this product: an agent that *derives* a plan from someone else's fabrication has
@@ -105,14 +105,14 @@ OPTIONAL MATCH (a)-[:ASSERTS]->(d:Claim)-[:DERIVED_FROM*1..5]->(:Claim)<-[:TARGE
 In the Mars demo this is what makes Researcher, Analyst **and** Planner all lose trust,
 which is the emotional payoff of the cascade.
 
-### Q7 — two things you only learn by running it
+### Q7, two things you only learn by running it
 
 1. The query vector **must** be wrapped in `vecf32(...)`. Passing a bare list, or a stored
    vector property directly, raises `Invalid arguments for procedure
    'db.idx.vector.queryNodes'`.
 2. The yielded `score` is a cosine **distance** (0.0 = identical) even though the index
    option is named `similarityFunction`. So `ORDER BY score DESC` returns the *least*
-   similar candidates. With fewer claims than `k` you would never notice — it is a silent
+   similar candidates. With fewer claims than `k` you would never notice, it is a silent
    correctness bug that only appears at scale. We order ascending.
 
 That second one is worth telling judges about, because the verifier did *not* catch it. It
@@ -143,7 +143,7 @@ being sorted last. This is the concrete example to use when asked how you verifi
 
 **"Isn't this just GraphRAG with extra steps?"**
 GraphRAG retrieves context to improve an answer. This detects a *property of the belief
-graph* — that it has become self-justifying or unsupported — and then acts on it. Retrieval
+graph*, that it has become self-justifying or unsupported, and then acts on it. Retrieval
 quality is orthogonal; you can have perfect retrieval of a fabrication.
 
 **"How is this different from Zep/Graphiti or Mem0?"**
@@ -161,7 +161,7 @@ is a *containment* system, not a truth oracle.
 **"Why is a cycle bad? Isn't mutual support fine?"**
 Mutual support between two *independently sourced* claims is fine. A cycle where the only
 thing supporting each claim is the next one in the loop means there is no external grounding
-anywhere in the loop — the belief is self-justifying by construction.
+anywhere in the loop, the belief is self-justifying by construction.
 
 **"Could an attacker game it?"**
 Yes. An agent could assert many well-sourced false claims and the system would trust them.
@@ -181,4 +181,4 @@ overclaiming.
 - Thresholds (`similarity` 0.25, trust decay 0.15) are chosen for demo legibility, not fitted
   to data.
 - `falkordblite` cannot be used on x86_64 macOS because its published wheels ship arm64-only
-  binaries — that is why this project requires Docker or FalkorDB Cloud.
+  binaries, that is why this project requires Docker or FalkorDB Cloud.

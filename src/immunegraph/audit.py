@@ -1,23 +1,23 @@
 """Self-audit: measure what the defence catches AND what it wrongly catches.
 
-Every system of this kind reports one number — how much it detects. That number
+Every system of this kind reports one number, how much it detects. That number
 is gameable: a detector that flags everything scores 100%. The only honest
 measurement is two-sided, and the side nobody reports is the one that bites.
 
 That side has a name in the literature. The Agent-Native Immune System paper
-(arXiv:2606.28270) lists the **Autoimmunity Rate** — the false-positive
-intervention rate — among the field's open challenges and does not implement it.
+(arXiv:2606.28270) lists the **Autoimmunity Rate**, the false-positive
+intervention rate, among the field's open challenges and does not implement it.
 This module does, and pairs it with coverage so neither can be optimised alone.
 
 It found a real defect immediately. With 134 tests passing, the audit measured a
-**20% autoimmunity rate**: "Enterprise costs 499 USD per seat per year" — a true
-statement — was judged to *conflict*, because it numerically mismatches the
+**20% autoimmunity rate**: "Enterprise costs 499 USD per seat per year", a true
+statement, was judged to *conflict*, because it numerically mismatches the
 *Team* plan's fact. The rule was subject-blind: it compared prices without
 checking which entity the claim was about. Binding conflicts to a shared subject
 took autoimmunity to 0% with coverage unchanged.
 
 A third measure follows from the same reasoning. A mutation can be caught for
-the wrong reason — flagged against a fact it has nothing to do with. **Attribution
+the wrong reason, flagged against a fact it has nothing to do with. **Attribution
 accuracy** asks not "did it fire" but "did it fire at the right target", because a
 defence that catches the right answer by accident will fail the next time.
 

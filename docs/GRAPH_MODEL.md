@@ -1,4 +1,4 @@
-# ImmuneGraph — Graph Data Model
+# ImmuneGraph, Graph Data Model
 
 > This document is the authoritative schema. Every Cypher query in the product is
 > written against this model. If you change the model, update this file in the same commit.
@@ -7,7 +7,7 @@ FalkorDB is not a storage layer here. The detection algorithms **are** Cypher qu
 and the immune response is a graph write. Remove FalkorDB and there is no product.
 
 Dialect note: FalkorDB implements a **subset of openCypher v9**. Known constraints that
-shaped this model are listed at the bottom — read them before writing new queries.
+shaped this model are listed at the bottom, read them before writing new queries.
 
 ---
 
@@ -23,8 +23,8 @@ The three memory types the track asks for are modelled as distinct node families
 
 Shared state is the graph itself: every agent reads and writes the same
 `Session` subgraph, so coordination needs no message bus.
-Multi-tenancy is handled by FalkorDB's multi-graph feature — one graph per tenant
-(`select_graph(f"tenant_{tenant_id}")`) — so isolation is physical as well as logical.
+Multi-tenancy is handled by FalkorDB's multi-graph feature, one graph per tenant
+(`select_graph(f"tenant_{tenant_id}")`), so isolation is physical as well as logical.
 
 ---
 
@@ -41,10 +41,10 @@ Multi-tenancy is handled by FalkorDB's multi-graph feature — one graph per ten
 (:Claim {
     id,
     text,             // canonical natural-language claim
-    fingerprint,      // normalised dedupe key — deterministic repeat detection
+    fingerprint,      // normalised dedupe key, deterministic repeat detection
     status,           // 'active' | 'suspect' | 'quarantined' | 'corroborated' | 'retracted'
     verification,     // 'unsourced' | 'sourced' | 'contradicted'
-    confidence,       // 0.0–1.0, as asserted
+    confidence,       // 0.0-1.0, as asserted
     created_at
 })
 (:Source {id, name, url, trust_level})   // trust_level: 'primary' | 'reputable' | 'unknown' | 'unreliable'
@@ -74,7 +74,7 @@ Multi-tenancy is handled by FalkorDB's multi-graph feature — one graph per ten
 // ("nothing supports this") is a meta-statement, not a truth.
 (:KernelFact {
     id,
-    text,          // canonical, claim-shaped — kept short so lexical matching works
+    text,          // canonical, claim-shaped, kept short so lexical matching works
     trust_level,   // inherited from the source that backs it
     version,
     status,        // 'active' | 'superseded'
@@ -87,7 +87,7 @@ Multi-tenancy is handled by FalkorDB's multi-graph feature — one graph per ten
 
 The original design detected repeats by asking an LLM to emit a `REPEATS` edge. That is
 non-deterministic, and the "immunity recall" moment is the single most important beat in
-the demo — it must never fail on stage.
+the demo, it must never fail on stage.
 
 `fingerprint` is a normalised key computed in Python (lowercase, strip punctuation and
 stopwords, collapse whitespace). Exact repeats are then found with an indexed equality
@@ -106,7 +106,7 @@ vector-recall path in §5, query 7.
 (:Session)-[:CONTAINS]->(:Message)
 (:Session)-[:CONTAINS]->(:Claim)
 
-// epistemic support structure — the substrate for every detection query
+// epistemic support structure, the substrate for every detection query
 (:Claim)-[:SUPPORTED_BY {quote}]->(:Source)
 (:Claim)-[:DERIVED_FROM {ts}]->(:Claim)      // child -> parent ("I inferred this from that")
 (:Claim)-[:CONTRADICTS {detected_at, reason}]->(:Claim)
@@ -122,7 +122,7 @@ vector-recall path in §5, query 7.
 (:Antibody)-[:NEUTRALIZES]->(:Infection)
 (:Antibody)-[:INJECTS]->(:Claim)             // the corrective claim itself
 
-// kernel of truth — provenance is edges, which is why the kernel is a graph
+// kernel of truth, provenance is edges, which is why the kernel is a graph
 (:KernelFact)-[:DERIVED_FROM]->(:Source)     // what backs this fact
 (:Antibody)-[:ESTABLISHES]->(:KernelFact)    // who taught the swarm this
 (:KernelFact)-[:SUPERSEDES]->(:KernelFact)   // a newer fact retires an older one
@@ -149,7 +149,7 @@ CREATE INDEX FOR (k:KernelFact) ON (k.id)
 CREATE INDEX FOR (k:KernelFact) ON (k.status)
 ```
 
-`fingerprint` and `status` are the hot paths — immunity recall and the active-claim scan.
+`fingerprint` and `status` are the hot paths, immunity recall and the active-claim scan.
 FalkorDB will not use an index for `<>` filters, so queries are written with positive
 equality predicates wherever an index should be used.
 
@@ -160,7 +160,7 @@ equality predicates wherever an index should be used.
 These are the product. Each is exposed as a tool the antibody agent can call and as a
 result table in the UI.
 
-### Q1 — Circular support (epistemic cycle)
+### Q1, Circular support (epistemic cycle)
 
 A supports B supports C supports A: the swarm's belief is self-justifying.
 
@@ -173,7 +173,7 @@ RETURN c.id AS claim_id,
 ```
 
 Fallback if relationship alternation inside a variable-length pattern is rejected by the
-target FalkorDB build — run the two single-type variants and union them:
+target FalkorDB build, run the two single-type variants and union them:
 
 ```cypher
 MATCH path = (c:Claim)-[:DERIVED_FROM*2..5]->(c)
@@ -184,7 +184,7 @@ RETURN c.id, c.text, [n IN nodes(path) | n.text] AS cycle_path
 > Alternation inside a variable-length pattern is accepted, and a 3-hop cycle
 > `A→B→C→A` is detected from each of its three starting nodes.
 
-### Q2 — Unsupported claims (no source, no derivation)
+### Q2, Unsupported claims (no source, no derivation)
 
 Written with `OPTIONAL MATCH` rather than a negated pattern predicate, because pattern
 predicates in `WHERE` are not guaranteed across FalkorDB builds.
@@ -201,7 +201,7 @@ RETURN c.id AS claim_id, c.text AS claim, c.fingerprint, c.created_at
 ORDER BY c.created_at
 ```
 
-### Q3 — Contradiction clusters
+### Q3, Contradiction clusters
 
 Two agents with healthy trust holding incompatible beliefs.
 
@@ -214,7 +214,7 @@ RETURN c1.id AS claim_a, c1.text AS text_a, a1.name AS agent_a,
        c2.created_at AS since
 ```
 
-### Q4 — Cascade reach (severity is computed from the graph)
+### Q4, Cascade reach (severity is computed from the graph)
 
 This is the query that makes "FalkorDB is load-bearing" literal: *how bad the infection
 is* is a property of graph reachability, not of anything an LLM said.
@@ -235,7 +235,7 @@ RETURN root.id AS root_id,
 (e.g. `1 + infected_claims + exposed_agents`), stored on the `Infection` node so the
 dashboard can sort outbreaks without recomputation.
 
-### Q5 — Trust decay, derived rather than stored
+### Q5, Trust decay, derived rather than stored
 
 The original design decremented a trust score in Python. Deriving it in Cypher keeps the
 graph as the single source of truth: trust is *recomputed* from association, so it cannot
@@ -253,7 +253,7 @@ RETURN a.name AS agent,
 ORDER BY effective_trust ASC
 ```
 
-### Q6 — Immunity recall (exact repeat)
+### Q6, Immunity recall (exact repeat)
 
 The payoff beat: a previously-infected claim reappears and is flagged instantly, with no
 re-detection of the original cascade.
@@ -270,7 +270,7 @@ RETURN past.id AS past_claim_id,
 ORDER BY i.detected_at DESC
 ```
 
-### Q7 — Semantic immunity recall (paraphrase)
+### Q7, Semantic immunity recall (paraphrase)
 
 Catches "Mars has oxygen at night" against a quarantined "Mars has breathable oxygen at
 night". Requires a vector index over `Claim.embedding`.
@@ -301,7 +301,7 @@ Two behaviours were confirmed by execution, not assumed:
    `Invalid arguments for procedure 'db.idx.vector.queryNodes'`.
 2. The yielded `score` is a cosine **distance** (0.0 = identical) even though the index
    option is named `similarityFunction`. `ORDER BY score DESC` therefore returns the *least*
-   similar candidates — a silent correctness bug that only shows up once more than `k`
+   similar candidates, a silent correctness bug that only shows up once more than `k`
    claims exist. Order ascending.
 
 **Fallback if vector support is unavailable:** `Q7B_RECALL_CANDIDATES` pulls the candidate
@@ -309,7 +309,7 @@ set from the graph (claims carrying an infection) and scores token-overlap simil
 Python via `models.similarity()`. The graph still supplies the recall set, so FalkorDB
 remains load-bearing; only the scoring differs.
 
-### Q8 — Antibody effectiveness (does immunity actually improve?)
+### Q8, Antibody effectiveness (does immunity actually improve?)
 
 Turns "the swarm develops immunity" from a claim into a measurement.
 
@@ -324,7 +324,7 @@ ORDER BY outbreaks DESC
 
 ---
 
-## 5c. External contradictions — grounding a visitor's claim
+## 5c. External contradictions, grounding a visitor's claim
 
 The Mars scenario is scripted; **Check any claim** is not. A visitor submits a statement, it is
 grounded against Wikipedia (`src/immunegraph/grounding.py`), and a refutation is treated by the
@@ -334,9 +334,9 @@ same machinery that handles everything else the swarm catches.
 
 | type | how it is discovered |
 | --- | --- |
-| `unsupported_root` | **Q2** — active, no trusted source, no parent |
-| `repeat_offender` | **Q6/Q7** — matches something already neutralised |
-| `external_contradiction` | **grounding** — a public source refutes it |
+| `unsupported_root` | **Q2**, active, no trusted source, no parent |
+| `repeat_offender` | **Q6/Q7**, matches something already neutralised |
+| `external_contradiction` | **grounding**, a public source refutes it |
 
 The shape written on a refutation:
 
@@ -349,18 +349,18 @@ The shape written on a refutation:
 ```
 
 Storing the deciding sentence as the `SUPPORTED_BY` quote means **why** a claim was refuted is a
-traversal rather than a log line — the same principle as every other verdict here.
+traversal rather than a log line, the same principle as every other verdict here.
 
 Because a refutation also registers a `KernelFact`, a second visitor repeating that claim is
 caught by the sanitiser with **no network call at all**.
 
-## 5b. The kernel of truth — recognising lies the swarm already knows
+## 5b. The kernel of truth, recognising lies the swarm already knows
 
-Q1–Q8 **detect new lies** by walking the support structure. They are thorough and they are
-expensive: extraction runs, then a scan. The kernel is the other half of immunity — a set of
+Q1-Q8 **detect new lies** by walking the support structure. They are thorough and they are
+expensive: extraction runs, then a scan. The kernel is the other half of immunity, a set of
 canonical, source-backed facts that new claims are judged against by comparison.
 
-| | Detection (Q1–Q8) | Sanitisation (K1–K5) |
+| | Detection (Q1-Q8) | Sanitisation (K1-K5) |
 | --- | --- | --- |
 | Finds | lies the swarm has **never seen** | lies it **already knows** |
 | Method | traversal over the support structure | lexical match against facts |
@@ -368,10 +368,10 @@ canonical, source-backed facts that new claims are judged against by comparison.
 | Measured | 3.1s for the cascade | **~5ms**, no model call |
 
 An antibody that cites a source establishes a fact. An antibody that cannot cite one
-establishes **nothing** — "no source supports this" is a meta-statement, not a truth worth
+establishes **nothing**, "no source supports this" is a meta-statement, not a truth worth
 remembering, and inventing certainty would just be a new infection.
 
-### K1 — the active kernel, with provenance
+### K1, the active kernel, with provenance
 
 ```cypher
 MATCH (k:KernelFact)
@@ -382,7 +382,7 @@ RETURN k.id AS fact_id, k.text AS text, k.trust_level AS trust_level,
 ORDER BY k.created_at
 ```
 
-### K2 — what currently conflicts with the kernel
+### K2, what currently conflicts with the kernel
 
 ```cypher
 MATCH (c:Claim)-[r:CONFLICTS_WITH]->(k:KernelFact)
@@ -392,7 +392,7 @@ RETURN c.id AS claim_id, c.text AS claim, c.status AS claim_status,
 ORDER BY r.score DESC
 ```
 
-### K3 — kernel health (the number that shows immunity accumulating)
+### K3, kernel health (the number that shows immunity accumulating)
 
 ```cypher
 MATCH (k:KernelFact)
@@ -409,7 +409,7 @@ RETURN facts, aligned_edges, count(cf) AS conflict_edges
 > this query did exactly that and the dashboard cheerfully reported a conflict before any
 > fact existed. Named-relationship counts ignore nulls; `count(*)` does not.
 
-### K4 — claims the sanitiser has not yet judged
+### K4, claims the sanitiser has not yet judged
 
 ```cypher
 MATCH (c:Claim)
@@ -419,7 +419,7 @@ ORDER BY c.created_at
 LIMIT $limit
 ```
 
-### K5 — who established a fact, citing what
+### K5, who established a fact, citing what
 
 ```cypher
 MATCH (k:KernelFact {id: $fact_id})
@@ -442,7 +442,7 @@ the same negation-asymmetry rule as `detect_contradiction`.
 
 This is worth being precise about, because the honest version is narrower than it first
 looks: against the Mars correction's short canonical fact, Jaccard already sufficed. The
-overlap coefficient is what saves the **prose-length** fact — which is exactly what the LLM
+overlap coefficient is what saves the **prose-length** fact, which is exactly what the LLM
 path produces. `tests/test_models.py` records that distinction rather than overclaiming.
 
 ---
@@ -460,10 +460,10 @@ Verified against the official Cypher compatibility and limitations pages.
    If a count must be accurate, explicitly reference the relationship alias.
 5. **`LIMIT` does not constrain eager operations** (`CREATE`, `SET`, `DELETE`, `MERGE`).
    Never write `CREATE ... RETURN x LIMIT 5` expecting 5 nodes.
-6. **No index support for `<>` filters** — write positive equality predicates.
+6. **No index support for `<>` filters**, write positive equality predicates.
 7. `LIMIT`/`SKIP`/`ORDER BY` and `UNWIND`, `MERGE`, `OPTIONAL MATCH`, `WITH`, `UNION`
    are all supported, as are list comprehensions and `size()`.
-8. `CALL` supports **procedures only** — no user-defined functions (Flex UDF library aside).
+8. `CALL` supports **procedures only**, no user-defined functions (Flex UDF library aside).
 
 Every query above must be exercised by `python -m immunegraph.verify_queries` against a
 live instance and pass before it is considered done. A query that has never been executed

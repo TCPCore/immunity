@@ -1,4 +1,4 @@
-# Halcyon Robotics — Data residency
+# Halcyon Robotics, Data residency
 
 Customer telemetry for EU customers is stored in the EU (Frankfurt). Data for
 all other regions is stored in the United States (Virginia).

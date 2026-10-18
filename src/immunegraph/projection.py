@@ -1,7 +1,7 @@
 """Rebuilding the graph from the write-ahead log.
 
 The graph is a projection, not the durable record. Wipe it and replay the log and
-you get the same graph back — same nodes, same edges, and crucially the same
+you get the same graph back, same nodes, same edges, and crucially the same
 `uuid4` ids, because the log stores fully-substituted statements rather than
 regenerating anything.
 

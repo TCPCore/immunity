@@ -34,7 +34,7 @@ failures: list[str] = []
 
 def check(label: str, condition: bool, detail: str = "") -> None:
     tag = PASS if condition else FAIL
-    print(f"  [{tag}] {label}" + (f" — {detail}" if detail else ""))
+    print(f"  [{tag}] {label}" + (f", {detail}" if detail else ""))
     if not condition:
         failures.append(label)
 
@@ -84,7 +84,7 @@ def main() -> int:
     store.create_indexes()
     st.cache_resource.clear()
 
-    print("\n=== BEAT 0 (0:00) — cold open, empty graph ===")
+    print("\n=== BEAT 0 (0:00), cold open, empty graph ===")
     started = time.time()
     at = AppTest.from_file(str(APP_PATH), default_timeout=240)
     at.run()
@@ -97,7 +97,7 @@ def main() -> int:
     check("Peak severity is 0 before anything happens", metrics(at).get("Peak severity") == "0.0",
           f"got {metrics(at).get('Peak severity')}")
 
-    print("\n=== BEAT 1 (0:35) — Act I: click 'Run Mars mission' ===")
+    print("\n=== BEAT 1 (0:35), Act I: click 'Run Mars mission' ===")
     started = time.time()
     at.button[button_index(at, "Run Mars")].click().run()
     elapsed = time.time() - started
@@ -106,7 +106,7 @@ def main() -> int:
     check("a risk: the run takes under ~6s, so narration must fill the gap",
           elapsed < 12, f"{elapsed:.1f}s")
 
-    print("\n=== BEAT 2 (1:15) — Act II/III: the dashboard after the run ===")
+    print("\n=== BEAT 2 (1:15), Act II/III: the dashboard after the run ===")
     m = metrics(at)
     print(f"  on screen: Active={m.get('Active outbreaks')} Contained={m.get('Contained')} "
           f"Peak severity={m.get('Peak severity')}")
@@ -123,7 +123,7 @@ def main() -> int:
           str(trust))
     check("the script's 'all three drop to 0.85' claim holds", len(trust) == 4)
 
-    print("\n=== BEAT 3 (2:20) — Act V: click 'Re-inject the false claim' ===")
+    print("\n=== BEAT 3 (2:20), Act V: click 'Re-inject the false claim' ===")
     started = time.time()
     at.button[button_index(at, "Re-inject")].click().run()
     print(f"  recall response: {time.time() - started:.1f}s")
@@ -132,7 +132,7 @@ def main() -> int:
     check("immunity recall fired", any("Immunity recall fired" in b for b in banners), str(banners))
     check("the banner names the paraphrase path", any("similarity" in b for b in banners), str(banners))
 
-    print("\n=== BEAT 4 (2:45) — close: did it work? ===")
+    print("\n=== BEAT 4 (2:45), close: did it work? ===")
     m = metrics(at)
     print(f"  on screen: Active={m.get('Active outbreaks')} Contained={m.get('Contained')} "
           f"Peak severity={m.get('Peak severity')}")
@@ -153,7 +153,7 @@ def main() -> int:
     check("repeat_offender: 1 outbreak, contained, none recurred",
           eff.get("repeat_offender") == (1, 1, 0), str(eff.get("repeat_offender")))
 
-    print("\n=== BEAT 5 — optional second re-inject (exact-match path) ===")
+    print("\n=== BEAT 5, optional second re-inject (exact-match path) ===")
     at.button[button_index(at, "Re-inject")].click().run()
     check("no exception on the second re-injection", not at.exception, str(at.exception)[:120])
     banners = [s.value or "" for s in at.success]
@@ -162,9 +162,9 @@ def main() -> int:
 
     print()
     if failures:
-        print(f"DRY RUN FAILED — {len(failures)} check(s): {failures}")
+        print(f"DRY RUN FAILED, {len(failures)} check(s): {failures}")
         return 1
-    print("DRY RUN PASSED — every beat does what DEMO_SCRIPT.md says it does.")
+    print("DRY RUN PASSED, every beat does what DEMO_SCRIPT.md says it does.")
     return 0
 
 

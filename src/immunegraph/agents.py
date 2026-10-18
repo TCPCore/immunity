@@ -1,7 +1,7 @@
 """The simulated swarm: personas and the scripted Mars mission.
 
 The personas exist so the demo has distinct trust profiles and roles. Nothing
-here is required for the immune system to work — a real deployment would take
+here is required for the immune system to work, a real deployment would take
 agent names from whatever framework is driving the conversation.
 """
 
@@ -61,7 +61,7 @@ DEFAULT_SWARM: tuple[Persona, ...] = (RESEARCHER, ANALYST, PLANNER)
 #
 # The first three turns are the cascade. Note that neither the Analyst nor the
 # Planner is lying: each reasons correctly from a premise it was handed. That
-# is the point of the demo — a swarm can be perfectly internally consistent and
+# is the point of the demo, a swarm can be perfectly internally consistent and
 # still wrong.
 MARS_CASCADE: tuple[tuple[Persona, str, str], ...] = (
     (

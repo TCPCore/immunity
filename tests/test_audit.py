@@ -156,7 +156,7 @@ def test_naive_vaccination_would_poison_the_kernel(swarm):
 
     Recording "The Starter plan costs 499 USD per seat per year" as known-false
     makes it fuzzily match the TRUE "The Enterprise plan costs 499 ..." on every
-    word but one. Without subject binding that scored 82% autoimmunity — the
+    word but one. Without subject binding that scored 82% autoimmunity, the
     vaccine attacking the host, while coverage looked perfect.
     """
     swarm.kernel.register_refuted("The Starter plan costs 499 USD per seat per year")

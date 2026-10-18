@@ -1,7 +1,7 @@
 """The Mars mission demo, headless.
 
-Runs the full arc — cascade, detection, immune response, trust decay, immunity
-recall, effectiveness — against a live FalkorDB instance. This is the same code
+Runs the full arc, cascade, detection, immune response, trust decay, immunity
+recall, effectiveness, against a live FalkorDB instance. This is the same code
 path the Streamlit app drives, so the recorded demo shows real work.
 
     python -m immunegraph.demo
@@ -68,7 +68,7 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
             time.sleep(pause)
 
     # ---------------------------------------------------------------- ACT I
-    banner("ACT I  —  A LIE ENTERS THE SWARM")
+    banner("ACT I ,  A LIE ENTERS THE SWARM")
     say("Three agents plan a Mars mission. None of them is lying;")
     say("each reasons correctly from the premise it was handed.")
     rule()
@@ -95,7 +95,7 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
         )
 
     # --------------------------------------------------------------- ACT II
-    banner("ACT II  —  WHAT THE GRAPH FOUND")
+    banner("ACT II ,  WHAT THE GRAPH FOUND")
     say("Severity is not an opinion. It is graph reach:")
     say("  Q4 walks DERIVED_FROM back to the unsupported root.")
     rule()
@@ -106,7 +106,7 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
     summary["infections"] = swarm.infections()
 
     # -------------------------------------------------------------- ACT III
-    banner("ACT III  —  THE IMMUNE RESPONSE")
+    banner("ACT III ,  THE IMMUNE RESPONSE")
     say("An antibody is dispatched. It must cite a source, and the")
     say("correction enters the graph as a first-class Claim.")
     rule()
@@ -121,9 +121,9 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
         )
 
     # ------------------------------------------------------------- ACT III.b
-    banner("ACT III.b  —  THE KERNEL OF TRUTH")
+    banner("ACT III.b ,  THE KERNEL OF TRUTH")
     say("Until now the swarm only remembered what was WRONG. A sourced")
-    say("correction also becomes a fact — so the antibody teaches, not just")
+    say("correction also becomes a fact, so the antibody teaches, not just")
     say("punishes, and every future claim is judged against it.")
     rule()
     stats = swarm.kernel_stats()
@@ -134,13 +134,13 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
     for fact in swarm.kernel_facts():
         say(f"  [{fact['trust_level']}] {fact['text']!r}")
         prov = swarm.fact_provenance(fact["id"]) or {}
-        say(f"      established by {prov.get('established_by') or '—'} "
-            f"citing {prov.get('source') or '—'}")
+        say(f"      established by {prov.get('established_by') or '-'} "
+            f"citing {prov.get('source') or '-'}")
     summary["kernel"] = swarm.kernel_stats()
     summary["kernel_facts"] = swarm.kernel_facts()
 
     # --------------------------------------------------------------- ACT IV
-    banner("ACT IV  —  TRUST DECAYS, DERIVED FROM THE GRAPH")
+    banner("ACT IV ,  TRUST DECAYS, DERIVED FROM THE GRAPH")
     say("No counter is decremented anywhere. Q5 recomputes trust from")
     say("exposure: asserting an infected claim, or deriving from one.")
     rule()
@@ -151,7 +151,7 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
     summary["trust"] = swarm.trust_table()
 
     # ---------------------------------------------------------------- ACT V
-    banner("ACT V  —  IMMUNITY. THE SWARM DOES NOT GET FOOLED TWICE.")
+    banner("ACT V ,  IMMUNITY. THE SWARM DOES NOT GET FOOLED TWICE.")
     persona, text, note = MARS_REPEAT
     say(f"  {persona.name:>10}: \"{text}\"")
     say(f"  {'':>10}  ({note})")
@@ -175,7 +175,7 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
             if verdict["verdict"] == "conflicts":
                 say(f"  SANITISER : contradicts kernel fact {verdict['fact']!r}")
                 say(f"              overlap {verdict['overlap']:.2f}, "
-                    f"decided in {verdict['elapsed_ms']:.1f}ms — no model call, no cascade scan")
+                    f"decided in {verdict['elapsed_ms']:.1f}ms, no model call, no cascade scan")
             else:
                 say(f"  SANITISER : {verdict['verdict']} ({verdict['elapsed_ms']:.1f}ms)")
 
@@ -188,7 +188,7 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
         summary["verdicts"] = turn.verdicts
 
     # --------------------------------------------------------------- ACT VI
-    banner("ACT VI  —  DID THE IMMUNE SYSTEM ACTUALLY WORK?")
+    banner("ACT VI ,  DID THE IMMUNE SYSTEM ACTUALLY WORK?")
     say("Q8 turns \"the swarm develops immunity\" into a measurement.")
     rule()
     say(f"  {'infection type':<22}{'outbreaks':>10}{'contained':>11}{'recurred':>10}")
@@ -198,7 +198,7 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
     summary["effectiveness"] = swarm.effectiveness()
 
     # -------------------------------------------------------------- EPILOGUE
-    banner("ACT VII  —  THE SWARM IS HARDER TO FOOL THAN IT WAS")
+    banner("ACT VII ,  THE SWARM IS HARDER TO FOOL THAN IT WAS")
     rule()
     stats = swarm.kernel_stats()
     summary_stats = swarm.sanitizer_summary()
@@ -210,10 +210,10 @@ def run(reset: bool = True, pause: float = 0.0, verbose: bool = True,
     say("  Detection finds lies the swarm has never seen, by walking the")
     say("  support structure. The kernel recognises lies it already knows,")
     say("  by comparison. One gets more expensive as the graph grows; the")
-    say("  other does not — that is what immunity means here.")
+    say("  other does not, that is what immunity means here.")
 
     # -------------------------------------------------------------- ACT VIII
-    banner("ACT VIII  —  DURABILITY: THE GRAPH IS A PROJECTION")
+    banner("ACT VIII ,  DURABILITY: THE GRAPH IS A PROJECTION")
     say("FalkorDB Cloud's free tier has no persistence and no backups. So")
     say("every write is appended to a log BEFORE it is applied, and the graph")
     say("can be rebuilt from that log at any time.")

@@ -18,7 +18,7 @@ class GraphStore:
 
     Construction is deliberately exception-safe. The official client connects
     eagerly inside its own constructor, so building one against a database that
-    is not running raises immediately — which means ``GraphStore(...)`` would
+    is not running raises immediately, which means ``GraphStore(...)`` would
     blow up before any caller could report the problem, and a user who forgets
     ``docker compose up -d`` gets a traceback instead of instructions.
 
@@ -83,7 +83,7 @@ class GraphStore:
     # ----------------------------------------------------------------- querying
 
     def query(self, cypher: str, params: dict[str, Any] | None = None):
-        """Run a read/write query. Never logged — see ``write``."""
+        """Run a read/write query. Never logged, see ``write``."""
         return self._graph().query(cypher, params or {})
 
     def attach_log(self, log) -> None:
@@ -145,7 +145,7 @@ class GraphStore:
             return False
 
     def reset(self) -> None:
-        """Delete the whole graph. Destructive — demo/dev only. Idempotent.
+        """Delete the whole graph. Destructive, demo/dev only. Idempotent.
 
         Returns quietly if the database is unreachable, so callers that reset
         before checking connectivity do not have to guard the call.

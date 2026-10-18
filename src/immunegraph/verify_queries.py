@@ -178,7 +178,7 @@ def _seed(store) -> None:
         try:
             store.query(statement)
         except Exception as exc:  # noqa: BLE001
-            print(f"note: optional index unavailable ({str(exc)[:80]}) — Q7 will SKIP")
+            print(f"note: optional index unavailable ({str(exc)[:80]}), Q7 will SKIP")
 
 
 def _check(spec: QuerySpec, store) -> tuple[str, str, list[list[Any]] | None]:

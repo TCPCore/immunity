@@ -20,7 +20,7 @@ load_dotenv(REPO_ROOT / ".env")
 
 STREAMLIT_SECRETS_BRIDGED = 0
 STREAMLIT_SECRETS_ERROR: str | None = None
-# Key *names* the app could see. Never values — this exists so a misconfigured
+# Key *names* the app could see. Never values, this exists so a misconfigured
 # deployment can be diagnosed from a screenshot without exposing a secret.
 STREAMLIT_SECRETS_SEEN: tuple[str, ...] = ()
 
@@ -56,7 +56,7 @@ def _load_streamlit_secrets() -> int:
     not environment variables. Without this bridge FALKORDB_HOST and its
     companions never arrive and the deployed app cannot connect.
 
-    Only runs when Streamlit is already imported — which is true under
+    Only runs when Streamlit is already imported, which is true under
     ``streamlit run`` (app.py imports it before this module) and false for the
     CLI tools, so those avoid the import cost and the bare-mode warnings.
     ``setdefault`` semantics mean a real environment variable always wins.
@@ -76,7 +76,7 @@ def _load_streamlit_secrets() -> int:
     except Exception as exc:  # noqa: BLE001 - no secrets configured is normal
         # Recorded rather than swallowed. A malformed TOML block otherwise looks
         # exactly like "no secrets set", and the app then silently talks to
-        # localhost — which is a genuinely confusing failure to debug remotely.
+        # localhost, which is a genuinely confusing failure to debug remotely.
         STREAMLIT_SECRETS_ERROR = f"{type(exc).__name__}: {exc}"
         return 0
 

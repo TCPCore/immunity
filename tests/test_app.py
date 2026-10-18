@@ -6,7 +6,7 @@ without a browser.
 
 Every test gets its own write-ahead log. That matters: the log persists across
 app instances by design, so without isolation a test can inherit a previous
-run's data — which is precisely how the durability feature first announced
+run's data, which is precisely how the durability feature first announced
 itself, by restoring a graph that a test expected to be empty.
 """
 
@@ -33,7 +33,7 @@ def _db_available() -> bool:
 
 pytestmark = pytest.mark.skipif(
     not _db_available(),
-    reason="FalkorDB not reachable — start it with: docker compose up -d",
+    reason="FalkorDB not reachable, start it with: docker compose up -d",
 )
 
 

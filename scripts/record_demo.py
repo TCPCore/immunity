@@ -64,7 +64,7 @@ class Beat:
 # is described in a caption instead of being demonstrated.
 BEATS: list[Beat] = [
     Beat(
-        "ImmuneGraph — a FalkorDB-backed immune system for AI agent swarms. "
+        "ImmuneGraph, a FalkorDB-backed immune system for AI agent swarms. "
         "Every claim, source, agent and derivation is a node in FalkorDB.",
         hold=7.0,
     ),
@@ -76,7 +76,7 @@ BEATS: list[Beat] = [
     ),
     Beat(
         "The Researcher asserts a claim with no source. The other two reason CORRECTLY "
-        "from it — that is the failure mode this project exists to catch.",
+        "from it, that is the failure mode this project exists to catch.",
         hold=5.0,
         button="Run Mars mission",
     ),
@@ -95,7 +95,7 @@ BEATS: list[Beat] = [
         highlight='[data-testid="stMain"] [data-testid="stExpander"]',
     ),
     Beat(
-        "The derived claims are downgraded to 'support invalidated' — amber, not red. "
+        "The derived claims are downgraded to 'support invalidated', amber, not red. "
         "They were never proven false; their justification was refuted.",
         hold=6.0,
         highlight='[data-testid="stChatMessage"]',
@@ -109,26 +109,26 @@ BEATS: list[Beat] = [
         highlight_index=2,
     ),
     Beat(
-        "Trust is DERIVED from the graph, never stored (Q5). All three fall to 0.85 — the "
+        "Trust is DERIVED from the graph, never stored (Q5). All three fall to 0.85, the "
         "Planner never touched the lie, it inherited it through the derivation chain.",
         hold=7.0,
         highlight='[data-testid="stMain"] [data-testid="stDataFrame"]',
         highlight_index=0,
     ),
     Beat(
-        "Now the Researcher repeats the claim — as a paraphrase, not the same words.",
+        "Now the Researcher repeats the claim, as a paraphrase, not the same words.",
         hold=4.0,
         button="Re-inject the false claim",
     ),
     Beat(
-        "The sanitiser catches it against the kernel in about five milliseconds — no "
+        "The sanitiser catches it against the kernel in about five milliseconds, no "
         "extraction, no cascade scan. Compare that with the three seconds the original "
         "detection needed. The re-offending Researcher drops to 0.70.",
         hold=11.0,
         highlight='[data-testid="stAlert"]',
     ),
     Beat(
-        "Every claim so far was scripted. This one is not — anyone can submit a claim "
+        "Every claim so far was scripted. This one is not, anyone can submit a claim "
         "the swarm has never seen.",
         hold=6.0,
         tab="Check any claim",
@@ -140,26 +140,26 @@ BEATS: list[Beat] = [
         button="Venus has a breathable atmosphere",
     ),
     Beat(
-        "GROUNDED AGAINST WIKIPEDIA — free, public and citable, so no API key and no private "
+        "GROUNDED AGAINST WIKIPEDIA, free, public and citable, so no API key and no private "
         "data. Watch the infection spread: the Analyst and Planner genuinely derive from it, "
         "so severity climbs 2.0 -> 4.0 -> 6.0. Those numbers are Q4, computed after each write.",
         hold=14.0,
         button="Check this claim",
     ),
     Beat(
-        "Refuted, quarantined, and the correcting fact enters the KERNEL — so a repeat of this "
+        "Refuted, quarantined, and the correcting fact enters the KERNEL, so a repeat of this "
         "claim is caught with no network call at all. Same infection, same antibody, same "
         "kernel. Only the source of truth changed.",
         hold=9.0,
     ),
     Beat(
-        "TRACK 03 — a company brain. Four synthetic documents load as Source nodes; the facts "
+        "TRACK 03, a company brain. Four synthetic documents load as Source nodes; the facts "
         "they establish become the kernel of truth, each linked to the document it came from.",
         hold=9.0,
         tab="Company brain",
     ),
     Beat(
-        "A department agent invents a price. Support repeats it — with a real DERIVED_FROM edge "
+        "A department agent invents a price. Support repeats it, with a real DERIVED_FROM edge "
         "back to Sales, so this is a cascade and not two coincidences. Severity 4.0, from Q4.",
         hold=14.0,
         button="Ask the company brain",
@@ -177,13 +177,13 @@ BEATS: list[Beat] = [
         tab="Self-audit",
     ),
     Beat(
-        "Three numbers, never one. Coverage, autoimmunity — the rate at which it wrongly flags "
-        "TRUE statements — and attribution: did it fire at the right fact, or just at one?",
+        "Three numbers, never one. Coverage, autoimmunity, the rate at which it wrongly flags "
+        "TRUE statements, and attribution: did it fire at the right fact, or just at one?",
         hold=13.0,
         button="Run self-audit",
     ),
     Beat(
-        "The audit finds five falsehoods that NO fact contradicts — 'a Starter plan at the "
+        "The audit finds five falsehoods that NO fact contradicts, 'a Starter plan at the "
         "Enterprise price'. Comparison can never catch those. So we record them as known-false "
         "and re-measure: holes closed, autoimmunity still zero.",
         hold=15.0,
@@ -191,7 +191,7 @@ BEATS: list[Beat] = [
     ),
     Beat(
         "That pair earned its place on our own code. With 134 tests green it measured 20% "
-        "autoimmunity, we fixed it to zero — and the obvious repair drove it to 82% while "
+        "autoimmunity, we fixed it to zero, and the obvious repair drove it to 82% while "
         "coverage still read 100%. One number would have shipped that as a success.",
         hold=13.0,
     ),
@@ -209,7 +209,7 @@ BEATS: list[Beat] = [
         button="Rebuild from log",
     ),
     Beat(
-        "73 writes replayed, 0 failures, and the result is identical — including node ids. "
+        "73 writes replayed, 0 failures, and the result is identical, including node ids. "
         "That is why the log stores whole statements rather than semantic events: replaying "
         "a statement reproduces its generated id exactly.",
         hold=11.0,
@@ -389,7 +389,7 @@ async def wait_for_app(cdp: "CDP", timeout: float = 90.0) -> bool:
     """Block until the app has actually rendered, rather than sleeping blindly.
 
     A fixed sleep must cover the worst case, which means Chrome idles on a static
-    page for most of it — and idle headless Chrome on this machine has been
+    page for most of it, and idle headless Chrome on this machine has been
     observed to exit by itself. Polling starts the recording the moment the
     dashboard exists and keeps that window of exposure short.
     """
@@ -421,7 +421,7 @@ async def record(frames_dir: Path) -> int:
 
     store = GraphStore(Settings.from_env())
     if not store.ping():
-        raise SystemExit("FalkorDB unreachable — start it with: docker compose up -d")
+        raise SystemExit("FalkorDB unreachable, start it with: docker compose up -d")
     store.reset()
     store.create_indexes()
     print("graph reset for a clean cold open", flush=True)
@@ -594,7 +594,7 @@ def preflight() -> None:
         ) from None
 
     ffmpeg_exe()
-    print(f"preflight ok — app {URL} healthy, DevTools on :9222, ffmpeg available", flush=True)
+    print(f"preflight ok, app {URL} healthy, DevTools on :9222, ffmpeg available", flush=True)
 
 
 def main() -> int:

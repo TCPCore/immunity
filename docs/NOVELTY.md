@@ -32,14 +32,14 @@ concrete:
 > "novel evaluation metrics such as the **Autoimmunity Rate** (false-positive intervention rate)"
 
 They name it. They do not define it, compute it, or use it to judge a system. As of writing, no
-system I can find reports it — every paper and product reports **coverage**: how much was caught.
+system I can find reports it, every paper and product reports **coverage**: how much was caught.
 
 That asymmetry is not cosmetic. **Coverage alone is a gameable metric.** A detector that flags
 every statement it sees achieves perfect coverage and is worthless. Any evaluation that reports one
 number can be won by turning the sensitivity up. The missing number is the one that tells you
 whether the immune system is attacking the host.
 
-So the gap is not "detect cascades" — that is solved. The gap is **"how do you know your detector
+So the gap is not "detect cascades", that is solved. The gap is **"how do you know your detector
 is good rather than merely loud?"**
 
 ---
@@ -62,30 +62,30 @@ A defence that contradicts the wrong fact has the right answer by luck, and will
 corpus. `Report.attribution` measures caught-minus-misattributed.
 
 **3. Probes generated from the system's own knowledge.** The test set is not a benchmark; it is
-mutations of what the system currently holds true — perturbed numbers, transplanted numbers,
+mutations of what the system currently holds true, perturbed numbers, transplanted numbers,
 substituted entities, and truth-preserving paraphrases that must *not* fire. A system can therefore
 audit itself the moment its knowledge base changes, with no labelled data.
 
 **4. Repair as graph state, with the metric closing the loop.** Blind spots become
-`RefutedStatement` nodes — negative memory, written through the same write-ahead log as everything
-else — and the audit is re-run to prove the repair worked *and did not poison anything*.
+`RefutedStatement` nodes, negative memory, written through the same write-ahead log as everything
+else, and the audit is re-run to prove the repair worked *and did not poison anything*.
 
 ---
 
-## 4. The evidence that this matters — measured, on our own code
+## 4. The evidence that this matters, measured, on our own code
 
 This is the part I would show a sceptic, because the audit found two real defects that 134 passing
 tests did not.
 
 **First: 20% autoimmunity.** With 134 green tests, the audit reported that 2 of 10 true statements
-were judged *conflicting*. `"Enterprise costs 499 USD per seat per year"` — true — was flagged,
+were judged *conflicting*. `"Enterprise costs 499 USD per seat per year"`, true, was flagged,
 because it numerically mismatches the **Team** plan's fact and the rule never checked which entity
 the claim was about. The defence was **subject-blind**.
 
 Binding conflicts to a shared subject: **autoimmunity 20% → 0%, coverage unchanged at 100%.**
 
 **Second, and this is the argument for the metric:** with subject binding in place, the audit found
-5 falsehoods that no fact contradicts — `"The Starter plan costs 499 USD per seat per year"` is
+5 falsehoods that no fact contradicts, `"The Starter plan costs 499 USD per seat per year"` is
 not contradicted by anything, because Halcyon sells no Starter plan. The obvious repair is to
 record it as known-false.
 
@@ -100,7 +100,7 @@ autoimmunity: 0% → 81.8%  <- the vaccine was attacking the host
 Recording "Starter plan costs 499" made it fuzzily match the **true** "Enterprise plan costs 499"
 on every word but one. A system reporting only coverage would have shipped this as a success.
 
-Applying subject binding one level deeper — to the vaccine itself — closed the holes with
+Applying subject binding one level deeper, to the vaccine itself, closed the holes with
 autoimmunity held at zero:
 
 ```
@@ -115,8 +115,8 @@ Three numbers, or the fix is invisible.
 ## 5. Why this is worth having
 
 A defence that cannot measure its own false-positive rate is not deployable in a company brain.
-Blocking a *correct* answer has a cost — a customer told the wrong price because the system
-"protected" them from a true sentence — and that cost is invisible in every metric currently
+Blocking a *correct* answer has a cost, a customer told the wrong price because the system
+"protected" them from a true sentence, and that cost is invisible in every metric currently
 reported. The pair makes the trade-off explicit and forces a design decision instead of a
 sensitivity slider.
 
@@ -129,12 +129,12 @@ base, so the number is about *your* corpus, not ours.
 
 - **Not a new detection algorithm.** Detection is the published part.
 - **Not novel as a technique.** Mutation testing is from 1978; metamorphic testing from 1998.
-  What is new is the object being mutated — a knowledge graph's own assertions — and the pairing
+  What is new is the object being mutated, a knowledge graph's own assertions, and the pairing
   of the two metrics for a belief-defence system.
 - **Not independently validated.** One corpus, five facts, tens of probes. The autoimmunity rate
   is a property of *this* defence on *this* knowledge; it is not a claim about belief-defence
   systems in general.
-- **Not proof that the repair generalises.** Subject binding is a heuristic — a leading-token
+- **Not proof that the repair generalises.** Subject binding is a heuristic, a leading-token
   match. It will fail on statements whose subject is not the first content word, and the audit
   would only catch that if a probe happens to expose it.
 
@@ -145,7 +145,7 @@ the system is correct.
 
 ## 7. Where to look
 
-- `src/immunegraph/audit.py` — probes, the three measures, vaccination.
-- `src/immunegraph/sanitizer.py` — subject binding, applied to both facts and refuted statements.
-- `tests/test_audit.py` — both defects pinned: the 20% autoimmunity and the 82% vaccine.
-- The **Self-audit** tab — run it, then vaccinate, and watch the three numbers.
+- `src/immunegraph/audit.py`, probes, the three measures, vaccination.
+- `src/immunegraph/sanitizer.py`, subject binding, applied to both facts and refuted statements.
+- `tests/test_audit.py`, both defects pinned: the 20% autoimmunity and the 82% vaccine.
+- The **Self-audit** tab, run it, then vaccinate, and watch the three numbers.

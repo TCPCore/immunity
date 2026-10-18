@@ -1,7 +1,7 @@
 """Walk the demo video script through the real, live UI in a browser.
 
-The AppTest dry run verifies values; this verifies the actual rendered page —
-real buttons, real Streamlit reruns, real pixels — and captures a screenshot at
+The AppTest dry run verifies values; this verifies the actual rendered page -
+real buttons, real Streamlit reruns, real pixels, and captures a screenshot at
 each beat so the storyboard can be checked before recording.
 
 Requires a headless Chrome started with --remote-debugging-port=9222:
@@ -64,7 +64,7 @@ async def run() -> int:
     failures: list[str] = []
 
     def check(label: str, ok: bool, detail: str = "") -> None:
-        print(f"  [{'PASS' if ok else 'FAIL'}] {label}" + (f" — {detail}" if detail else ""))
+        print(f"  [{'PASS' if ok else 'FAIL'}] {label}" + (f", {detail}" if detail else ""))
         if not ok:
             failures.append(label)
 
@@ -110,7 +110,7 @@ async def run() -> int:
         await settle(26)
 
         # ---------------------------------------------------------- beat 0
-        print("\n=== BEAT 0 — reset to a clean graph, cold open ===")
+        print("\n=== BEAT 0, reset to a clean graph, cold open ===")
         print(f"  Reset graph -> {await js(click_js('Reset graph'))}")
         await settle(6)
         boot_metrics = await js(METRICS_JS)
@@ -120,7 +120,7 @@ async def run() -> int:
         await shot("beat0-clean")
 
         # ---------------------------------------------------------- beat 1
-        print("\n=== BEAT 1 — click 'Run Mars mission' ===")
+        print("\n=== BEAT 1, click 'Run Mars mission' ===")
         print(f"  Run Mars mission -> {await js(click_js('Run Mars mission'))}")
         await settle(10)
         run_metrics = await js(METRICS_JS)
@@ -134,7 +134,7 @@ async def run() -> int:
         await shot("beat1-cascade-detected")
 
         # ---------------------------------------------------------- beat 2
-        print("\n=== BEAT 2 — click 'Re-inject the false claim' ===")
+        print("\n=== BEAT 2, click 'Re-inject the false claim' ===")
         print(f"  Re-inject -> {await js(click_js('Re-inject the false claim'))}")
         await settle(8)
         recall_metrics = await js(METRICS_JS)
@@ -149,9 +149,9 @@ async def run() -> int:
 
         print(f"\nStoryboard written to {OUTDIR}")
         if failures:
-            print(f"LIVE WALKTHROUGH FAILED — {len(failures)}: {failures}")
+            print(f"LIVE WALKTHROUGH FAILED, {len(failures)}: {failures}")
             return 1
-        print("LIVE WALKTHROUGH PASSED — the real UI does what the script says.")
+        print("LIVE WALKTHROUGH PASSED, the real UI does what the script says.")
     return 0
 
 

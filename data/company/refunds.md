@@ -1,4 +1,4 @@
-# Halcyon Robotics — Refund policy
+# Halcyon Robotics, Refund policy
 
 Refunds are available within 30 days of purchase. After 30 days, an annual
 subscription can be cancelled but not refunded.

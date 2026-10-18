@@ -32,7 +32,7 @@ def _db_available() -> bool:
 
 pytestmark = pytest.mark.skipif(
     not _db_available(),
-    reason="FalkorDB not reachable — start it with: docker compose up -d",
+    reason="FalkorDB not reachable, start it with: docker compose up -d",
 )
 
 
@@ -77,7 +77,7 @@ def test_mars_scenario_end_to_end():
     assert results[0].severity_before == 6.0
 
     # The offender is quarantined. (The infection itself moves to 'contained',
-    # which is still reported — contained outbreaks are history worth showing.)
+    # which is still reported, contained outbreaks are history worth showing.)
     root_status = store.scalar(
         "MATCH (c:Claim {id: $cid}) RETURN c.status",
         {"cid": results[0].root_claim_id},

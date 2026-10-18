@@ -1,4 +1,4 @@
-"""ImmuneGraph — Streamlit UI.
+"""ImmuneGraph, Streamlit UI.
 
 Three columns: the conversation, the live belief graph, and the immune
 dashboard. Every panel is driven by a Cypher query; nothing is computed in
@@ -14,7 +14,7 @@ import time
 import streamlit as st
 
 st.set_page_config(
-    page_title="ImmuneGraph — self-healing memory for agent swarms",
+    page_title="ImmuneGraph, self-healing memory for agent swarms",
     page_icon="🧬",
     layout="wide",
 )
@@ -50,7 +50,7 @@ NODE_COLOURS = {
 }
 
 QUARANTINED_COLOUR = "#7A2E28"
-# Support invalidated by an upstream quarantine — not proven false, but no
+# Support invalidated by an upstream quarantine, not proven false, but no
 # longer trustworthy. Amber, deliberately distinct from the red of a refuted claim.
 SUSPECT_COLOUR = "#D98324"
 
@@ -120,7 +120,7 @@ def require_db(store: GraphStore) -> bool:
             "effect until the app restarts."
         )
     if STREAMLIT_SECRETS_ERROR:
-        st.error("The secrets block could not be read — check its TOML syntax:")
+        st.error("The secrets block could not be read, check its TOML syntax:")
         st.code(STREAMLIT_SECRETS_ERROR, language="text")
 
     st.caption(
@@ -331,7 +331,7 @@ def render_dashboard(swarm: Swarm) -> None:
 def render_kernel(swarm: Swarm) -> None:
     """The kernel of truth: what the swarm has learned is *right*.
 
-    Infection/Claim record what was wrong. This panel is the other half — the
+    Infection/Claim record what was wrong. This panel is the other half, the
     facts the antibody established, each with the source that backs it, and the
     claims currently in conflict with them.
     """
@@ -348,7 +348,7 @@ def render_kernel(swarm: Swarm) -> None:
             [
                 {
                     "fact": fact["text"],
-                    "source": fact["source"] or "—",
+                    "source": fact["source"] or "-",
                     "trust": fact["trust_level"],
                 }
                 for fact in facts
@@ -356,19 +356,19 @@ def render_kernel(swarm: Swarm) -> None:
             width="stretch",
             hide_index=True,
         )
-        with st.expander("Provenance — who taught the swarm this?"):
+        with st.expander("Provenance, who taught the swarm this?"):
             for fact in facts:
                 prov = swarm.fact_provenance(fact["id"]) or {}
                 st.markdown(f"**{fact['text']}**")
                 st.caption(
-                    f"established by `{prov.get('established_by') or '—'}` · "
-                    f"source {prov.get('source') or '—'} · {prov.get('created_at', '')}"
+                    f"established by `{prov.get('established_by') or '-'}` · "
+                    f"source {prov.get('source') or '-'} · {prov.get('created_at', '')}"
                 )
                 if prov.get("source_url"):
                     st.caption(prov["source_url"])
     else:
         st.caption(
-            "Nothing established yet. The antibody adds a fact when it can cite a source — "
+            "Nothing established yet. The antibody adds a fact when it can cite a source, "
             "an unsourced correction is a meta-statement, not a truth."
         )
 
@@ -382,7 +382,7 @@ def render_kernel(swarm: Swarm) -> None:
     st.markdown("##### Durability")
     st.caption(
         f"{swarm.log_count()} writes in the append-only log. FalkorDB Cloud's free tier has "
-        "no persistence, so the graph is a projection — rebuild it and it comes back."
+        "no persistence, so the graph is a projection, rebuild it and it comes back."
     )
     with st.expander("Write-ahead log (what a rebuild replays)"):
         rows = swarm.log_entries(limit=40)
@@ -405,7 +405,7 @@ def render_kernel(swarm: Swarm) -> None:
 def run_mission(swarm: Swarm, store: GraphStore, placeholder) -> None:
     # Always replay from a clean graph. The scripted cascade assumes no prior
     # claims, and a leftover claim would silently become the derivation parent
-    # of the Analyst's line — the demo would then show the wrong cascade.
+    # of the Analyst's line, the demo would then show the wrong cascade.
     #
     # reset_all() clears the log as well: resetting only the graph would leave
     # the log describing data that no longer exists, and the next rebuild would
@@ -429,19 +429,19 @@ def reinject(swarm: Swarm) -> str:
     persona, text, _ = MARS_REPEAT
     recall = swarm.recall(text)
     if not recall.hit:
-        return "No prior infection matched — nothing to recall."
+        return "No prior infection matched, nothing to recall."
     turn = swarm.say(persona, text, sweep=False)
     swarm.contain_repeat(turn.claim_ids[0], recall)
 
     # A first re-injection matches the paraphrase by similarity and carries a
     # score. Clicking again matches the now-quarantined identical claim by
-    # fingerprint, which has no score — so this must not blindly format one.
+    # fingerprint, which has no score, so this must not blindly format one.
     if recall.score is not None:
         how = f"{recall.method}, score {recall.score:.2f}"
     else:
         how = f"{recall.method}, exact match"
     return (
-        f"**Immunity recall fired** ({how}). Claim quarantined on sight — "
+        f"**Immunity recall fired** ({how}). Claim quarantined on sight, "
         "no cascade re-detection was needed."
     )
 
@@ -521,7 +521,7 @@ def _run_company_stream(swarm: Swarm, brain: CompanyBrain) -> None:
 
 def render_audit(swarm: Swarm) -> None:
     """Track 01/02: measure what the defence catches AND what it wrongly catches."""
-    st.markdown("#### Self-audit — two-sided, because one number is gameable")
+    st.markdown("#### Self-audit, two-sided, because one number is gameable")
     st.caption(
         "A defence that flags everything scores **100% coverage** and is worthless. Coverage "
         "alone cannot tell you that. So the audit generates adversarial probes from the "
@@ -545,7 +545,7 @@ def render_audit(swarm: Swarm) -> None:
     facts = swarm.kernel.facts()
     if len(facts) < 3:
         st.warning(
-            f"The kernel holds {len(facts)} fact(s) — too few to audit meaningfully. "
+            f"The kernel holds {len(facts)} fact(s), too few to audit meaningfully. "
             "The audit mutates facts, so it needs a corpus. Load the company documents, "
             "which come with numbers, policies and a shared subject."
         )
@@ -568,13 +568,13 @@ def render_audit(swarm: Swarm) -> None:
     cols[0].metric("Coverage", f"{shown.coverage:.0%}",
                    help="Generated contradictions the defence caught")
     cols[1].metric("Autoimmunity", f"{shown.autoimmunity:.0%}",
-                   help="True statements wrongly flagged — the immune system attacking the host")
+                   help="True statements wrongly flagged, the immune system attacking the host")
     cols[2].metric("Attribution", f"{shown.attribution:.0%}",
                    help="Caught against the RIGHT fact, not by luck")
 
     st.caption(
         f"{shown.probes} probes: {shown.contradictions} contradictions, {shown.controls} controls "
-        f"that must not fire — in {shown.elapsed_ms:.0f} ms."
+        f"that must not fire, in {shown.elapsed_ms:.0f} ms."
     )
 
     if after is not None:
@@ -586,7 +586,7 @@ def render_audit(swarm: Swarm) -> None:
 
     left, right = st.columns(2, gap="large")
     with left:
-        st.markdown("##### Uncovered — falsehoods no fact contradicts")
+        st.markdown("##### Uncovered, falsehoods no fact contradicts")
         if shown.uncovered:
             st.dataframe(
                 [{"statement": u["text"]} for u in shown.uncovered],
@@ -594,7 +594,7 @@ def render_audit(swarm: Swarm) -> None:
             )
             st.caption(
                 "Nothing here is contradicted by the kernel, so no comparison can catch it. "
-                "What is missing is the knowledge that the thing does not exist — which is "
+                "What is missing is the knowledge that the thing does not exist, which is "
                 "why vaccinating means recording it as known-false."
             )
         else:
@@ -619,7 +619,7 @@ def render_audit(swarm: Swarm) -> None:
 
 def render_company(swarm: Swarm) -> None:
     """Track 03: a shared brain over one company's documents."""
-    st.markdown(f"#### {COMPANY} — a company brain that can be corrected")
+    st.markdown(f"#### {COMPANY}, a company brain that can be corrected")
     st.caption(
         "Every department agent answers from the same documents. The failure this prevents is "
         "not retrieval failure: it is one agent's confident wrong **price** being repeated by "
@@ -658,14 +658,14 @@ def render_company(swarm: Swarm) -> None:
         if facts:
             st.dataframe(
                 [
-                    {"fact": f["text"], "trust": f["trust_level"], "source": f["source"] or "—"}
+                    {"fact": f["text"], "trust": f["trust_level"], "source": f["source"] or "-"}
                     for f in facts
                 ],
                 width="stretch",
                 hide_index=True,
             )
         else:
-            st.caption("Nothing loaded yet — run the scenario.")
+            st.caption("Nothing loaded yet, run the scenario.")
         st.markdown("##### Policy drift")
         st.caption(
             "When a price changes the old fact is **superseded**, not deleted. Claims that were "
@@ -678,7 +678,7 @@ def render_check_claim(swarm: Swarm) -> None:
     """Let a visitor submit a claim the swarm has never seen."""
     st.markdown("#### Submit a claim the swarm has never seen")
     st.caption(
-        "Grounded against **Wikipedia** — free, public, and citable — then run through the same "
+        "Grounded against **Wikipedia**, free, public, and citable, then run through the same "
         "immune machinery as the Mars scenario. If a public source refutes it, the claim is "
         "quarantined, an antibody cites that source, and the fact enters the kernel."
     )
@@ -724,11 +724,11 @@ def render_check_claim(swarm: Swarm) -> None:
     elif evidence is None:
         st.warning("Grounding unavailable.")
     elif evidence.is_false:
-        st.error(f"**Refuted** by {evidence.title} — the claim is false.")
+        st.error(f"**Refuted** by {evidence.title}, the claim is false.")
     elif evidence.verdict == "supports":
         st.success(f"**Corroborated** by {evidence.title}.")
     else:
-        st.info(f"**Inconclusive** — a public source was found but does not settle it.")
+        st.info(f"**Inconclusive**, a public source was found but does not settle it.")
 
     if evidence is not None:
         with st.container(border=True):
@@ -736,7 +736,7 @@ def render_check_claim(swarm: Swarm) -> None:
                 st.markdown(f"> {evidence.sentence.strip()[:600]}")
             if evidence.url:
                 st.markdown(f"Source: [{evidence.title}]({evidence.url})")
-            st.caption(f"Matched by lexical grounding — {evidence.reason}")
+            st.caption(f"Matched by lexical grounding, {evidence.reason}")
 
     if result["arrest"]:
         arrest = result["arrest"]
@@ -751,7 +751,7 @@ def render_check_claim(swarm: Swarm) -> None:
             f"touching the network."
         )
     elif evidence is not None and not evidence.is_false:
-        st.caption("Nothing to arrest — the swarm only quarantines what a source refutes.")
+        st.caption("Nothing to arrest, the swarm only quarantines what a source refutes.")
 
     st.divider()
     st.markdown("##### What the swarm already knew")
@@ -800,7 +800,7 @@ def _rebuild(swarm: Swarm) -> str:
         return result["error"]
     if result["identical"]:
         return (
-            f"Rebuilt {result['applied']} writes — the graph is **identical** to the one "
+            f"Rebuilt {result['applied']} writes, the graph is **identical** to the one "
             f"before the wipe ({result['nodes']} nodes)."
         )
     return f"Rebuilt {result['applied']} writes, but the result differs ({result['failed']} failed)."
@@ -813,7 +813,7 @@ def main() -> None:
     st.markdown(
         "**A self-healing memory for AI agent swarms.** Ordinary memory records what agents "
         "*said*. ImmuneGraph records **what supports what**, so an unsupported claim, a "
-        "self-justifying cycle and a cascade all become graph traversals — and the swarm "
+        "self-justifying cycle and a cascade all become graph traversals, and the swarm "
         "arrests them."
     )
 
@@ -856,11 +856,11 @@ def main() -> None:
         )
         with st.expander("Graph data model"):
             st.markdown(
-                "**Nodes** — `Agent` `Claim` `KernelFact` `Source` `Infection` `Antibody` "
+                "**Nodes**, `Agent` `Claim` `KernelFact` `Source` `Infection` `Antibody` "
                 "`Message` `Session`\n\n"
-                "**Memory** — episodic (`Message`/`Session`), semantic "
+                "**Memory**, episodic (`Message`/`Session`), semantic "
                 "(`Claim`/`Source`/`KernelFact`), procedural (`Antibody`/`Infection`)\n\n"
-                "**Edges** — `ASSERTS` `SUPPORTED_BY` `DERIVED_FROM` `CONTRADICTS` `REPEATS` "
+                "**Edges**, `ASSERTS` `SUPPORTED_BY` `DERIVED_FROM` `CONTRADICTS` `REPEATS` "
                 "`TARGETS` `SPREAD_TO` `NEUTRALIZES` `ESTABLISHES` `CONFLICTS_WITH`\n\n"
                 "`DERIVED_FROM` points **child → parent**, so cascades walk "
                 "`(downstream)-[:DERIVED_FROM*1..5]->(root)`."
@@ -920,9 +920,9 @@ def main() -> None:
 
     st.divider()
     st.caption(
-        "Track 01 — Agents That Act on Connected Data · "
-        "Track 02 — Agent Memory and Coordination · "
-        "Track 03 — Company Brain · "
+        "Track 01, Agents That Act on Connected Data · "
+        "Track 02, Agent Memory and Coordination · "
+        "Track 03, Company Brain · "
         "Graph Hacks: Context for AI Agents (WeMakeDevs × FalkorDB)"
     )
 

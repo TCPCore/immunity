@@ -155,7 +155,7 @@ class ImmuneScanner:
         return infections
 
     def scan_cycles(self) -> list[Infection]:
-        """Q1: cycles in the support structure — self-justifying belief.
+        """Q1: cycles in the support structure, self-justifying belief.
 
         A cycle of length n is reported once from each of its n members, so the
         result is deduplicated by the set of claim ids in each path.
@@ -307,7 +307,7 @@ class ImmuneScanner:
         # claim without help. That is the signal Q8 measures.
         self.writer.mark_antibodies_effective_for(recall.past_claim_id)
 
-        # The recall is itself an immune response, so it is recorded as one —
+        # The recall is itself an immune response, so it is recorded as one -
         # otherwise Q8 would silently omit the most interesting outbreak type.
         antibody = Antibody(
             id=_new_id("ab"),

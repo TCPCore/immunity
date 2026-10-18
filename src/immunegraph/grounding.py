@@ -3,8 +3,8 @@
 The kernel of truth previously grew only from antibody corrections, which meant
 the swarm could only learn about things it had already been told were wrong.
 This closes that loop: anyone can submit a claim and have it checked against a
-public source, so the *same* immune machinery — infection, antibody, kernel fact
-— can arrest something it was never briefed on.
+public source, so the *same* immune machinery, infection, antibody, kernel fact
+- can arrest something it was never briefed on.
 
 Wikipedia is the source because it is free, needs no API key, returns a citable
 URL, and is unambiguously public data (hackathon rule 6).
@@ -14,12 +14,12 @@ design decisions keep it trustworthy rather than merely confident:
 
 *Subject check.* Wikipedia's search matches individual words, so "Mars is made
 of cheese" returns articles about cheese. An article is only considered if its
-*title* shares a token with the claim — no cheese article is called anything with
+*title* shares a token with the claim, no cheese article is called anything with
 "Mars" in it, so that claim comes back inconclusive instead of wrongly
 corroborated.
 
 *Sentence-level, Jaccard-scored agreement.* Judging a whole article at once fires
-on unrelated text, and the overlap coefficient flatters short claims — two shared
+on unrelated text, and the overlap coefficient flatters short claims, two shared
 words out of three reads as 0.67. An earlier version of this module reported
 "Mars is made of cheese" as SUPPORTED by an article about Cheez-Its for exactly
 that reason. Agreement now needs real Jaccard density within a single sentence.
@@ -44,7 +44,7 @@ USER_AGENT = "ImmuneGraph/1.0 (hackathon demo; https://github.com/TCPCore/immuni
 # Words that limit or exclude rather than negate outright. "Trace levels of
 # oxygen" refutes "breathable oxygen" without containing the word "not".
 #
-# "only" is deliberately absent. It is far too common — "the Moon is Earth's
+# "only" is deliberately absent. It is far too common, "the Moon is Earth's
 # only natural satellite" refuted the true claim that the Moon orbits the Earth.
 # A false refutation is worse than an inconclusive answer, so the list holds
 # only words that genuinely exclude a quantity or a capability.
@@ -194,7 +194,7 @@ class WikipediaGrounder:
                 return "contradicts", overlap, "negation asymmetry against the source", sentence
 
             # 3. Agreement: the sentence must contain essentially everything the
-            #    claim asserts. Coverage, not Jaccard — a sentence that says
+            #    claim asserts. Coverage, not Jaccard, a sentence that says
             #    exactly what the claim says is still long, and Jaccard reads
             #    that length as disagreement.
             coverage = len(shared) / len(claim_tokens)

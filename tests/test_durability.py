@@ -2,7 +2,7 @@
 
 FalkorDB Cloud's free tier has no persistence and no backups, so the graph is
 treated as a projection that the log can rebuild. The claim worth testing is not
-"the app still works after a rebuild" — it is "the rebuilt graph is provably the
+"the app still works after a rebuild", it is "the rebuilt graph is provably the
 same", ids and statuses included.
 
 The structural test at the bottom is the one that matters most: a write issued
@@ -48,7 +48,7 @@ def _db_available() -> bool:
 
 live = pytest.mark.skipif(
     not _db_available(),
-    reason="FalkorDB not reachable — start it with: docker compose up -d",
+    reason="FalkorDB not reachable, start it with: docker compose up -d",
 )
 
 
@@ -275,7 +275,7 @@ def test_reset_all_clears_the_log_as_well_as_the_graph():
 def test_no_write_hides_inside_a_read_call():
     """A write issued through rows()/scalar()/one() is never logged.
 
-    It still works — and a rebuild silently loses it. This is not hypothetical:
+    It still works, and a rebuild silently loses it. This is not hypothetical:
     the cascade containment update was written that way, and the graph
     fingerprint is what caught it. A rebuild looked fine by every other measure
     while two claims quietly reverted from 'suspect' to 'active'.

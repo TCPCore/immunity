@@ -1,4 +1,4 @@
-# Halcyon Robotics — Support SLA
+# Halcyon Robotics, Support SLA
 
 Critical incidents are acknowledged within 15 minutes, 24 hours a day, for
 Enterprise customers. Team customers receive acknowledgement within 8 business

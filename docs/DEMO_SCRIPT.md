@@ -10,17 +10,17 @@ immune system**, not a visualisation bolted onto storage.
 
 | Beat | On screen | Scripted slot |
 | --- | --- | --- |
-| App boot | 1.0s | — |
-| "Run Mars mission" cascade + detection + antibody | **3.1s** | 0:35 – 1:15 (40s) |
-| "Re-inject the false claim" recall | **0.2s** | 2:20 – 2:45 (25s) |
+| App boot | 1.0s |, |
+| "Run Mars mission" cascade + detection + antibody | **3.1s** | 0:35 - 1:15 (40s) |
+| "Re-inject the false claim" recall | **0.2s** | 2:20 - 2:45 (25s) |
 
 **The one pacing trap:** the cascade animation finishes in about three seconds, but Act I is
-scripted as forty seconds of narration. Do not click and then start talking — you will be
+scripted as forty seconds of narration. Do not click and then start talking, you will be
 pointing at a static graph for 37 seconds. Either narrate *what is about to happen* before
 clicking, or click first and use the finished graph as the illustration while you explain the
 three hops. Both work; the second looks better on camera.
 
-The recall at the end is effectively instant, which is the point — say so rather than waiting.
+The recall at the end is effectively instant, which is the point, say so rather than waiting.
 
 ---
 
@@ -55,57 +55,57 @@ deterministically from a clean graph, so a second take is cheap. Do not improvis
 
 ---
 
-## 0:00 – 0:15 · Hook
+## 0:00 - 0:15 · Hook
 
 **On screen:** the app, empty graph, title visible.
 
 > "Multi-agent AI systems have a failure mode that ordinary memory can't see. One agent
 > invents a claim. A second derives a plan from it. A third builds on that plan. Nothing was
-> stored incorrectly — every agent faithfully recorded what it was told — and yet the swarm
+> stored incorrectly, every agent faithfully recorded what it was told, and yet the swarm
 > is now acting on a lie."
 
-## 0:15 – 0:35 · What this is
+## 0:15 - 0:35 · What this is
 
 **On screen:** hover the sidebar **Graph data model** and **The queries doing the work**
 expanders so the node/edge names are visible. Do not expand them fully.
 
 > "ImmuneGraph treats belief as a graph. Every claim, source, agent and derivation is a node
-> in FalkorDB. Then the pathologies of collective belief become *traversals* — a cycle in the
+> in FalkorDB. Then the pathologies of collective belief become *traversals*, a cycle in the
 > support edges is a self-justifying belief, and reachability along derivation edges is a
 > cascade. This is Cypher doing the detection, not Python drawing a picture."
 
-## 0:35 – 1:15 · Act I — the cascade
+## 0:35 - 1:15 · Act I, the cascade
 
 **Do:** click **▶ Run Mars mission**. Let it play out.
 
 **On screen:** the three messages appear one at a time; the graph fills in; an infection
 node appears in red.
 
-> "Three agents plan a Mars mission. The Researcher says Mars has breathable oxygen at night —
+> "Three agents plan a Mars mission. The Researcher says Mars has breathable oxygen at night -
 > with no source. The Analyst says: if that's true, we don't need helmets. The Planner says:
 > then we can skip life support. Neither the Analyst nor the Planner is lying. Each reasoned
 > correctly from the premise it was handed."
 
-*Beat. Let the audience watch the graph build — but note it finishes in about three seconds,
+*Beat. Let the audience watch the graph build, but note it finishes in about three seconds,
 so this is where the pacing trap lives. See "Measured timings" at the top.*
 
-## 1:15 – 1:40 · Act II — what the graph found
+## 1:15 - 1:40 · Act II, what the graph found
 
 **On screen:** the **Immune dashboard**, right column. Point at the infection row.
 
 > "Query two found the unsupported root: no trusted source, no parent. And look at the
-> severity — six point zero. That number isn't an LLM's opinion. Query four walks the
+> severity, six point zero. That number isn't an LLM's opinion. Query four walks the
 > derivation edges backwards and counts two contaminated claims and three exposed agents.
 > Remove the database and that number stops having a definition."
 
 **Point at** `spread 2` in the infection expander.
 
-## 1:40 – 2:05 · Act III — the immune response
+## 1:40 - 2:05 · Act III, the immune response
 
 **On screen:** expand the infection to show the root claim; the antibody node appears in gold.
 
-> "An antibody is dispatched. It has to cite a source, so it pulls NASA's actual figure —
-> ninety-five percent CO-two — and the correction enters the graph as a first-class claim
+> "An antibody is dispatched. It has to cite a source, so it pulls NASA's actual figure -
+> ninety-five percent CO-two, and the correction enters the graph as a first-class claim
 > with its own support edge. The false claim is quarantined, and the correction is recorded as
 > contradicting it. Notice the antibody cannot just assert a fact: if it had no source, it
 > would say so instead of inventing one."
@@ -113,20 +113,20 @@ so this is where the pacing trap lives. See "Measured timings" at the top.*
 **Then point at the conversation panel, which is the part judges remember.**
 
 > "And look at what happened to the other two. The Analyst's and the Planner's claims are now
-> amber — *support invalidated*. They were never proven false, but their only justification
+> amber, *support invalidated*. They were never proven false, but their only justification
 > was the claim we just refuted, so they stop being trustworthy. Quarantining the root isn't
 > enough; the whole cascade has to be contained."
 
-## 2:05 – 2:35 · Act III.b — the kernel of truth
+## 2:05 - 2:35 · Act III.b, the kernel of truth
 
 **On screen:** scroll the dashboard to the **Kernel of truth** panel. This is the beat that
 distinguishes the project from a detector.
 
-> "Now the part I care most about. Everything up to here recorded what was *wrong* — an
+> "Now the part I care most about. Everything up to here recorded what was *wrong*, an
 > infection, a quarantined claim, a trust score that dropped. But a swarm that only remembers
 > its mistakes learns nothing it can reuse.
 >
-> The correction cited NASA, so it became a **fact**. Not a note, not a log line — a node in
+> The correction cited NASA, so it became a **fact**. Not a note, not a log line, a node in
 > the graph, linked to the source that backs it, and to the antibody that established it.
 > That's the purple node: *Mars has no breathable oxygen*, citing NASA.
 >
@@ -135,42 +135,42 @@ distinguishes the project from a detector.
 
 **Point at** the `Facts held` metric and the fact table.
 
-## 2:35 – 2:50 · Act IV — trust, derived
+## 2:35 - 2:50 · Act IV, trust, derived
 
 **On screen:** the **Trust** table.
 
-> "All three agents drop to zero point eight five. No counter is decremented anywhere —
+> "All three agents drop to zero point eight five. No counter is decremented anywhere -
 > query five recomputes trust from exposure every time. The Planner never touched the false
 > claim directly; it inherited the infection through the derivation chain, and the graph knows
 > that."
 
 *Optional extra, only if you have room:* point out the **Immunity memory (Q8)** table now
-reads `contained: 0` for the unsupported root. That is deliberate — the antibody is not
+reads `contained: 0` for the unsupported root. That is deliberate, the antibody is not
 credited with working until the swarm proves it by not being fooled again. The recall in the
 next beat is what flips that number to 1.
 
-## 2:20 – 2:45 · Act V — immunity (the payoff)
+## 2:20 - 2:45 · Act V, immunity (the payoff)
 
 **Do:** click **💉 Re-inject the false claim**. The recall is effectively instant (0.2s), so
-click and keep talking — do not wait for something to happen.
+click and keep talking, do not wait for something to happen.
 
 > "Now the Researcher tries again, with a *paraphrase*: Mars has oxygen at night. Watch."
 
 *The green banner is already there.*
 
-> "Recognised instantly — and look at *why*. The sanitiser matched this claim against the
+> "Recognised instantly, and look at *why*. The sanitiser matched this claim against the
 > kernel fact in about five milliseconds. No extraction call, no cascade scan. Compare that
 > with the three seconds the original detection needed.
 >
 > That's the difference between the two halves of the immune system. Detection finds lies the
-> swarm has never seen, by walking the support structure — thorough, and it gets more
+> swarm has never seen, by walking the support structure, thorough, and it gets more
 > expensive as the graph grows. The kernel recognises lies it already knows, by comparison,
 > and it doesn't. The swarm is measurably harder to fool than it was ninety seconds ago.
 >
 > Click it again and it matches on the fingerprint hash instead, and the answer is immediate.
 > The swarm does not get fooled twice."
 
-**Point at the trust table again — this is a strong beat.**
+**Point at the trust table again, this is a strong beat.**
 
 > "And the Researcher drops further, to zero point seven, because it asserted the lie twice.
 > The other two stay at zero point eight five. Trust is being derived from the graph, so
@@ -178,21 +178,21 @@ click and keep talking — do not wait for something to happen.
 
 **Optional:** click **Re-inject** a second time to show the "exact match" path.
 
-## 2:45 – 3:00 · Close — did it actually work?
+## 2:45 - 3:00 · Close, did it actually work?
 
 **On screen:** the **Immunity memory (Q8)** table.
 
 > "And query eight makes 'the swarm develops immunity' measurable: one outbreak of each type,
-> both contained, zero recurred. That number was zero a moment ago — the recall is what proved
+> both contained, zero recurred. That number was zero a moment ago, the recall is what proved
 > the antibody worked.
 >
-> Every query here has been executed against a live instance — `verify_queries` runs all
+> Every query here has been executed against a live instance, `verify_queries` runs all
 > thirteen, and the test suite has one hundred and one tests. FalkorDB wasn't a place to store the
 > answer. It was the thing that worked out the answer."
 
 ---
 
-## If you want a shorter cut (60–75s)
+## If you want a shorter cut (60-75s)
 
 Keep: 0:00 hook → Act I cascade → the severity number → the antibody correction → **the
 re-inject payoff** → the Q8 table. Drop Act IV and the architecture narration. The re-inject

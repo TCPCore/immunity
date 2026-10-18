@@ -41,7 +41,7 @@ def _db_available() -> bool:
 
 pytestmark = pytest.mark.skipif(
     not _db_available(),
-    reason="FalkorDB not reachable — start it with: docker compose up -d",
+    reason="FalkorDB not reachable, start it with: docker compose up -d",
 )
 
 

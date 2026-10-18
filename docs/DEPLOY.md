@@ -1,4 +1,4 @@
-# Deployment — getting a clickable link
+# Deployment, getting a clickable link
 
 Two accounts are needed, and both require a human because both are behind
 interactive sign-up or OAuth. The application itself is ready: a clean
@@ -17,13 +17,13 @@ Streamlit app, so this is a free cloud instance.
 
 1. Sign in or sign up at <https://app.falkordb.cloud/signup>.
    - **If you signed up with Google**, email/password login will not work for
-     scripting. Use the console UI instead — that is fine, everything below is
+     scripting. Use the console UI instead, that is fine, everything below is
      doable by clicking.
 2. **Create an instance.**
    - Tier: **Free**
    - Provider / region: AWS `us-east-1` is a safe default
    - Name: `immunegraph`
-   - Set a **database password** — this is separate from your account password.
+   - Set a **database password**, this is separate from your account password.
      Store it somewhere; it goes into the app config, not into git.
 3. Wait until the instance shows **RUNNING** (a minute or two).
 4. Copy four values from the instance page:
@@ -40,7 +40,7 @@ Streamlit app, so this is a free cloud instance.
 > **deleted after 7 days** of inactivity. No TLS.
 >
 > Two consequences. First, that is exactly why ImmuneGraph keeps a write-ahead
-> log and can rebuild itself — but §B note 3 matters for surviving a cold start.
+> log and can rebuild itself, but §B note 3 matters for surviving a cold start.
 > Second, **load the app shortly before judging** so the instance is awake, or
 > the first judge to click waits on a cold database.
 
@@ -87,7 +87,7 @@ Once the app is up, two checks are worth running:
    infection should appear with severity 6.0, the antibody should cite NASA and
    register a kernel fact, and **♻️ Rebuild from log** should report the rebuilt
    graph as *identical*.
-2. **From a terminal, against the real cloud instance** — this is the check that
+2. **From a terminal, against the real cloud instance**, this is the check that
    the deployed environment genuinely works, not just locally:
 
    ```bash
@@ -116,7 +116,7 @@ tracked file.
 - **Rotate any password that has been shared in a chat or ticket.** Assume it is
   compromised the moment it is typed somewhere it can be read back.
 - If a credential is ever committed by accident, rotate it first and clean
-  history second — rewriting history does not un-leak a secret.
+  history second, rewriting history does not un-leak a secret.
 
 ---
 

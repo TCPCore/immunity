@@ -96,7 +96,7 @@ RETURN root.id AS root_id,
 #
 # Counts two distinct kinds of exposure: asserting a claim that is itself
 # infected, and asserting a claim *derived from* an infected root. The second
-# matters — an agent that builds a plan on someone else's falsehood has
+# matters, an agent that builds a plan on someone else's falsehood has
 # propagated it, and the cascade should cost them too.
 Q5_TRUST_DECAY = """
 MATCH (a:Agent)
@@ -135,7 +135,7 @@ ORDER BY i.detected_at DESC
 #      a stored property raises "Invalid arguments for procedure".
 #   2. The yielded `score` is a cosine DISTANCE (0.0 = identical), despite the
 #      option being named similarityFunction. Ordering DESC returns the least
-#      similar candidates first — a silent correctness bug at scale.
+#      similar candidates first, a silent correctness bug at scale.
 Q7_VECTOR_RECALL = """
 CALL db.idx.vector.queryNodes('Claim', 'embedding', $k, vecf32($query_embedding))
 YIELD node AS candidate, score
@@ -179,7 +179,7 @@ ORDER BY outbreaks DESC
 # query here is a traversal over provenance, which is why the kernel lives in
 # the graph rather than in a side table.
 
-# K1 — the active kernel, with provenance.
+# K1, the active kernel, with provenance.
 K1_KERNEL_FACTS = """
 MATCH (k:KernelFact)
 WHERE k.status = 'active'
@@ -193,7 +193,7 @@ RETURN k.id AS fact_id,
 ORDER BY k.created_at
 """
 
-# K2 — which claims currently conflict with the kernel, and how strongly.
+# K2, which claims currently conflict with the kernel, and how strongly.
 K2_KERNEL_CONFLICTS = """
 MATCH (c:Claim)-[r:CONFLICTS_WITH]->(k:KernelFact)
 RETURN c.id AS claim_id,
@@ -206,7 +206,7 @@ RETURN c.id AS claim_id,
 ORDER BY r.score DESC
 """
 
-# K3 — kernel health in one row: facts held, claims aligned, claims in conflict.
+# K3, kernel health in one row: facts held, claims aligned, claims in conflict.
 #     This is the number that shows immunity accumulating across outbreaks.
 #
 #     count(rel) rather than count(*): under OPTIONAL MATCH an unmatched pattern
@@ -222,7 +222,7 @@ OPTIONAL MATCH (:Claim)-[cf:CONFLICTS_WITH]->(:KernelFact)
 RETURN facts, aligned_edges, count(cf) AS conflict_edges
 """
 
-# K4 — claims the sanitiser has not yet judged. Drives the incremental pass.
+# K4, claims the sanitiser has not yet judged. Drives the incremental pass.
 K4_UNSANITISED_CLAIMS = """
 MATCH (c:Claim)
 WHERE c.status = 'active' AND c.verdict IS NULL
@@ -232,7 +232,7 @@ ORDER BY c.created_at
 LIMIT $limit
 """
 
-# K5 — provenance path for one fact: who established it, citing what.
+# K5, provenance path for one fact: who established it, citing what.
 #      This is the "explain this truth" view.
 K5_FACT_PROVENANCE = """
 MATCH (k:KernelFact {id: $fact_id})
@@ -285,7 +285,7 @@ QUERIES: dict[str, QuerySpec] = {
         QuerySpec(
             "Q1_CIRCULAR_SUPPORT",
             Q1_CIRCULAR_SUPPORT,
-            "Cycles in SUPPORTED_BY/DERIVED_FROM — self-justifying beliefs.",
+            "Cycles in SUPPORTED_BY/DERIVED_FROM, self-justifying beliefs.",
         ),
         QuerySpec(
             "Q1B_CIRCULAR_FALLBACK",
