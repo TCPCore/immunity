@@ -81,8 +81,8 @@ Copy these into any form field asking what has been verified.
 
 ```
 Cypher queries executed against a live instance     18 / 18
-Kernel fast path (local)                            1.31 ms median, 2.25 ms p95
-Detection sweep, 12-node graph (local)              20.3 ms
+Kernel fast path, 5-fact kernel (local)             ~3.9 ms median, flat as the graph grows
+Detection sweep, 10 / 210 / 2,010 nodes (local)     4.8 ms / 930 ms / 17.0 s
 Rebuild from the write-ahead log                    73 writes, 0 failed, identical
 Concurrent sequence allocation, 8 writers           200 / 200 unique
 Conflict detection precision / recall / F1          1.00 / 1.00 / 1.00  (including after a policy revision)
@@ -97,9 +97,19 @@ Two of those deserve their condition attached, because a number without one is m
 the kernel's own facts, and negatives that include six hand-written true restatements phrased the
 way a person would say them. It is not human-labelled production traffic.
 
-**Sweep scaling** was measured at 1.1 s for 100 claims and 14.9 s for 1,000 in the worst case,
-where every claim is an unsupported root and the sweep writes an infection for each. The fast path
-stayed flat at 1.3 ms throughout. That asymmetry is why the check that blocks answers is the fast
+**The two speeds** were measured together against a fixed five-fact kernel, with the graph grown
+around them. This is the architectural argument in four lines:
+
+```
+graph nodes   fast path (5-fact kernel)   detection sweep
+         10             3.74 ms                   4.8 ms
+        210             3.92 ms                 930 ms
+      2,010             3.93 ms                17.0 s
+```
+
+A 200x larger graph moves the fast path by 5% and the sweep by three orders of magnitude. The
+sweep figure is a worst case, because every padding claim is an unsupported root and the sweep
+writes an infection for each. That asymmetry is why the check that blocks answers is the fast
 path and the sweep is asynchronous.
 
 Both are reproducible: `python scripts/verify_tracks.py`, `python scripts/bench_scale.py`,

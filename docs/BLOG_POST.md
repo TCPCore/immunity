@@ -78,11 +78,13 @@ So there are two memories with opposite polarity. `Infection` and quarantined `C
 The payoff is speed, and it is measurable. Detecting a cascade is a graph search that grows with the graph. Checking a new claim against the kernel is a comparison against a handful of facts. Against a local FalkorDB instance:
 
 ```
-kernel fast path   1.31 ms median, 2.25 ms p95
-detection sweep    20.3 ms
+kernel fast path   ~3.9 ms median, flat as the graph grows
+detection sweep    4.8 ms at 10 nodes, 17 s at 2,010
 ```
 
-Roughly 15x, and every correction moves work from the expensive path to the cheap one. That is what immunity should do. A system that only detects pays the expensive path forever, and gets slower as it learns more.
+Measured with a fixed five-fact kernel while the graph grew from 10 to 2,010 nodes, the fast
+path moved by 5% and the sweep by three orders of magnitude. Every correction moves work from the
+expensive path to the cheap one. That is what immunity should do. A system that only detects pays the expensive path forever, and gets slower as it learns more.
 
 ## How this differs from the tooling you already use
 
@@ -238,9 +240,10 @@ autoimmunity 0%      six hard negatives, phrased the way a person would say them
 Then the part that decides the architecture. I benchmarked both paths at increasing graph size, against a local instance:
 
 ```
-claims     fast path     detection sweep
-   100       1.3 ms          1,118 ms
- 1,000       1.3 ms         14,887 ms
+graph nodes   fast path (5-fact kernel)   detection sweep
+         10             3.74 ms                   4.8 ms
+        210             3.92 ms                 930 ms
+      2,010             3.93 ms                17.0 s
 ```
 
 The benchmark is deliberately hostile: every one of those claims is an unsupported root with no source, so the sweep has a finding to write for every row. Real graphs are not like that. But the shape is what matters and it does not change: **the fast path is flat and the sweep is not.**

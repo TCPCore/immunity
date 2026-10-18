@@ -10,9 +10,9 @@ code; where something is unproven it says so.
 | Claim | Measured | How |
 | --- | --- | --- |
 | Every Cypher query executes and returns the expected shape | **18/18** | `python -m immunegraph.verify_queries` against live FalkorDB, local **and** cloud |
-| Kernel fast path (judge one claim against the kernel) | **1.31 ms** median, **2.25 ms** p95 | local Docker, 30 judgements |
+| Kernel fast path (judge one claim against a 5-fact kernel) | **~3.9 ms** median, flat from 10 to 2,010 nodes | local Docker |
 | Kernel fast path over a network | **21 ms** median | same code against FalkorDB Cloud |
-| Full detection sweep (Q1+Q2+Q3) | **20.3 ms** | local Docker, 12-node graph |
+| Full detection sweep (Q1+Q2+Q3) | **4.8 ms** at 10 nodes, **930 ms** at 210, **17.0 s** at 2,010 | local Docker, worst case |
 | Full detection sweep over a network | **234 ms** | FalkorDB Cloud, same graph |
 | A real policy conflict (wrong price vs pricing doc) | **7.2 ms** local / **97 ms** cloud | company scenario |
 | Rebuild from the write-ahead log | **73 writes, 0 failed, identical** | including node ids |
@@ -147,7 +147,7 @@ obvious repair for the next gap drove it to **82.8% while coverage still read 10
 
 Four decisions that cannot be made without it:
 
-1. **Inline or async.** Our kernel check is 1.31 ms locally, 21 ms over a network. At low
+1. **Inline or async.** Our kernel check is about 4 ms locally and roughly 16x that over a network, flat as the graph grows. At low
    autoimmunity you can put it in the request path and block. At high autoimmunity you must not,
    because you would block correct answers. The audit tells you which system you have.
 2. **Ship or hold.** A pre-deployment gate: autoimmunity above a threshold (say 2%) fails the

@@ -5,15 +5,12 @@
          max-width: 760px; margin: 48px auto; padding: 0 24px; }
   h1 { font-size: 34px; line-height: 1.2; margin-bottom: 28px; }
   h2 { font-size: 25px; margin-top: 40px; }
-  h3 { font-size: 20px; margin-top: 32px; }
   pre { background: #F5F7FA; border: 1px solid #E1E6EC; border-radius: 6px;
          padding: 14px 16px; overflow-x: auto;
          font: 13.5px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-  code { background: #F5F7FA; padding: 1px 5px; border-radius: 3px;
-          font: 0.9em ui-monospace, Menlo, Consolas, monospace; }
+  code { background: #F5F7FA; padding: 1px 5px; border-radius: 3px; }
   pre code { background: none; padding: 0; }
   a { color: #1F6FEB; }
-  hr { border: none; border-top: 1px solid #E1E6EC; margin: 34px 0; }
 </style></head><body>
 <p style="font:14px/1.5 -apple-system,sans-serif;color:#888;border-bottom:1px solid #eee;padding-bottom:14px">
 Select everything below this line, copy, and paste into the Substack editor.</p>
@@ -35,7 +32,7 @@ contradiction          a CONTRADICTS edge between two asserted claims
 cascade                reachability along DERIVED_FROM back to a bad root
 </code></pre>
 <p>That is the whole idea. Everything else in this post is consequence.</p>
-<p>The implementation is FalkorDB, a graph database that speaks Redis and a subset of openCypher. Seven node types, eleven relationships. The important edge points backwards:</p>
+<p>The implementation is FalkorDB, a graph database that speaks Redis and a subset of openCypher. Nine node labels, eighteen relationships. The important edge points backwards:</p>
 <pre><code>(Claim)-[:DERIVED_FROM]-&gt;(Claim)     child -&gt; parent
 </code></pre>
 <p>That direction means every cascade query is one backward traversal:</p>
@@ -65,10 +62,12 @@ RETURN a.name, a.base_trust - (0.15 * size(infs)) AS effective_trust
 <p>That leaves the swarm unable to answer the next question. Fine, you caught the lie. What should it believe instead?</p>
 <p>So there are two memories with opposite polarity. <code>Infection</code> and quarantined <code>Claim</code> nodes record what was <strong>wrong</strong>. A <code>KernelFact</code> records what is now held <strong>true</strong>, written by the antibody that established it, citing the source and the claim it refutes.</p>
 <p>The payoff is speed, and it is measurable. Detecting a cascade is a graph search that grows with the graph. Checking a new claim against the kernel is a comparison against a handful of facts. Against a local FalkorDB instance:</p>
-<pre><code>kernel fast path   1.31 ms median, 2.25 ms p95
-detection sweep    20.3 ms
+<pre><code>kernel fast path   ~3.9 ms median, flat as the graph grows
+detection sweep    4.8 ms at 10 nodes, 17 s at 2,010
 </code></pre>
-<p>Roughly 15x, and every correction moves work from the expensive path to the cheap one. That is what immunity should do. A system that only detects pays the expensive path forever, and gets slower as it learns more.</p>
+<p>Measured with a fixed five-fact kernel while the graph grew from 10 to 2,010 nodes, the fast
+path moved by 5% and the sweep by three orders of magnitude. Every correction moves work from the
+expensive path to the cheap one. That is what immunity should do. A system that only detects pays the expensive path forever, and gets slower as it learns more.</p>
 <h2>How this differs from the tooling you already use</h2>
 <p>Most of the ecosystem around agent memory answers one question: what was said.</p>
 <pre><code>SYSTEM                      ANSWERS                          LEAVES OPEN
@@ -109,7 +108,8 @@ Quarantined, cascade contained
 <p>One mechanism, three domains, no special cases.</p>
 <h2>The part I think is genuinely new: measuring the other side</h2>
 <p>Every system in this space reports coverage, meaning how much it catches. That number is gameable. A detector that flags every statement scores 100% and is useless.</p>
-<p>The other side has a name. A recent paper on agent immune systems lists the <strong>Autoimmunity Rate</strong>, the false-positive intervention rate, among the field's open challenges. It is not defined, computed, or used there.</p>
+<p>The other side has a name, <strong>autoimmunity</strong>, and it is the number almost nobody reports. Every
+paper and product I looked at publishes what it catches. None publishes what it wrongly catches.</p>
 <p>So I built it, paired it with coverage, and added a third measure: did the defence fire at the right fact, or merely at one. Then I pointed all three at my own code.</p>
 <pre><code>COVERAGE       generated falsehoods the defence catches
 AUTOIMMUNITY   TRUE statements it wrongly flags
@@ -118,7 +118,7 @@ PRECISION      of the flags raised, how many were false
 RECALL         of the falsehoods, how many were flagged
 </code></pre>
 <p>The probes are generated from the system's own knowledge base: perturbed numbers, transplanted numbers, substituted entities, and truth-preserving paraphrases that must not fire. No labelled dataset required. Your knowledge base is the test set. That makes the number about your corpus rather than someone else's benchmark.</p>
-<h2>What it found, with 160 tests passing</h2>
+<h2>What it found, with the whole suite green</h2>
 <p>Two things, and the second is the argument for the metric.</p>
 <p><strong>First, the defence was subject-blind.</strong> The claim "Enterprise costs 499 USD per seat per year" is true. It was judged <strong>conflicting</strong>, because it numerically mismatches the Team plan's fact and nothing checked which entity the claim was about.</p>
 <pre><code>AUTOIMMUNITY RATE: 2/10 = 20% of true statements wrongly flagged
@@ -165,9 +165,10 @@ f1          1.00
 autoimmunity 0%      six hard negatives, phrased the way a person would say them
 </code></pre>
 <p>Then the part that decides the architecture. I benchmarked both paths at increasing graph size, against a local instance:</p>
-<pre><code>claims     fast path     detection sweep
-   100       1.3 ms          1,118 ms
- 1,000       1.3 ms         14,887 ms
+<pre><code>graph nodes   fast path (5-fact kernel)   detection sweep
+         10             3.74 ms                   4.8 ms
+        210             3.92 ms                 930 ms
+      2,010             3.93 ms                17.0 s
 </code></pre>
 <p>The benchmark is deliberately hostile: every one of those claims is an unsupported root with no source, so the sweep has a finding to write for every row. Real graphs are not like that. But the shape is what matters and it does not change: <strong>the fast path is flat and the sweep is not.</strong></p>
 <p>That is not a defect, it is the reason the two exist. The thing you put in a request path has to be the flat one, so it is. The sweep is asynchronous, and at a thousand findings it is also the thing to batch, because the cost is dominated by one write per finding rather than by the query.</p>

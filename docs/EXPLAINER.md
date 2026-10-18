@@ -194,9 +194,9 @@ State these before a judge finds them:
 - **Precision and recall are measured on a generated labelled set**, not human-labelled production
   traffic. The negatives include hand-written true restatements, which is what makes the precision
   figure mean something, but it is a proxy.
-- **Scale is measured to 1,000 claims**, where a worst-case sweep takes 14.9 s because every claim
-  is a finding and each writes. The fast path stays at 1.31 ms throughout, which is why it is the
-  one in the request path.
+- **Scale is measured to 2,010 nodes**, where a worst-case sweep takes 17 s because every claim is
+  a finding and each writes. The fast path stays flat at about 3.9 ms across a 200x larger graph,
+  which is why it is the one in the request path.
 - **The antibody is a model and can be wrong.** It is constrained to cite a source and record its
   outcome. This is a containment system, not a truth oracle.
 

@@ -82,7 +82,7 @@ it happens again, durable enough to rebuild itself from a log, proven identical.
 
 ImmuneGraph keeps three kinds of memory, episodic conversation, semantic belief with provenance,
 and procedural immunity that records which correction worked. Its kernel of truth means a repeated
-lie is caught in 1.3 ms instead of a 20 ms graph search. Every write is logged first, so the graph
+lie is caught in about 4 ms instead of a graph search that grows with the graph. Every write is logged first, so the graph
 is a projection that can be rebuilt and verified identical.
 
 ## Long description (205 words)
@@ -98,7 +98,7 @@ recorded outcome, so effectiveness is measured rather than assumed.
 
 The distinction that matters is two memories of opposite polarity. `Infection` records what was
 **wrong**; `KernelFact` records what is now held **true**. That is what makes immunity cheap, a
-repeat is recognised against a handful of facts in **1.3 ms median** instead of a **20.3 ms** graph
+repeat is recognised against a handful of facts in **about 4 ms** instead of a graph
 sweep, and every correction moves work from the expensive path to the cheap one.
 
 Coordination is derived, not stored: trust is recomputed from each agent's exposure, so it cannot
@@ -115,7 +115,8 @@ including node ids.
 
 ## Evidence
 
-- Kernel fast path **1.31 ms median / 2.25 ms p95** (local); detection sweep **20.3 ms**, a ~15x
+- Kernel fast path **~3.9 ms median, flat from 10 to 2,010 nodes**; detection sweep **4.8 ms at
+  10 nodes to 17 s at 2,010**
   difference, and the reason the two are used differently.
 - Rebuild: **73 writes, 0 failed, identical**, including node ids, which is why the log stores
   statements rather than semantic events.

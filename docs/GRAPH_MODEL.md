@@ -402,7 +402,7 @@ canonical, source-backed facts that new claims are judged against by comparison.
 | Finds | lies the swarm has **never seen** | lies it **already knows** |
 | Method | traversal over the support structure | lexical match against facts |
 | Cost | extraction + full scan | one fact query, then comparison per fact |
-| Measured | 20.3 ms sweep on a 12-node graph, local | 1.31 ms median, 2.25 ms p95, no model call |
+| Measured | 4.8 ms at 10 nodes, 930 ms at 210, 17.0 s at 2,010 (local, worst case) | ~3.9 ms median, flat across those sizes, no model call |
 
 An antibody that cites a source establishes a fact. An antibody that cannot cite one
 establishes **nothing**, "no source supports this" is a meta-statement, not a truth worth
