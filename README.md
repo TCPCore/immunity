@@ -3,6 +3,8 @@
 **A FalkorDB-backed immune system that catches hallucination cascades in multi-agent
 systems, corrects them, and remembers them so the swarm develops immunity.**
 
+Multi-agent systems spread hallucinations like infections, and existing memory layers store the lie instead of fighting it. We built an immune system: graph-native detection of unsupported claims and derivation cascades, corrections that become permanent kernel facts, and a fast path that catches the second offense in 5ms instead of 3 seconds. It's truth maintenance for LLM agents — an old idea, rebuilt for a substrate that can actually traverse the provenance.
+
 **AI disclosure:** AI was used for code generation and editing. The design, iterations, testing and decisions were human.
 
 **Watch the demo:** [youtube.com/watch?v=kX1Jscw91so](https://www.youtube.com/watch?v=kX1Jscw91so) *(4:17, captioned)*
