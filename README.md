@@ -621,12 +621,17 @@ A Cypher query that has never been executed is not a feature. Three layers of pr
 - **UI tests** execute `app.py` in a real Streamlit runtime via `AppTest`, click through the
   mission, re-inject twice, and assert the run replays deterministically.
 
-Running the code rather than assuming it has caught five defects that reading the source
-would not have: a silent `ORDER BY` inversion in the vector recall path (FalkorDB returns a
-cosine *distance* despite the option being named `similarityFunction`), missing `vecf32()`
-wrapping, a false-positive contradiction caused by a conditional being read as opposing its
-own premise, a case-sensitive source pattern that dropped citations, and the concurrency
-collision above.
+Running the code rather than assuming it has caught six defects that reading the source would
+not have:
+
+1. A silent `ORDER BY` inversion in the vector recall path, because FalkorDB returns a cosine
+   *distance* despite the option being named `similarityFunction`.
+2. Missing `vecf32()` wrapping, which raises `Invalid arguments for procedure` on a bare list.
+3. A false-positive contradiction, from a conditional being read as opposing its own premise.
+4. `count(*)` under `OPTIONAL MATCH` counting rows rather than edges, so an empty kernel reported a
+   conflict that did not exist.
+5. A write hiding inside a read helper, invisible until a rebuild from the log lost it.
+6. The concurrency collision above, 163 lost sequence numbers out of 200.
 
 FalkorDB implements a **subset** of openCypher v9. The dialect constraints that shaped this
 model, no regex operator, no label expressions, no aggregation inside pattern

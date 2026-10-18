@@ -109,9 +109,15 @@ Both are reproducible: `python scripts/verify_tracks.py`, `python scripts/bench_
 
 | Item | Value |
 | --- | --- |
-| Repository | <https://github.com/TCPCore/immunity>, public, 30 commits on `main` |
-| Demo video | **Recorded and verified**, 90.5s, 1680×1200, silent with burned-in captions and per-beat panel highlighting. Upload it (YouTube/Loom, public or unlisted) and paste the URL here. Reproducible with `python scripts/record_demo.py`; `docs/DEMO_SCRIPT.md` is the shot list. |
-| Live deployment | Local Docker / FalkorDB Cloud; see below |
+| Repository | <https://github.com/TCPCore/immunity>, public, 58 commits on `main` |
+| Demo video | **Recorded and verified**, 4:17, 1680×1200, silent with burned-in captions, a visible cursor and click pulses on each action, and an address bar. Upload it (YouTube/Loom, public or unlisted) and paste the URL here. Reproducible with `python scripts/record_demo.py`; `docs/DEMO_SCRIPT.md` is the shot list. |
+| Live deployment | <https://immunity-jcssfw2knj85bkdtut3rie.streamlit.app> (see note), or local Docker / FalkorDB Cloud; see below |
+
+> **Deployment note.** The Streamlit app is deployed from this repository. As of the last check from
+> an unauthenticated client it returned `303` to `share.streamlit.io/-/auth/app`, so it may require
+> a signed-in viewer depending on the app's Sharing setting. Verify in an incognito window before
+> submitting. If it is not publicly reachable, rule 10's "complete local setup instructions"
+> alternative is satisfied by the Docker path below.
 
 ## Setup (rule 10, a live deployment, or complete local setup instructions)
 
@@ -151,7 +157,7 @@ See the full section in the README. Summary: AI coding assistants were used exte
 implementation and documentation. The project concept, the immune-system framing, the choice
 of Tracks 01, 02 and 03, the Mars scenario, the memory-taxonomy mapping and the Docker decision
 were human decisions. Every Cypher query was executed against a live FalkorDB instance before
-being committed, and running them, rather than assuming them, caught five defects. The team
+being committed, and running them, rather than assuming them, caught six defects. The team
 can explain the graph model, each detection query and the trade-offs; `docs/EXPLAINER.md` is
 the written form of that explanation.
 
@@ -167,9 +173,9 @@ the written form of that explanation.
 - [x] README with setup instructions
 - [x] README with the graph data model
 - [x] The Cypher queries the product depends on, `docs/GRAPH_MODEL.md` §5, `src/immunegraph/queries.py`, and the four headline queries inlined in the README
-- [x] **Demo video** recorded (90.5s, captioned, verified beat by beat), **still needs uploading and a link here**
+- [ ] **Demo video** recorded (4:17, captioned, cursor and address bar), **still needs uploading and a link here**
 - [x] Complete local setup instructions (Docker) and a Cloud path
-- [x] Tracks named, 01 and 02
+- [x] Tracks named, 01, 02 and 03
 
 **Other rules**
 
@@ -184,7 +190,7 @@ the written form of that explanation.
 
 **Final five minutes**
 
-- [x] `git push`, 25 commits verified on `origin/main`, same SHA as local `HEAD`
+- [x] `git push`, 58 commits verified on `origin/main`, same SHA as local `HEAD`
 - [x] README renders from the remote, fetched raw and confirmed, screenshot returns 200
 - [ ] Confirm the demo video is public or unlisted-but-linkable, not private
 - [ ] Re-read the AI disclosure with a critical eye
