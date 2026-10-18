@@ -109,7 +109,7 @@ Both are reproducible: `python scripts/verify_tracks.py`, `python scripts/bench_
 
 | Item | Value |
 | --- | --- |
-| Repository | <https://github.com/TCPCore/immunity>, public, 58 commits on `main` |
+| Repository | <https://github.com/TCPCore/immunity>, public, default branch `main`, actively maintained |
 | Demo video | **Recorded and verified**, 4:17, 1680×1200, silent with burned-in captions, a visible cursor and click pulses on each action, and an address bar. Upload it (YouTube/Loom, public or unlisted) and paste the URL here. Reproducible with `python scripts/record_demo.py`; `docs/DEMO_SCRIPT.md` is the shot list. |
 | Live deployment | <https://immunity-jcssfw2knj85bkdtut3rie.streamlit.app> (see note), or local Docker / FalkorDB Cloud; see below |
 
@@ -133,9 +133,14 @@ cp .env.example .env                                   # optional: add OPENAI_AP
 .venv/bin/streamlit run app.py
 ```
 
-`-e ".[dev]"` is required rather than `requirements.txt`: the project uses a `src/` layout, so
-`python -m immunegraph...` only resolves once the package is installed. Installing only the
-requirements leaves the package missing and every command fails with `ModuleNotFoundError`.
+`-e ".[dev]"` installs the package plus the dev tools, which is what the commands above need.
+The project uses a `src/` layout, so `python -m immunegraph...` only resolves once the package
+itself is installed.
+
+`requirements.txt` installs it too, because its first line is `-e .`. That line is load-bearing
+for hosted deploys: Streamlit Community Cloud runs `pip install -r requirements.txt` and then
+`streamlit run app.py` with no separate install step. Without it the `src/` layout means
+`import immunegraph` fails and the deployed app dies at startup.
 
 No API key is required: with `EXTRACTOR=rule` the extraction is deterministic and every graph
 query still runs for real. `EXTRACTOR=auto` uses an LLM when a key is present and falls back
@@ -190,7 +195,7 @@ the written form of that explanation.
 
 **Final five minutes**
 
-- [x] `git push`, 58 commits verified on `origin/main`, same SHA as local `HEAD`
+- [x] `git push`, `origin/main` in sync with local `HEAD` (same SHA), verified with `git fetch`
 - [x] README renders from the remote, fetched raw and confirmed, screenshot returns 200
 - [ ] Confirm the demo video is public or unlisted-but-linkable, not private
 - [ ] Re-read the AI disclosure with a critical eye
