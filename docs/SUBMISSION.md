@@ -177,13 +177,21 @@ is user-initiated: nothing is fetched unless someone submits a claim.
 
 ## AI assistant disclosure (rule 11)
 
-See the full section in the README. Summary: AI coding assistants were used extensively for
-implementation and documentation. The project concept, the immune-system framing, the choice
-of Tracks 01, 02 and 03, the Mars scenario, the memory-taxonomy mapping and the Docker decision
-were human decisions. Every Cypher query was executed against a live FalkorDB instance before
-being committed, and running them, rather than assuming them, caught six defects. The team
-can explain the graph model, each detection query and the trade-offs; `docs/EXPLAINER.md` is
-the written form of that explanation.
+Full version in the README. The division, stated plainly:
+
+**Human:** the idea and every modification of it. An immune system for agent swarms, belief as a
+graph of justifications, the kernel of truth, the visitor-claim path, the company-brain scenario,
+the self-audit, negative memory, and the decision to enter all three tracks. Also every scoping
+call, the Mars scenario, and the verification of every claim by running it.
+
+**AI:** implementation under that direction. The code in `src/immunegraph/` and `app.py`, the test
+suite, the documentation, and research into FalkorDB's dialect and vector-index API.
+
+**Why rule 13 is not a problem, in one sentence:** AI wrote the code, but it did not verify it.
+Every Cypher query was executed against a live instance before commit, and running them rather
+than assuming them caught six defects that reading the source would not have. The measurements in
+this document were taken, not asserted, and where they disagreed with what was written down, the
+document was corrected.
 
 > Confirm every sentence is true before submitting.
 

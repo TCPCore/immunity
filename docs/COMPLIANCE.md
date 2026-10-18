@@ -146,8 +146,12 @@ pre-hackathon code exists, as the workspace was empty at session start.
 | The track being entered | ✅ | `../README.md`, tracks 01, 02 and 03 |
 
 ### Rule 11, Disclose AI coding assistant use
-⚠️ Section exists in `../README.md` and **must be reviewed and made true by the human
-before submission.** See the note below.
+✅ Disclosed in `../README.md` and summarised in `SUBMISSION.md`, split three ways: the idea
+and every decision about it was human, implementation was AI-assisted, and verification was
+human and is evidenced by `verify_queries` and the six defects it caught.
+
+⚠️ Still needs one human read-through before submission, because only the participant can
+confirm the split is stated correctly.
 
 ### Rule 12, Participants must understand the code and be able to explain it
 ⚠️ **Action required by the human.** For every query you must be able to answer: what
